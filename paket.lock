@@ -197,10 +197,10 @@ NUGET
     Chessie (0.6) - content: none
       FSharp.Core
     FAKE (4.52) - content: none
-    FSharp.Core (4.1.12) - content: none
+    FSharp.Core (4.1.17) - content: none
       System.ValueTuple (>= 4.3)
     Mono.Cecil (0.10.0-beta5) - content: none
-    Newtonsoft.Json (9.0.1) - content: none
+    Newtonsoft.Json (10.0.2) - content: none
     Paket.Core (3.36.5) - content: none
       Chessie (>= 0.6)
       FSharp.Core (>= 4.0.1.7-alpha)
@@ -219,8 +219,8 @@ NUGET
     System.Diagnostics.Process (4.3) - content: none
     System.Diagnostics.TraceSource (4.3) - content: none
     System.Security.Cryptography.Algorithms (4.3) - content: none
-    System.Security.Cryptography.ProtectedData (4.3) - content: none
-    System.ValueTuple (4.3) - content: none
+    System.Security.Cryptography.ProtectedData (4.4.0-preview1-25305-02) - content: none
+    System.ValueTuple (4.3.1) - content: none
     System.Xml.XDocument (4.3) - content: none
     System.Xml.XPath.XDocument (4.3) - content: none
     System.Xml.XPath.XmlDocument (4.3) - content: none

@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26403.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "UiDemo", "UiDemo\UiDemo.fsproj", "{731DF56E-1E28-4017-87A6-6CF234AC5AC0}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "RTPAL", "RTPAL\RTPAL.fsproj", "{731DF56E-1E28-4017-87A6-6CF234AC5AC0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
