@@ -7,12 +7,12 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>731df56e-1e28-4017-87a6-6cf234ac5ac0</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>UiDemo</RootNamespace>
-    <AssemblyName>UiDemo</AssemblyName>
+    <RootNamespace>RTPAL</RootNamespace>
+    <AssemblyName>RTPAL</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.4.1.0</TargetFSharpCoreVersion>
-    <Name>UiDemo</Name>
+    <Name>RTPAL</Name>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -67,9 +67,6 @@
     <Compile Include="SimpleTestModel.fs" />
     <Compile Include="SimpleTest.fs" />
     <Compile Include="Program.fs" />
-    <Content Include="App.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>

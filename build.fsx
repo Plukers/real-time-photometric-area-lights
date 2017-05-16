@@ -8,10 +8,10 @@ open Aardvark.Fake
 
 do Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
-DefaultSetup.install ["src/UiDemo.sln"]
+DefaultSetup.install ["src/RTPAL.sln"]
 
 Target "Run" (fun() ->
-    tracefn "exec: %d" (Shell.Exec "bin/Release/UiDemo.exe")
+    tracefn "exec: %d" (Shell.Exec "bin/Release/RTPAL.exe")
 )
 
 Target "Test" (fun () ->
