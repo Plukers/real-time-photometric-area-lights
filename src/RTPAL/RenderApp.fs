@@ -42,7 +42,7 @@
                 toEffect DefaultSurfaces.trafo
                 toEffect DefaultSurfaces.diffuseTexture
                 toEffect DefaultSurfaces.simpleLighting
-            ]       
+            ] 
 
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
         CameraController.controlledControl m.cameraState CAMERA
@@ -74,6 +74,7 @@
             files = []
             scenes = sgs
             bounds = bounds
+            lights = []
             cameraState =
                 {
                     view = CameraView.lookAt (6.0 * V3d.III) V3d.Zero V3d.OOI
