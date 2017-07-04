@@ -6,18 +6,22 @@ open System.Windows.Forms
 open Aardvark.Base
 open Aardvark.Application.WinForms
 open Aardvark.UI
+open Aardvark.SceneGraph.IO
+
 
 [<EntryPoint>]
 let main argv = 
     Xilium.CefGlue.ChromiumUtilities.unpackCef()
     Aardvark.UI.Chromium.init argv
 
+    Loader.Assimp.initialize()
+
     Ag.initialize()
     Aardvark.Init()
     use app = new OpenGlApplication()
     let runtime = app.Runtime
 
-    let a = SimpleTestApp.app |> App.start
+    let a = RenderApp.app |> App.start
 
     WebPart.startServer 4321 [ 
         MutableApp.toWebPart runtime a
