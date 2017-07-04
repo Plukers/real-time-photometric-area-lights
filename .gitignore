@@ -13,3 +13,5 @@ bin/Debug
 /.fake
 /.paket/paket.exe
 /Aardvark.log
+
+src/RTPAL/meshes
