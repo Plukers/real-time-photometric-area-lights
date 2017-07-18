@@ -10,7 +10,8 @@
     open Aardvark.UI
     open Aardvark.UI.Primitives
 
-
+    open Light
+    
     let update (s : RenderState) (a : Action) =
         match a with            
             | IMPORT ->
@@ -33,7 +34,7 @@
             Trafo3d.Translation(-center) *
             Trafo3d.Scale(scale)
 
-        let sg = 
+        let sceneSg = 
             m.scenes
             |> Sg.set
             |> Sg.trafo (m.bounds |> Mod.map normalizeTrafo)
@@ -43,6 +44,13 @@
                 toEffect DefaultSurfaces.diffuseTexture
                 toEffect DefaultSurfaces.simpleLighting
             ] 
+            
+
+        let sg = 
+            sceneSg
+            |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
+            |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)
+            |> Sg.noEvents
 
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
         CameraController.controlledControl m.cameraState CAMERA
@@ -70,12 +78,15 @@
         let bounds = scenes |> Seq.map (fun s -> s.bounds) |> Box3d
         let sgs = scenes |> HSet.map Sg.adapter
 
+        let lc = emptyLightCollection
+        let light1 = addSquareLight lc 1.0 false
+
         {
             files = []
             scenes = sgs
             bounds = bounds
-            lights = []
-            cameraState =
+            lights = lc
+            cameraState = 
                 {
                     view = CameraView.lookAt (6.0 * V3d.III) V3d.Zero V3d.OOI
                     dragStart = V2i.Zero
@@ -87,7 +98,6 @@
                     stash = None
                 }
         }
-
 
     let app =
         {

@@ -15,10 +15,10 @@ type Action =
 [<DomainType>]
 type RenderState =
     {    
-        files : list<string>
-        scenes : hset<ISg<Action>>
-        bounds : Box3d
-        lights : list<Light>
+        files       : list<string>
+        scenes      : hset<ISg<Action>>
+        bounds      : Box3d
+        lights      : LightCollection
         cameraState : CameraControllerState
     }
 

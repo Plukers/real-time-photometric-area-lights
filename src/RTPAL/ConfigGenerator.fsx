@@ -12,9 +12,9 @@ let VERT_ALL_LIGHT = NUM_LIGHTS * VERT_PER_LIGHT
 
 (*
     A) V - E + F = 2    Euler's formular for planar graphs  https://en.wikipedia.org/wiki/Planar_graph
-    B)  E <= 3V - 6     Euler's formular for planar graphs  https://en.wikipedia.org/wiki/Planar_graph
+    B) E <= 3V - 6      Euler's formular for planar graphs  https://en.wikipedia.org/wiki/Planar_graph
     C) 3F <= 2E         Average Degree                      https://en.wikipedia.org/wiki/Planar_graph
-    =>  F <= 2V - 4
+    => F <= 2V - 4
     => Max number of faces is 2V - 4
     => Max size of index buffer is 3 * max number of faces
 *)
@@ -29,7 +29,7 @@ let config = String.Format("""namespace Render
 (* 
     This file is generated automatically with ConfigGenerator.fsx 
     If you want to update the configuration, please modify ConfigGenerator.fsx and execute 
-    Call fsi --exec ConfigGenerator.fsx
+        fsi --exec ConfigGenerator.fsx
 *)
 
 module Config = 

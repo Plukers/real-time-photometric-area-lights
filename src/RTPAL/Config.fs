@@ -2,7 +2,7 @@ namespace Render
 (* 
     This file is generated automatically with ConfigGenerator.fsx 
     If you want to update the configuration, please modify ConfigGenerator.fsx and execute 
-    Call fsi --exec ConfigGenerator.fsx
+        fsi --exec ConfigGenerator.fsx
 *)
 
 module Config = 
