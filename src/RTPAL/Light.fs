@@ -17,8 +17,8 @@ module Light =
         Intensities : ModRef< double[]> // Size: Config.NUM_LIGHTS.
         TwoSided    : ModRef<   bool[]> // Size: Config.NUM_LIGHTS.
         Trafos      : ModRef<Trafo3d[]> // Size: Config.NUM_LIGHTS.
-        NextFree    : ModRef<    int  > //                              Indicates the next free address in Lights array, -1 indicates no free space
-        IDCounter   : ModRef<    int  > //                              Counts the IDs of the lights, holds the next free ID
+        NextFree    : ModRef<     int  > //                              Indicates the next free address in Lights array, -1 indicates no free space
+        IDCounter   : ModRef<     int  > //                              Counts the IDs of the lights, holds the next free ID
     } 
 
     let emptyLightCollection = {    
@@ -81,10 +81,11 @@ module Light =
         lc.NumIndices.Value.[addr] <- indices.Length
 
     // Adds a new square light to the given light collection
+    // The trafo parameter is used as Mod dependency to control the light
     // Returns the updated light collection and the id of the added light
     // If the light could not be added because there is no space left, the index -1 is returned
-    let addSquareLight (lc : LightCollection) (intensity : float) (twoSided : bool) =
-
+    let addSquareLight (lc : LightCollection) (trafo : ModRef<Trafo3d>) (intensity : float) (twoSided : bool) =
+    //TODO how to add a trafo such that the orientation can be modified?
         if collectionSlotAvailable lc then
             
             let mutable returnID = -1;
