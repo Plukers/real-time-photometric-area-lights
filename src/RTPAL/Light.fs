@@ -85,7 +85,7 @@ module Light =
     // Returns the updated light collection and the id of the added light
     // If the light could not be added because there is no space left, the index -1 is returned
     let addSquareLight (lc : LightCollection) (trafo : ModRef<Trafo3d>) (intensity : float) (twoSided : bool) =
-    //TODO how to add a trafo such that the orientation can be modified?
+    //TODO how to add a trafo such that the orientation can be modified? idea: hset
         if collectionSlotAvailable lc then
             
             let mutable returnID = -1;
