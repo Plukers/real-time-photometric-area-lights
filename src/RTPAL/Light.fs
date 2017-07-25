@@ -146,9 +146,7 @@ module Light =
 
     module Sg = 
         open System
-        open Aardvark.Base
         open Aardvark.Base.Rendering
-        open Aardvark.Base.Incremental
         open Aardvark.SceneGraph
 
         let addLightCollectionSg ( lc : LightCollection ) sg =

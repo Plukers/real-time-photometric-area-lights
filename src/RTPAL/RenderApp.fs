@@ -3,8 +3,7 @@
     open Render
     open Aardvark.Base
     open Aardvark.Base.Incremental
-
-    open Aardvark.SceneGraph
+    
     open Aardvark.SceneGraph.IO
     open Aardvark.Base.Rendering
     open Aardvark.UI
@@ -50,6 +49,7 @@
             sceneSg
             |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
             |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)
+            |> Utils.HaltonSequence.addSequenceToSg
             |> Sg.noEvents
 
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
@@ -83,7 +83,6 @@
         let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
         transformLight lc light1 t |> ignore
                 
-
         {
             files = []
             scenes = sgs

@@ -4,7 +4,6 @@ open Aardvark.Base.Incremental
 open Aardvark.Base
 open Aardvark.UI
 open Aardvark.UI.Primitives
-open Aardvark.Base.ShaderReflection.ShaderPath
 
 open Light
 

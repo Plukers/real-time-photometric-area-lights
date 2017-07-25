@@ -80,7 +80,9 @@
   <ItemGroup>
     <Compile Include="ConfigGenerator.fsx" />
     <Compile Include="Config.fs" />
+    <Compile Include="Utils.fs" />
     <Compile Include="Light.fs" />
+    <Compile Include="GDEffect.fs" />
     <Compile Include="RenderState.fs" />
     <Compile Include="RenderApp.fs" />
     <Compile Include="Program.fs" />

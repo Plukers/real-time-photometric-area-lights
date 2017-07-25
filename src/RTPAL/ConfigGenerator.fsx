@@ -22,6 +22,9 @@ let MAX_IDX_BUFFER_SIZE_PER_LIGHT = 3 * (2 * VERT_PER_LIGHT - 4)
 
 let MAX_IDX_BUFFER_SIZE_ALL_LIGHT = NUM_LIGHTS * MAX_IDX_BUFFER_SIZE_PER_LIGHT
 
+
+let NUM_SAMPLES = 8
+
 (* 
 Build config
 *)
@@ -47,12 +50,16 @@ module Config =
 
     [<Literal>]
     let MAX_IDX_BUFFER_SIZE_ALL_LIGHT = {4}
+
+    [<Literal>]
+    let NUM_SAMPLES = {5}
                            """, 
                            NUM_LIGHTS, 
                            VERT_PER_LIGHT, 
                            VERT_ALL_LIGHT,
                            MAX_IDX_BUFFER_SIZE_PER_LIGHT,
-                           MAX_IDX_BUFFER_SIZE_ALL_LIGHT)
+                           MAX_IDX_BUFFER_SIZE_ALL_LIGHT,
+                           NUM_SAMPLES)
 
                            
 File.WriteAllText("Config.fs", config);
