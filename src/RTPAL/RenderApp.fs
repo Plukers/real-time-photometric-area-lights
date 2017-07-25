@@ -80,6 +80,9 @@
 
         let lc = emptyLightCollection
         let light1 = addSquareLight lc 1.0 false
+        let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
+        transformLight lc light1 t |> ignore
+                
 
         {
             files = []
