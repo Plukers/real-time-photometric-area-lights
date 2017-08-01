@@ -41,10 +41,9 @@
             |> Sg.effect [
                 toEffect DefaultSurfaces.trafo
                 toEffect DefaultSurfaces.diffuseTexture
-                toEffect DefaultSurfaces.simpleLighting
+                toEffect GTEffect.groundTruthLighting
             ] 
             
-
         let sg = 
             sceneSg
             |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)

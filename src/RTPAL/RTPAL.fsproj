@@ -82,7 +82,8 @@
     <Compile Include="Config.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="Light.fs" />
-    <Compile Include="GDEffect.fs" />
+    <Compile Include="BRDF_GGX.fs" />
+    <Compile Include="GTEffect.fs" />
     <Compile Include="RenderState.fs" />
     <Compile Include="RenderApp.fs" />
     <Compile Include="Program.fs" />
