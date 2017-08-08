@@ -125,13 +125,13 @@ module GTEffect =
             let tVec   = orig - v0
             let u      = (Vec.dot tVec pVec) * invDet
 
-            if (u < 0.0 || u > 1.0) then
+            if (u < 0.0 || 1.0 < u) then
                 0.0
             else
                 let qVec = Vec.cross tVec e1
                 let v    = (Vec.dot dir qVec) * invDet
 
-                if (v < 0.0 || u + v > 1.0) then
+                if (v < 0.0 || 1.0 < u + v) then
                     0.0
                 else 
                     ((Vec.dot e2 qVec) * invDet)
@@ -151,7 +151,7 @@ module GTEffect =
             let w2t = t2w |> Mat.inverse
             
             // Transform view vector into tangent space
-            let o = w2t * worldV
+            // let o = w2t * worldV
 
             // Compute a jitter
             // https://bartwronski.com/2014/03/15/temporal-supersampling-and-antialiasing/
@@ -170,7 +170,8 @@ module GTEffect =
                     let x = jitter.Y + uniform.HaltonSamples.[sIdx].Y
                     x - Math.Floor(x)
 
-                let i = BRDF_GGX.sampleGGX u1 u2 alpha
+                // let i = BRDF_GGX.sampleGGX u1 u2 alpha
+                let i = sampleHemisphere u1 u2
 
                 // Check if i hits a light
                 // If it does, compute the illumination
@@ -186,10 +187,10 @@ module GTEffect =
                             
                             let v0Addr = uniform.LIndices.[iIdx + 0] + vAddr
                             let v0 = w2t * uniform.LVertices.[v0Addr]
-
+                           
                             let v1Addr = uniform.LIndices.[iIdx + 1] + vAddr
                             let v1 = w2t * uniform.LVertices.[v1Addr]
-
+                           
                             let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
                             let v2 = w2t * uniform.LVertices.[v2Addr]                        
 
@@ -197,19 +198,21 @@ module GTEffect =
 
                             if t > 1e-8 then
                                 // compute irradiance from light
-                                let irr = (Vec.dot -i uniform.LForwards.[addr] ) * uniform.LIntensities.[addr]
-                                let irr = 1.0
+                                // let irr = (Vec.dot -i uniform.LForwards.[addr] ) * uniform.LIntensities.[addr]
+                                let irr = 1.0 // TODO
                                 illumination <-
-                                    // TODO use real material values
-                                    illumination + BRDF_GGX.evaluate i o V3d.OOI alpha f0 irr atten t
+                                    illumination + irr // TODO
+                                    // illumination + BRDF_GGX.evaluate i o V3d.OOI alpha f0 irr atten t
                                     
                                 ()
+
                             
                             ()  
                         ()  
                 ()
             
-            return V4d(( v.c * illumination).XYZ, v.c.W)
+            // TODO remove 0.15
+            return V4d(( v.c * (0.15 + illumination)).XYZ, v.c.W)
             
             }
        

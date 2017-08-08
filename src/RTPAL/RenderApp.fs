@@ -9,6 +9,7 @@
     open Aardvark.UI
     open Aardvark.UI.Primitives
 
+    open Utils
     open Light
     
     let update (s : RenderState) (a : Action) =
@@ -20,6 +21,13 @@
                 let sgs = scenes |> HSet.map Sg.adapter
                 Log.stop()
                 { s with files = []; scenes = sgs; bounds = bounds }
+            | HALTON_UPDATE ->
+                // CHECK if this mutation of the state is valid
+                transact (fun _ ->
+                    let last = s.haltonSequence.Value.[s.haltonSequence.Value.Length - 1]
+                    s.haltonSequence.Value <- HaltonSequence.next last
+                    )                
+                s
             | CAMERA a -> { s with cameraState = CameraController.update s.cameraState a }
 
     let render (m : MRenderState) =
@@ -43,19 +51,13 @@
                 toEffect DefaultSurfaces.diffuseTexture
                 toEffect GTEffect.groundTruthLighting
             ] 
-(*
-        let time = 
-            adaptive {
-                0.0 
-            }
-*)
+
         let sg = 
             sceneSg
             |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
             |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)
-            |> Utils.HaltonSequence.addSequenceToSg            
+            |> Utils.HaltonSequence.addSequenceToSg (m.haltonSequence |> Mod.force)           
             |> Sg.noEvents
-            //|> Sg.uniform "Time" time
 
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
         CameraController.controlledControl m.cameraState CAMERA
@@ -95,6 +97,7 @@
             scenes = sgs
             bounds = bounds
             lights = lc
+            haltonSequence = HaltonSequence.init |> Mod.init
             cameraState = 
                 {
                     view = CameraView.lookAt (6.0 * V3d.III) V3d.Zero V3d.OOI
@@ -108,10 +111,25 @@
                 }
         }
 
+    let appThreads (state : RenderState) =
+        let pool = ThreadPool.empty
+       
+        let rec haltonUpdate() =
+            proclist {
+                do! Proc.Sleep 16
+                yield HALTON_UPDATE
+                yield! haltonUpdate()
+            }
+
+        ThreadPool.add "haltonUpdate" (haltonUpdate()) pool
+
     let app =
         {
             unpersist = Unpersist.instance
-            threads = fun model -> CameraController.threads model.cameraState |> ThreadPool.map CAMERA
+            threads = fun model -> 
+                CameraController.threads model.cameraState 
+                |> ThreadPool.map CAMERA
+                |> ThreadPool.union (appThreads model)
             initial = initialState
             update = update
             view = view
