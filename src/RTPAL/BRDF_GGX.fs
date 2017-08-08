@@ -73,3 +73,11 @@ module BRDF_GGX =
         
         else
             V4d.Zero
+
+    [<ReflectedDefinition>]
+    let sampleGGX u1 u2 alpha = 
+
+        let r = Math.Atan(alpha * Math.Sqrt(u1) / (1.0 - u1))
+        let phi = 2.0 * PI * u2
+
+        V3d(Math.Cos(phi) * Math.Sin(r), Math.Sin(phi) * Math.Sin(r), Math.Cos(r)) |> Vec.normalize

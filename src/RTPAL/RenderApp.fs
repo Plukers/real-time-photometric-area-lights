@@ -43,13 +43,19 @@
                 toEffect DefaultSurfaces.diffuseTexture
                 toEffect GTEffect.groundTruthLighting
             ] 
-            
+(*
+        let time = 
+            adaptive {
+                0.0 
+            }
+*)
         let sg = 
             sceneSg
             |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
             |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)
-            |> Utils.HaltonSequence.addSequenceToSg
+            |> Utils.HaltonSequence.addSequenceToSg            
             |> Sg.noEvents
+            //|> Sg.uniform "Time" time
 
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
         CameraController.controlledControl m.cameraState CAMERA
@@ -76,6 +82,8 @@
         let scenes = files |> HSet.ofList |> HSet.map (Loader.Assimp.load)
         let bounds = scenes |> Seq.map (fun s -> s.bounds) |> Box3d
         let sgs = scenes |> HSet.map Sg.adapter
+
+        GTEffect.debugOutput
 
         let lc = emptyLightCollection
         let light1 = addSquareLight lc 1.0 false
