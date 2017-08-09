@@ -21,21 +21,22 @@ module GTEffect =
     
     [<ReflectedDefinition>]
     let private floorV4d (v : V4d) = 
-        V4d(Math.Floor(v.X), Math.Floor(v.Y), Math.Floor(v.Z), Math.Floor(v.W))
+        V4d(floor v.X, floor v.Y, floor v.Z, floor v.W)
 
     [<ReflectedDefinition>]
     let private fractV4d (v : V4d) = 
         v - floorV4d(v)
+        
 
     (*
         Creates a hash usable as jitter computed from a 2D coordinate
         Taken from https://briansharpe.wordpress.com/2011/11/15/a-fast-and-simple-32bit-floating-point-hash-function/
     *)
     [<ReflectedDefinition>]
-    let private fast32Hash (coordinate : V2d) = 
-        let offset = V2d(26.0, 16.0)
+    let private fast32Hash (coordinate : V3d) = 
+        let offset = V2d(26.0, 161.0)
         let domain = 71.0
-        let someLargeFloat = 951.135664
+        let someLargeFloat = 951.135664 //+ coordinate.Z
 
         let mutable P = V4d(coordinate.X, coordinate.Y, coordinate.X, coordinate.Y)
         P <- P + V4d(0.0, 0.0, 1.0, 1.0)
@@ -43,7 +44,7 @@ module GTEffect =
         P <- P - floorV4d(P / domain) * domain
         
         P <- P + V4d(offset.X, offset.Y, offset.X, offset.Y)
-        P <- P * P * P
+        P <- P * P
 
         let xzxz = V4d(P.X, P.Z, P.X, P.Z)
         let yyww = V4d(P.Y, P.Y, P.W, P.W)
@@ -62,8 +63,22 @@ module GTEffect =
         let phi = 2.0 * PI * u2
 
         V3d(Math.Cos(phi) * r, Math.Sin(phi) * r, u1) |> Vec.normalize
-    
-    [<GLSLIntrinsic("transpose(mat3({0},{1},{2},{3},{4},{5},{6},{7},{8}))")>] // transpose because of inverted multiplication logic
+
+    (*
+        Samples a direction from the hemisphere for two given random numbers where the samples are cosine weighted
+        Works in the tangent space
+        http://www.rorydriscoll.com/2009/01/07/better-sampling/
+    *)
+    [<ReflectedDefinition>]
+    let private cosineSampleHemisphere u1 u2 = 
+        let r = Math.Sqrt(u1)
+        let theta = 2.0 * PI * u2
+
+        V3d(r * Math.Cos(theta), r * Math.Sin(theta), Math.Sqrt(max 0.0 (1.0 - u1))) |> Vec.normalize
+
+    // glsl mat3 is column major
+    // transpose because of inverted multiplication logic
+    [<GLSLIntrinsic("transpose(mat3({0},{1},{2},{3},{4},{5},{6},{7},{8}))")>] 
     let inline private glslM33d (a00 : 'a) (a10 : 'a) (a20 : 'a) (a01 : 'a) (a11 : 'a) (a21 : 'a) (a02 : 'a) (a12 : 'a) (a22 : 'a) = 
         onlyInShaderCode<M33d> "mat3"
 
@@ -88,14 +103,14 @@ module GTEffect =
     let private basisFrisvad (n : V3d) = 
 
         let c1 = V3d(
-                    1.0 - n.X  * n.X / (1.0 + n.Z),
-                    -n.X * n.Y / (1.0 + n.Z),
+                    1.0 - (n.X  * n.X) / (1.0 + n.Z),
+                    (-n.X * n.Y) / (1.0 + n.Z),
                     -n.X
                     )
 
         let c2 = V3d(
-                    -n.X * n.Y / (1.0 + n.Z),
-                    1.0 - n.Y  * n.Y / (1.0 + n.Y),
+                    (-n.X * n.Y) / (1.0 + n.Z),
+                    1.0 - (n.Y  * n.Y) / (1.0 + n.Z),
                     -n.Y
                     )
 
@@ -135,27 +150,34 @@ module GTEffect =
                     0.0
                 else 
                     ((Vec.dot e2 qVec) * invDet)
+
+    type Vertex = {
+        [<Position>]        pos     : V4d
+        [<WorldPosition>]   wp      : V4d
+        [<Normal>]          n       : V3d
+        [<Color>]           c       : V4d
+        [<FragCoord>]       fc      : V4d
+    }        
         
-        
-    let groundTruthLighting (v : Effects.Vertex) = 
+    let groundTruthLighting (v : Vertex) = 
         fragment {
             // TODO use real material values
             let alpha = 0.3
             let f0 = 2.0
             let atten = V3d(0.3, 0.0, 0.05)
 
+            let P = v.wp.XYZ
+            let worldV = (uniform.CameraLocation - P) |> Vec.normalize
 
-            let worldV = (uniform.CameraLocation - v.wp.XYZ) |> Vec.normalize
-
-            let t2w = basisFrisvad (v.n |> Vec.normalize)
-            let w2t = t2w |> Mat.inverse
+            let w2t = v.n |> Vec.normalize |> basisFrisvad |> Mat.transpose
+            // let t2w = w2t |> Mat.inverse
             
             // Transform view vector into tangent space
-            // let o = w2t * worldV
-
+            let o = w2t * worldV
+            
             // Compute a jitter
-            // https://bartwronski.com/2014/03/15/temporal-supersampling-and-antialiasing/
-            let jitter = (fast32Hash v.tc).XY                
+            let jitter = (fast32Hash v.fc.XYZ).XY  
+            
 
             let mutable illumination = V4d.Zero
             
@@ -170,8 +192,9 @@ module GTEffect =
                     let x = jitter.Y + uniform.HaltonSamples.[sIdx].Y
                     x - Math.Floor(x)
 
-                // let i = BRDF_GGX.sampleGGX u1 u2 alpha
-                let i = sampleHemisphere u1 u2
+                let i = BRDF_GGX.sampleGGX u1 u2 alpha
+                // let i = sampleHemisphere u1 u2
+                // let i = cosineSampleHemisphere u1 u2                
 
                 // Check if i hits a light
                 // If it does, compute the illumination
@@ -186,23 +209,23 @@ module GTEffect =
                         for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumIndices.[addr] - 1) do
                             
                             let v0Addr = uniform.LIndices.[iIdx + 0] + vAddr
-                            let v0 = w2t * uniform.LVertices.[v0Addr]
+                            let v0 = w2t * (uniform.LVertices.[v0Addr] - P)
                            
                             let v1Addr = uniform.LIndices.[iIdx + 1] + vAddr
-                            let v1 = w2t * uniform.LVertices.[v1Addr]
+                            let v1 = w2t * (uniform.LVertices.[v1Addr] - P)
                            
                             let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
-                            let v2 = w2t * uniform.LVertices.[v2Addr]                        
+                            let v2 = w2t * (uniform.LVertices.[v2Addr] - P)                       
 
                             let t = rayTriangleIntersaction V3d.Zero i v0 v1 v2
 
                             if t > 1e-8 then
                                 // compute irradiance from light
-                                // let irr = (Vec.dot -i uniform.LForwards.[addr] ) * uniform.LIntensities.[addr]
-                                let irr = 1.0 // TODO
+                                let irr = (Vec.dot -i (w2t * uniform.LForwards.[addr])) * uniform.LIntensities.[addr]
+                                // let irr = 1.0 // TODO
                                 illumination <-
-                                    illumination + irr // TODO
-                                    // illumination + BRDF_GGX.evaluate i o V3d.OOI alpha f0 irr atten t
+                                    // illumination + irr // TODO
+                                    illumination + BRDF_GGX.evaluate i o V3d.OOI alpha f0 irr atten t
                                     
                                 ()
 
@@ -210,10 +233,7 @@ module GTEffect =
                             ()  
                         ()  
                 ()
-            
-            // TODO remove 0.15
-            return V4d(( v.c * (0.15 + illumination)).XYZ, v.c.W)
-            
+            return V4d(( v.c * illumination).XYZ, v.c.W)
             }
        
     let debugOutput = 

@@ -81,6 +81,7 @@
     
     let initialState =     
         let files = [Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]]
+        // let files = [Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.obj"]]
         let scenes = files |> HSet.ofList |> HSet.map (Loader.Assimp.load)
         let bounds = scenes |> Seq.map (fun s -> s.bounds) |> Box3d
         let sgs = scenes |> HSet.map Sg.adapter
@@ -90,6 +91,7 @@
         let lc = emptyLightCollection
         let light1 = addSquareLight lc 1.0 false
         let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
+        // For plane let t = Trafo3d.Translation(0.0, 0.0, 0.5) * (Trafo3d.Scale 1.0)
         transformLight lc light1 t |> ignore
                 
         {
