@@ -13,6 +13,9 @@ type Action =
     | HALTON_UPDATE 
     | CAMERA of CameraController.Message
 
+type RenderMode =
+    | GroundTruth
+
 [<DomainType>]
 type RenderState =
     {    
@@ -20,6 +23,7 @@ type RenderState =
         scenes         : hset<ISg<Action>>
         bounds         : Box3d
         lights         : LightCollection
+        renderMode     : RenderMode
         haltonSequence : ModRef< V2d[]>
         cameraState    : CameraControllerState
     }

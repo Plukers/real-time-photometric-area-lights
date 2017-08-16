@@ -151,7 +151,7 @@ module GTEffect =
                 else 
                     ((Vec.dot e2 qVec) * invDet)
 
-    type Vertex = {
+    type GTVertex = {
         [<Position>]        pos     : V4d
         [<WorldPosition>]   wp      : V4d
         [<Normal>]          n       : V3d
@@ -159,7 +159,7 @@ module GTEffect =
         [<FragCoord>]       fc      : V4d
     }        
         
-    let groundTruthLighting (v : Vertex) = 
+    let groundTruthLighting (v : GTVertex) = 
         fragment {
             // TODO use real material values
             let alpha = 0.3
@@ -167,7 +167,7 @@ module GTEffect =
             let atten = V3d(0.3, 0.0, 0.05)
 
             let P = v.wp.XYZ
-            let worldV = (uniform.CameraLocation - P) |> Vec.normalize
+            let worldV = ( uniform.CameraLocation - P) |> Vec.normalize
 
             let w2t = v.n |> Vec.normalize |> basisFrisvad |> Mat.transpose
             // let t2w = w2t |> Mat.inverse
@@ -235,6 +235,35 @@ module GTEffect =
                 ()
             return V4d(( v.c * illumination).XYZ, v.c.W)
             }
+
+
+    (*
+    type UniformScope with
+        member uniform.IterationTex    : ShaderTextureHandle = uniform?IterationTex
+        member uniform.AccumulationTex : ShaderTextureHandle = uniform?AccumulationTex
+    *)
+    // let iterationTexSym = Sym.ofString "IterationTex"
+
+   (*
+    let accumulationTexSym = Sym.ofString "AccumulationTex"
+    let private accumulationTex = 
+        sampler2d {
+            texture uniform.AccumulationTex
+            filter Filter.MinMagMipPoint
+        }
+    *)
+    let private iterationTex =
+        sampler2d {
+            texture uniform?DiffuseColorTexture
+            filter Filter.MinMagMipPoint
+        }
+
+    type PostVertex = { [<TexCoord>] tc : V2d }     
+
+    let passThrough (v : PostVertex) =
+        fragment {
+            return iterationTex.Sample(v.tc)
+        }
        
     let debugOutput = 
    

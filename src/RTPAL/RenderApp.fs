@@ -3,8 +3,11 @@
     open Render
     open Aardvark.Base
     open Aardvark.Base.Incremental
-    
+    open Aardvark.Base.Incremental.Operators
+    open Aardvark.Service
+
     open Aardvark.SceneGraph.IO
+    open Aardvark.SceneGraph.RuntimeSgExtensions
     open Aardvark.Base.Rendering
     open Aardvark.UI
     open Aardvark.UI.Primitives
@@ -28,9 +31,9 @@
                     s.haltonSequence.Value <- HaltonSequence.next last
                     )                
                 s
-            | CAMERA a -> { s with cameraState = CameraController.update s.cameraState a }
+            | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
 
-    let render (m : MRenderState) =
+    let render (m : MRenderState) runtime =
 
         let normalizeTrafo (b : Box3d) =
             let size = b.Size
@@ -41,42 +44,77 @@
             Trafo3d.Translation(-center) *
             Trafo3d.Scale(scale)
 
+        let setupEffects effects sg =   
+            sg
+                |> Sg.effect ( List.append [
+                                    toEffect DefaultSurfaces.trafo
+                                    toEffect DefaultSurfaces.diffuseTexture
+                                ] effects)
+
+        let setupLights sg =
+            sg
+                |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
+                |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)       
+
         let sceneSg = 
             m.scenes
             |> Sg.set
             |> Sg.trafo (m.bounds |> Mod.map normalizeTrafo)
             |> Sg.transform (Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO))
-            |> Sg.effect [
-                toEffect DefaultSurfaces.trafo
-                toEffect DefaultSurfaces.diffuseTexture
-                toEffect GTEffect.groundTruthLighting
-            ] 
 
-        let sg = 
-            sceneSg
-            |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
-            |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)
-            |> Utils.HaltonSequence.addSequenceToSg (m.haltonSequence |> Mod.force)           
-            |> Sg.noEvents
+        let effectSg (clientValues : ClientValues) = 
+            match m.renderMode |> Mod.force with
+            | GroundTruth ->
 
+                let iterationRender =
+                    sceneSg
+                        |> setupEffects [ toEffect GTEffect.groundTruthLighting ]
+                        |> setupLights 
+                        |> Utils.HaltonSequence.addSequenceToSg (m.haltonSequence |> Mod.force)
+                        |> Sg.noEvents
+                        |> Sg.compile runtime clientValues.signature
+                        |> RenderTask.renderToColor clientValues.size
+                
+                let fullscreenQuad =
+                    Sg.draw IndexedGeometryMode.TriangleStrip
+                        |> Sg.vertexAttribute DefaultSemantic.Positions (Mod.constant [|V3f(-1.0,-1.0,0.0); V3f(1.0,-1.0,0.0); V3f(-1.0,1.0,0.0);V3f(1.0,1.0,0.0) |])
+                        |> Sg.vertexAttribute DefaultSemantic.DiffuseColorCoordinates (Mod.constant [|V2f.OO; V2f.IO; V2f.OI; V2f.II|])
+                        |> Sg.depthTest ~~DepthTestMode.None
+                        |> Sg.uniform "ViewportSize" clientValues.size
+
+                let accumulate =
+                    fullscreenQuad 
+                        |> Sg.texture DefaultSemantic.DiffuseColorTexture iterationRender
+                        //|> Sg.effect [ GTEffect.passThrough |> toEffect ]
+                        |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
+
+                accumulate
+
+                (*
+                sceneSg
+                |> Sg.effect (setupEffects [ toEffect GTEffect.groundTruthLighting ])
+                |> Utils.HaltonSequence.addSequenceToSg (m.haltonSequence |> Mod.force)
+                *)
+        
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
-        CameraController.controlledControl m.cameraState CAMERA
+        Render.CameraController.controlledControlWithClientValues m.cameraState CAMERA
             (Mod.constant frustum) 
-            (AttributeMap.ofList [ attribute "style" "width:100%; height: 100%"]) sg
+            (AttributeMap.ofList [ attribute "style" "width:100%; height: 100%"]) effectSg
     
-    let view (m : MRenderState) =
+    let view (runtime : Aardvark.Rendering.GL.Runtime) =
+        let viewFunc (m : MRenderState) =
+            let semui =
+                [ 
+                    { kind = Stylesheet; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
+                    { kind = Script; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
+                ]  
 
-        let semui =
-            [ 
-                { kind = Stylesheet; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
-                { kind = Script; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
-            ]  
-
-        require semui (
-                div[][
-                    render m
-                ]
-            )
+            require semui (
+                    div[][
+                        render m runtime
+                    ]
+                )
+        viewFunc
 
     
     let initialState =     
@@ -99,18 +137,9 @@
             scenes = sgs
             bounds = bounds
             lights = lc
+            renderMode = GroundTruth
             haltonSequence = HaltonSequence.init |> Mod.init
-            cameraState = 
-                {
-                    view = CameraView.lookAt (6.0 * V3d.III) V3d.Zero V3d.OOI
-                    dragStart = V2i.Zero
-                    look = false; zoom = false; pan = false
-                    forward = false; backward = false; left = false; right = false
-                    moveVec = V3i.Zero
-                    lastTime = None
-                    orbitCenter = None
-                    stash = None
-                }
+            cameraState = Render.CameraController.initial
         }
 
     let appThreads (state : RenderState) =
@@ -125,14 +154,14 @@
 
         ThreadPool.add "haltonUpdate" (haltonUpdate()) pool
 
-    let app =
+    let app (runtime : Aardvark.Rendering.GL.Runtime) =
         {
             unpersist = Unpersist.instance
             threads = fun model -> 
-                CameraController.threads model.cameraState 
+                Render.CameraController.threads model.cameraState 
                 |> ThreadPool.map CAMERA
                 |> ThreadPool.union (appThreads model)
             initial = initialState
             update = update
-            view = view
+            view = view runtime
         }

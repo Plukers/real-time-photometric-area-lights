@@ -89,7 +89,7 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
       <PropertyGroup>
-        <__paket__Aardvark_Compiler_DomainTypes_targets>Aardvark.Compiler.DomainTypes</__paket__Aardvark_Compiler_DomainTypes_targets>
+        <__paket__Aardvark_Compiler_DomainTypes_MSBuild_targets>Aardvark.Compiler.DomainTypes.MSBuild</__paket__Aardvark_Compiler_DomainTypes_MSBuild_targets>
       </PropertyGroup>
     </When>
   </Choose>
@@ -107,6 +107,7 @@
     <Compile Include="Light.fs" />
     <Compile Include="BRDF_GGX.fs" />
     <Compile Include="GTEffect.fs" />
+    <Compile Include="CameraController.fs" />
     <Compile Include="RenderState.fs" />
     <Compile Include="RenderApp.fs" />
     <Compile Include="Program.fs" />
@@ -628,6 +629,6 @@
       </ItemGroup>
     </When>
   </Choose>
-  <Import Project="..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\$(__paket__Aardvark_Compiler_DomainTypes_targets).targets" Condition="Exists('..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\$(__paket__Aardvark_Compiler_DomainTypes_targets).targets')" Label="Paket" />
+  <Import Project="..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\$(__paket__Aardvark_Compiler_DomainTypes_MSBuild_targets).targets" Condition="Exists('..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\$(__paket__Aardvark_Compiler_DomainTypes_MSBuild_targets).targets')" Label="Paket" />
   <Import Project="..\..\packages\AssimpNet\build\$(__paket__AssimpNet_targets).targets" Condition="Exists('..\..\packages\AssimpNet\build\$(__paket__AssimpNet_targets).targets')" Label="Paket" />
 </Project>

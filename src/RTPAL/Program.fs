@@ -93,8 +93,8 @@ let main argv =
     Aardvark.Init()
     use app = new OpenGlApplication()
     let runtime = app.Runtime
-
-    let a = RenderApp.app |> App.start
+    
+    let a = RenderApp.app runtime |> App.start
 
     WebPart.startServer 4321 [ 
         MutableApp.toWebPart runtime a
