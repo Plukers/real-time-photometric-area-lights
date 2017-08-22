@@ -54,7 +54,13 @@
         let setupLights sg =
             sg
                 |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
-                |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)       
+                |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)    
+                
+        let setupCamera (clientValues : ClientValues) sg =
+            sg
+                |> Sg.viewTrafo clientValues.viewTrafo
+                |> Sg.projTrafo clientValues.projTrafo
+                |> Sg.uniform "ViewportSize" clientValues.size
 
         let sceneSg = 
             m.scenes
@@ -72,6 +78,7 @@
                         |> setupLights 
                         |> Utils.HaltonSequence.addSequenceToSg (m.haltonSequence |> Mod.force)
                         |> Sg.noEvents
+                        |> setupCamera clientValues
                         |> Sg.compile runtime clientValues.signature
                         |> RenderTask.renderToColor clientValues.size
                 
