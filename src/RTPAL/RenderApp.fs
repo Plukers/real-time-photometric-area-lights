@@ -13,6 +13,7 @@
 
     open Utils
     open Light
+    open Aardvark.Base.RenderTask
     
     let update (s : RenderState) (a : Action) =
         match a with            
@@ -24,18 +25,16 @@
                 Log.stop()
                 { s with files = []; scenes = sgs; bounds = bounds }
             | GROUND_TRUTH_UPDATE ->
-                transact (fun _ ->
-                    let last = s.haltonSequence.Value.[s.haltonSequence.Value.Length - 1]
-                    s.haltonSequence.Value <- HaltonSequence.next last
-                    )                
-                { s with frameCount = s.frameCount + 1 }
+                let newhs = (s.haltonSequence |> Seq.toArray).[(s.haltonSequence |> Seq.length) - 1] |> HaltonSequence.next 
+                let newfc = s.frameCount + 1
+                { s with haltonSequence = newhs |> Seq.ofArray; frameCount = newfc; clear = false }
             | GROUND_TRUTH_CLEAR ->
-                transact (fun _ -> s.haltonSequence.Value <- HaltonSequence.init)
-                { s with frameCount = 0 }
+                let newhs = HaltonSequence.init
+                let newfc = 0
+                { s with haltonSequence = newhs; frameCount = newfc; clear = true }
             | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
 
     let render (m : MRenderState) runtime =
-
         let normalizeTrafo (b : Box3d) =
             let size = b.Size
             let scale = 4.0 / size.NormMax
@@ -68,6 +67,20 @@
             |> Sg.set
             |> Sg.trafo (m.bounds |> Mod.map normalizeTrafo)
             |> Sg.transform (Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO))
+            
+        let blub (size : IMod<V2i>) (task : IRenderTask) =
+            let sem = (Set.singleton DefaultSemantic.Colors)
+            let runtime = task.Runtime.Value
+            let signature = task.FramebufferSignature.Value
+
+            //let clear = runtime.CompileClear(signature, ~~C4f.Black, ~~1.0)
+            let fbo = runtime.CreateFramebuffer(signature, sem, size)
+
+            let res = 
+                new SequentialRenderTask([|task|]) |> renderTo fbo
+        
+            sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
+
 
         let effectSg (clientValues : ClientValues) = 
             match m.renderMode |> Mod.force with
@@ -77,26 +90,51 @@
                     sceneSg
                         |> setupEffects [ toEffect GTEffect.groundTruthLighting ]
                         |> setupLights 
-                        |> Utils.HaltonSequence.addSequenceToSg (m.haltonSequence |> Mod.force)
-                        |> Sg.noEvents
+                        |> Utils.HaltonSequence.addSequenceToSg (m.haltonSequence |> Mod.map Seq.toArray) |> Sg.noEvents
+                        |> Sg.uniform "FrameCount" ( m.frameCount)
                         |> setupCamera clientValues
                         |> Sg.compile runtime clientValues.signature
                         |> RenderTask.renderToColor clientValues.size
-                
-                let fullscreenQuad =
-                    Sg.draw IndexedGeometryMode.TriangleStrip
-                        |> Sg.vertexAttribute DefaultSemantic.Positions (Mod.constant [|V3f(-1.0,-1.0,0.0); V3f(1.0,-1.0,0.0); V3f(-1.0,1.0,0.0);V3f(1.0,1.0,0.0) |])
-                        |> Sg.vertexAttribute DefaultSemantic.DiffuseColorCoordinates (Mod.constant [|V2f.OO; V2f.IO; V2f.OI; V2f.II|])
-                        |> Sg.depthTest ~~DepthTestMode.None
-                        |> Sg.uniform "ViewportSize" clientValues.size
+
+                let mode = 
+                    m.clear |> Mod.map ( fun c -> 
+                        if c then
+                            BlendMode(
+                                true, 
+                                SourceFactor = BlendFactor.One, 
+                                DestinationFactor = BlendFactor.Zero,
+                                Operation = BlendOperation.Add,
+                                SourceAlphaFactor = BlendFactor.One,
+                                DestinationAlphaFactor = BlendFactor.Zero,
+                                AlphaOperation = BlendOperation.Add
+                            )
+                        else    
+                            BlendMode(
+                                true, 
+                                SourceFactor = BlendFactor.SourceAlpha, 
+                                DestinationFactor = BlendFactor.DestinationAlpha,
+                                Operation = BlendOperation.Add,
+                                SourceAlphaFactor = BlendFactor.SourceAlpha,
+                                DestinationAlphaFactor = BlendFactor.DestinationAlpha,
+                                AlphaOperation = BlendOperation.Add
+                            )
+                        )
 
                 let accumulate =
-                    fullscreenQuad 
+                    Sg.fullscreenQuad clientValues.size 
+                        |> Sg.blendMode mode
+                        |> setupEffects []
                         |> Sg.texture DefaultSemantic.DiffuseColorTexture iterationRender
+                        |> Sg.compile runtime clientValues.signature
+                        |> blub clientValues.size
+
+                let final =
+                    Sg.fullscreenQuad clientValues.size
+                        |> Sg.texture DefaultSemantic.DiffuseColorTexture accumulate
                         //|> Sg.effect [ GTEffect.passThrough |> toEffect ]
                         |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
 
-                accumulate
+                final
 
                 (*
                 sceneSg
@@ -140,14 +178,15 @@
         // For plane let t = Trafo3d.Translation(0.0, 0.0, 0.5) * (Trafo3d.Scale 1.0)
         transformLight lc light1 t |> ignore
                 
-        {
+        {            
+            lights = lc
+            renderMode = GroundTruth
+            frameCount = 0
+            clear = true
+            haltonSequence = HaltonSequence.init
             files = []
             scenes = sgs
             bounds = bounds
-            lights = lc
-            renderMode = GroundTruth
-            frameCount = 0;
-            haltonSequence = HaltonSequence.init |> Mod.init
             cameraState = Render.CameraController.initial
         }
 

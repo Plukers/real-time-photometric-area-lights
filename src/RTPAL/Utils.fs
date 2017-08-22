@@ -1,6 +1,21 @@
 ﻿namespace Render
 
 module Utils = 
+
+    module Sg =
+        
+        open Aardvark.Base
+        open Aardvark.Base.Incremental
+        open Aardvark.Base.Incremental.Operators        
+        open Aardvark.Base.Rendering
+        open Aardvark.UI
+
+        let fullscreenQuad size =
+            Sg.draw IndexedGeometryMode.TriangleStrip
+                |> Sg.vertexAttribute DefaultSemantic.Positions (Mod.constant [|V3f(-1.0,-1.0,0.0); V3f(1.0,-1.0,0.0); V3f(-1.0,1.0,0.0);V3f(1.0,1.0,0.0) |])
+                |> Sg.vertexAttribute DefaultSemantic.DiffuseColorCoordinates (Mod.constant [|V2f.OO; V2f.IO; V2f.OI; V2f.II|])
+                |> Sg.depthTest ~~DepthTestMode.None
+                |> Sg.uniform "ViewportSize" size
     
     module HaltonSequence = 
         open FShade
@@ -43,7 +58,7 @@ module Utils =
               
             h.[1..]
             
-        let addSequenceToSg (sequence : ModRef<V2d[]>) sg = sg |> Sg.uniform "HaltonSamples" (Mod.map (fun sequence ->  sequence) sequence)
+        let addSequenceToSg (sequence : IMod<V2d[]>) sg = sg |> Sg.uniform "HaltonSamples" sequence
 
 
      

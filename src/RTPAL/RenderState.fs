@@ -58,13 +58,20 @@ type RenderMode =
 [<DomainType>]
 type RenderState =
     {    
+
+
+        lights          : LightCollection
+
+        renderMode      : RenderMode
+        
+        clear           : bool
+        frameCount      : int
+        haltonSequence  : seq<V2d>
+
         files           : list<string>
         scenes          : hset<ISg<Action>>
         bounds          : Box3d
-        lights          : LightCollection
-        renderMode      : RenderMode
-        frameCount      : int
-        haltonSequence  : ModRef< V2d[]>
+
         cameraState     : CameraControllerState
     }
 
