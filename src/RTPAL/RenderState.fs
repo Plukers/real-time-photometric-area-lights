@@ -1,17 +1,56 @@
 ﻿namespace Render
 
-open Aardvark.Base.Incremental
 open Aardvark.Base
+open Aardvark.Base.Incremental
 open Aardvark.UI
-open Aardvark.UI.Primitives
+open Aardvark.Application
 
 open Utils
 open Light
 
+type CameraControllerAction = 
+        | Down of button : MouseButtons * pos : V2i
+        | Up of button : MouseButtons
+        | Move of V2i
+        | StepTime
+        | KeyDown of key : Keys
+        | KeyUp of key : Keys
+        | Blur
+
+[<DomainType>]
+type CameraControllerState =
+    {
+        view : CameraView
+
+        dragStart : V2i
+        look      : bool
+        zoom      : bool
+        pan       : bool
+
+        moving    : bool
+
+        forward     : bool
+        backward    : bool
+        left        : bool
+        right       : bool
+        moveVec     : V3i
+        orbitCenter : Option<V3d>
+        lastTime    : Option<float>
+
+        sensitivity     : float
+        zoomFactor      : float
+        panFactor       : float
+        rotationFactor  : float        
+
+        [<TreatAsValue>]
+        stash : Option<CameraControllerState> 
+    }
+
 type Action =
     | IMPORT
-    | HALTON_UPDATE 
-    | CAMERA of CameraController.Message
+    | GROUND_TRUTH_UPDATE 
+    | GROUND_TRUTH_CLEAR
+    | CAMERA of CameraControllerAction
 
 type RenderMode =
     | GroundTruth
@@ -19,12 +58,13 @@ type RenderMode =
 [<DomainType>]
 type RenderState =
     {    
-        files          : list<string>
-        scenes         : hset<ISg<Action>>
-        bounds         : Box3d
-        lights         : LightCollection
-        renderMode     : RenderMode
-        haltonSequence : ModRef< V2d[]>
-        cameraState    : CameraControllerState
+        files           : list<string>
+        scenes          : hset<ISg<Action>>
+        bounds          : Box3d
+        lights          : LightCollection
+        renderMode      : RenderMode
+        frameCount      : int
+        haltonSequence  : ModRef< V2d[]>
+        cameraState     : CameraControllerState
     }
 

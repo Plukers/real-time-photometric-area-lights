@@ -10,7 +10,6 @@
     open Aardvark.SceneGraph.RuntimeSgExtensions
     open Aardvark.Base.Rendering
     open Aardvark.UI
-    open Aardvark.UI.Primitives
 
     open Utils
     open Light
@@ -24,13 +23,15 @@
                 let sgs = scenes |> HSet.map Sg.adapter
                 Log.stop()
                 { s with files = []; scenes = sgs; bounds = bounds }
-            | HALTON_UPDATE ->
-                // CHECK if this mutation of the state is valid
+            | GROUND_TRUTH_UPDATE ->
                 transact (fun _ ->
                     let last = s.haltonSequence.Value.[s.haltonSequence.Value.Length - 1]
                     s.haltonSequence.Value <- HaltonSequence.next last
                     )                
-                s
+                { s with frameCount = s.frameCount + 1 }
+            | GROUND_TRUTH_CLEAR ->
+                transact (fun _ -> s.haltonSequence.Value <- HaltonSequence.init)
+                { s with frameCount = 0 }
             | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
 
     let render (m : MRenderState) runtime =
@@ -145,21 +146,38 @@
             bounds = bounds
             lights = lc
             renderMode = GroundTruth
+            frameCount = 0;
             haltonSequence = HaltonSequence.init |> Mod.init
             cameraState = Render.CameraController.initial
         }
 
     let appThreads (state : RenderState) =
+        
         let pool = ThreadPool.empty
-       
-        let rec haltonUpdate() =
-            proclist {
-                do! Proc.Sleep 16
-                yield HALTON_UPDATE
-                yield! haltonUpdate()
-            }
 
-        ThreadPool.add "haltonUpdate" (haltonUpdate()) pool
+        match state.renderMode with 
+        | GroundTruth ->
+            if state.cameraState.moving = false then
+                let rec haltonUpdate() =
+                    proclist {
+                        do! Proc.Sleep 16
+                        yield GROUND_TRUTH_UPDATE
+                        yield! haltonUpdate()
+                    }
+                ThreadPool.add "haltonUpdate" (haltonUpdate()) pool
+            else
+                let mutable cleared = false;
+                let rec clear() =
+                    proclist {
+                        do! Proc.Sleep 16
+                        if cleared = false then
+                            yield GROUND_TRUTH_CLEAR
+                            cleared <- true
+                        yield! clear()
+                    }
+                ThreadPool.add "clear" (clear()) pool
+            
+        
 
     let app (runtime : Aardvark.Rendering.GL.Runtime) =
         {

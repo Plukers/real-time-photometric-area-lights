@@ -10,29 +10,35 @@ open Aardvark.SceneGraph
 open Aardvark.UI
 open Aardvark.Service
 
-open Aardvark.UI.Primitives
-
 module CameraController =
     open Aardvark.Base.Incremental.Operators    
     
-    type Message = CameraControllerMessage
+    type Message = CameraControllerAction
 
     let initial =
         {
             view = CameraView.lookAt (6.0 * V3d.III) V3d.Zero V3d.OOI
-                                    
-            orbitCenter = None
-            stash = None
-            sensitivity = 1.0
-            panFactor  = 0.01
-            zoomFactor = 0.01
-            rotationFactor = 0.01            
-
-            lastTime = None
-            moveVec = V3i.Zero
             dragStart = V2i.Zero
-            look = false; zoom = false; pan = false                    
-            forward = false; backward = false; left = false; right = false
+            look = false
+            zoom = false
+            pan = false
+
+            moving = false
+
+            forward = false; 
+            backward = false; 
+            left = false; 
+            right = false
+            moveVec = V3i.Zero
+            orbitCenter = None
+            lastTime = None
+
+            sensitivity = 1.0
+            zoomFactor = 0.01
+            panFactor  = 0.01
+            rotationFactor = 0.01       
+            
+            stash = None
         }
 
     let sw = System.Diagnostics.Stopwatch()
@@ -82,25 +88,25 @@ module CameraController =
 
             | KeyDown Keys.W ->
                 if not model.forward then
-                    withTime { model with forward = true; moveVec = model.moveVec + V3i.OOI  }
+                    withTime { model with forward = true; moveVec = model.moveVec + V3i.OOI; moving = true }
                 else
                     model
 
             | KeyUp Keys.W ->
                 if model.forward then
-                    withTime { model with forward = false; moveVec = model.moveVec - V3i.OOI  }
+                    withTime { model with forward = false; moveVec = model.moveVec - V3i.OOI; moving = false }
                 else
                     model
 
             | KeyDown Keys.S ->
                 if not model.backward then
-                    withTime { model with backward = true; moveVec = model.moveVec - V3i.OOI  }
+                    withTime { model with backward = true; moveVec = model.moveVec - V3i.OOI; moving = true }
                 else
                     model
 
             | KeyUp Keys.S ->
                 if model.backward then
-                    withTime { model with backward = false; moveVec = model.moveVec + V3i.OOI  }
+                    withTime { model with backward = false; moveVec = model.moveVec + V3i.OOI; moving = false }
                 else
                     model
 
@@ -108,26 +114,26 @@ module CameraController =
 
             | KeyDown Keys.A ->
                 if not model.left then
-                    withTime { model with left = true; moveVec = model.moveVec - V3i.IOO  }
+                    withTime { model with left = true; moveVec = model.moveVec - V3i.IOO; moving = true }
                 else
                     model
 
             | KeyUp Keys.A ->
                 if model.left then
-                    withTime { model with left = false; moveVec = model.moveVec + V3i.IOO  }
+                    withTime { model with left = false; moveVec = model.moveVec + V3i.IOO; moving = false }
                 else
                     model
 
 
             | KeyDown Keys.D ->
                 if not model.right then
-                    withTime { model with right = true; moveVec = model.moveVec + V3i.IOO}
+                    withTime { model with right = true; moveVec = model.moveVec + V3i.IOO; moving = true }
                 else
                     model
 
             | KeyUp Keys.D ->
                 if model.right then
-                    withTime { model with right = false; moveVec = model.moveVec - V3i.IOO }
+                    withTime { model with right = false; moveVec = model.moveVec - V3i.IOO; moving = false }
                 else
                     model
 
@@ -135,22 +141,22 @@ module CameraController =
                 model
 
 
-            | Down(button,pos) ->
+            | CameraControllerAction.Down (button,pos) ->
                 let model = { model with dragStart = pos }
                 match button with
-                    | MouseButtons.Left -> { model with look = true }
-                    | MouseButtons.Middle -> { model with pan = true }
-                    | MouseButtons.Right -> { model with zoom = true }
+                    | MouseButtons.Left -> { model with look = true; moving = true }
+                    | MouseButtons.Middle -> { model with pan = true; moving = true }
+                    | MouseButtons.Right -> { model with zoom = true; moving = true }
                     | _ -> model
 
-            | Up button ->
+            | CameraControllerAction.Up button ->
                 match button with
-                    | MouseButtons.Left -> { model with look = false }
-                    | MouseButtons.Middle -> { model with pan = false }
-                    | MouseButtons.Right -> { model with zoom = false }
+                    | MouseButtons.Left -> { model with look = false; moving = false }
+                    | MouseButtons.Middle -> { model with pan = false; moving = false }
+                    | MouseButtons.Right -> { model with zoom = false; moving = false }
                     | _ -> model
 
-            | Move pos  ->
+            | CameraControllerAction.Move pos  ->
                 let cam = model.view
                 let delta = pos - model.dragStart
 
@@ -182,27 +188,15 @@ module CameraController =
                 { model with view = cam; dragStart = pos }
 
 
-    let extractAttributes (state : MCameraControllerState) (f : Message -> 'msg) (frustum : IMod<Frustum>)  =
-        AttributeMap.ofListCond [
-            always (onBlur (fun _ -> f Blur))
-            always (onMouseDown (fun b p -> f (Down(b,p))))
-            onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseUp (fun b p -> f (Up b)))
-            always (onKeyDown (KeyDown >> f))
-            always (onKeyUp (KeyUp >> f))
-            onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseMove (Move >> f))
-        ] |> AttributeMap.toAMap
-
-
-
-    let controlledControlWithClientValues (state : MCameraControllerState) (f : Message -> 'msg) (frustum : IMod<Frustum>) (att : AttributeMap<'msg>) (sg : Aardvark.Service.ClientValues -> ISg<'msg>) =
+    let controlledControlWithClientValues (state : MCameraControllerState) (f : Message -> 'msg) (frustum : IMod<Frustum>) (att : AttributeMap<'msg>) (sg : Aardvark.Service.ClientValues -> ISg<'msg>) =        
         let attributes =
             AttributeMap.ofListCond [
                 always (onBlur (fun _ -> f Blur))
-                always (onMouseDown (fun b p -> f (Down(b,p))))
-                onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseUp (fun b p -> f (Up b)))
+                always (onMouseDown (fun b p -> f (CameraControllerAction.Down(b,p))))
+                onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseUp (fun b p -> f (CameraControllerAction.Up b)))
                 always (onKeyDown (KeyDown >> f))
                 always (onKeyUp (KeyUp >> f))
-                onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseMove (Move >> f))
+                onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseMove (CameraControllerAction.Move >> f))
             ]
 
         let attributes = AttributeMap.union att attributes
@@ -232,11 +226,11 @@ module CameraController =
         let attributes =
             AttributeMap.ofListCond [
                 always (onBlur (fun _ -> f Blur))
-                always (onMouseDown (fun b p -> f (Down(b,p))))
-                onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseUp (fun b p -> f (Up b)))
+                always (onMouseDown (fun b p -> f (CameraControllerAction.Down(b,p))))
+                onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseUp (fun b p -> f (CameraControllerAction.Up b)))
                 always (onKeyDown (KeyDown >> f))
                 always (onKeyUp (KeyUp >> f))
-                onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseMove (Move >> f))
+                onlyWhen (state.look %|| state.pan %|| state.zoom) (onMouseMove (CameraControllerAction.Move >> f))
             ]
 
         node.WithAttributes(AttributeMap.union node.Attributes attributes)

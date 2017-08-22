@@ -107,8 +107,8 @@
     <Compile Include="Light.fs" />
     <Compile Include="BRDF_GGX.fs" />
     <Compile Include="GTEffect.fs" />
-    <Compile Include="CameraController.fs" />
     <Compile Include="RenderState.fs" />
+    <Compile Include="CameraController.fs" />
     <Compile Include="RenderApp.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
