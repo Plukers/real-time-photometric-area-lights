@@ -25,7 +25,7 @@ module BRDF_GGX =
         alphaSquare / (PI * dSquare)
 
     [<ReflectedDefinition>] 
-    let private G1 alpha cosThetaM mOH =
+    let private G1 alpha cosThetaM =
     
         let alphaSquare = alpha * alpha
         let cosSquare = cosThetaM * cosThetaM
@@ -48,19 +48,19 @@ module BRDF_GGX =
 
         if nOo > 0.0 && nOi > 0.0 then                        
 
-            let h = i + o |> Vec.normalize
+            let m = i + o |> Vec.normalize
 
-            let nOh = Vec.dot n h                            
-            let oOh = Vec.dot o h                    
-            let iOh = Vec.dot i h
+            let nOm = Vec.dot n m                            
+            let oOm = Vec.dot o m                    
+            let iOm = Vec.dot i m
 
             let alpha = roughness
 
-            let d = D alpha nOh
+            let d = D alpha nOm
                     
-            let g = (G1 alpha nOi nOh) * (G1 alpha nOo oOh)
+            let g = (G1 alpha nOi) * (G1 alpha nOo)
 
-            let f = schlickFresnel f0 iOh 
+            let f = schlickFresnel f0 iOm 
 
             let I = (d * g * f) / (4.0 * nOi * nOo)
 
@@ -73,6 +73,13 @@ module BRDF_GGX =
         
         else
             V4d.Zero
+
+    [<ReflectedDefinition>]
+    let weightGGX (i : V3d) (o : V3d) (n : V3d) (roughness : float) =
+
+        let m = i + o |> Vec.normalize
+
+        (i.Dot(m) * (G1 roughness (i.Dot(m))) * (G1 roughness (o.Dot(m)))) / (i.Dot(n) * m.Dot(n))
 
     [<ReflectedDefinition>]
     let sampleGGX u1 u2 alpha = 

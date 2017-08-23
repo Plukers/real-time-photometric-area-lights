@@ -34,7 +34,7 @@
                 { s with haltonSequence = newhs; frameCount = newfc; clear = true }
             | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
 
-    let render (m : MRenderState) runtime =
+    let render (m : MRenderState) (runtime : Aardvark.Rendering.GL.Runtime) =
         let normalizeTrafo (b : Box3d) =
             let size = b.Size
             let scale = 4.0 / size.NormMax
@@ -68,12 +68,11 @@
             |> Sg.trafo (m.bounds |> Mod.map normalizeTrafo)
             |> Sg.transform (Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO))
             
-        let blub (size : IMod<V2i>) (task : IRenderTask) =
+        let renderToColorWithoutClear (size : IMod<V2i>) (task : IRenderTask) =
             let sem = (Set.singleton DefaultSemantic.Colors)
             let runtime = task.Runtime.Value
             let signature = task.FramebufferSignature.Value
-
-            //let clear = runtime.CompileClear(signature, ~~C4f.Black, ~~1.0)
+            
             let fbo = runtime.CreateFramebuffer(signature, sem, size)
 
             let res = 
@@ -85,16 +84,6 @@
         let effectSg (clientValues : ClientValues) = 
             match m.renderMode |> Mod.force with
             | GroundTruth ->
-
-                let iterationRender =
-                    sceneSg
-                        |> setupEffects [ toEffect GTEffect.groundTruthLighting ]
-                        |> setupLights 
-                        |> Utils.HaltonSequence.addSequenceToSg (m.haltonSequence |> Mod.map Seq.toArray) |> Sg.noEvents
-                        |> Sg.uniform "FrameCount" ( m.frameCount)
-                        |> setupCamera clientValues
-                        |> Sg.compile runtime clientValues.signature
-                        |> RenderTask.renderToColor clientValues.size
 
                 let mode = 
                     m.clear |> Mod.map ( fun c -> 
@@ -112,7 +101,7 @@
                             BlendMode(
                                 true, 
                                 SourceFactor = BlendFactor.SourceAlpha, 
-                                DestinationFactor = BlendFactor.DestinationAlpha,
+                                DestinationFactor = BlendFactor.InvSourceAlpha,
                                 Operation = BlendOperation.Add,
                                 SourceAlphaFactor = BlendFactor.SourceAlpha,
                                 DestinationAlphaFactor = BlendFactor.DestinationAlpha,
@@ -120,27 +109,51 @@
                             )
                         )
 
+                
+                let signature =
+                    runtime.CreateFramebufferSignature [
+                        DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
+                        DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
+                    ]
+                
+                let iterationRender =
+                    sceneSg
+                        |> setupEffects [ toEffect GTEffect.groundTruthLighting ]
+                        |> setupLights |> Sg.noEvents
+                        |> setupCamera clientValues
+                        |> Sg.uniform "HaltonSamples" (m.haltonSequence |> Mod.map Seq.toArray)
+                        |> Sg.uniform "FrameCount" ( m.frameCount)
+                        |> Sg.compile runtime signature
+                        |> RenderTask.renderToColor clientValues.size
+              
                 let accumulate =
                     Sg.fullscreenQuad clientValues.size 
                         |> Sg.blendMode mode
                         |> setupEffects []
                         |> Sg.texture DefaultSemantic.DiffuseColorTexture iterationRender
+                        |> Sg.compile runtime signature
+                        |> renderToColorWithoutClear clientValues.size
+                
+                (*
+                // USE THIS
+                let accumulate =
+                    sceneSg
+                        |> setupEffects [ toEffect GTEffect.groundTruthLighting ]
+                        |> setupLights |> Sg.noEvents
+                        |> setupCamera clientValues
+                        |> Sg.uniform "HaltonSamples" (m.haltonSequence |> Mod.map Seq.toArray)
+                        |> Sg.uniform "FrameCount" (m.frameCount)
+                        |> Sg.blendMode mode
                         |> Sg.compile runtime clientValues.signature
-                        |> blub clientValues.size
-
+                        |> renderToColorWithoutClear clientValues.size
+                        // |> renderToColor clientValues.size
+                *)
                 let final =
                     Sg.fullscreenQuad clientValues.size
                         |> Sg.texture DefaultSemantic.DiffuseColorTexture accumulate
-                        //|> Sg.effect [ GTEffect.passThrough |> toEffect ]
                         |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
-
+                        
                 final
-
-                (*
-                sceneSg
-                |> Sg.effect (setupEffects [ toEffect GTEffect.groundTruthLighting ])
-                |> Utils.HaltonSequence.addSequenceToSg (m.haltonSequence |> Mod.force)
-                *)
         
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
         Render.CameraController.controlledControlWithClientValues m.cameraState CAMERA
@@ -173,7 +186,7 @@
         GTEffect.debugOutput
 
         let lc = emptyLightCollection
-        let light1 = addSquareLight lc 1.0 false
+        let light1 = addSquareLight lc 5.0 false
         let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
         // For plane let t = Trafo3d.Translation(0.0, 0.0, 0.5) * (Trafo3d.Scale 1.0)
         transformLight lc light1 t |> ignore

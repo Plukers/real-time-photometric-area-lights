@@ -17,7 +17,7 @@ module CameraController =
 
     let initial =
         {
-            view = CameraView.lookAt (6.0 * V3d.III) V3d.Zero V3d.OOI
+            view = CameraView.lookAt (V3d(-1.0, 0.0, 0.0)) (V3d(1.0, 0.0, -1.0)) V3d.OOI
             dragStart = V2i.Zero
             look = false
             zoom = false

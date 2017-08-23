@@ -16,6 +16,9 @@ module GTEffect =
     open Utils.HaltonSequence
     open Light.Effect
 
+    type UniformScope with
+        member uniform.FrameCount : int = uniform?FrameCount
+
     [<ReflectedDefinition>]
     let private PI = Math.PI
     
@@ -176,8 +179,7 @@ module GTEffect =
             let o = w2t * worldV
             
             // Compute a jitter
-            let jitter = (fast32Hash v.fc.XYZ).XY  
-            
+            let jitter = (fast32Hash v.fc.XYZ).XY              
 
             let mutable illumination = V4d.Zero
             
@@ -192,10 +194,14 @@ module GTEffect =
                     let x = jitter.Y + uniform.HaltonSamples.[sIdx].Y
                     x - Math.Floor(x)
 
-                let i = BRDF_GGX.sampleGGX u1 u2 alpha
+                // let m = BRDF_GGX.sampleGGX u1 u2 alpha                
                 // let i = sampleHemisphere u1 u2
-                // let i = cosineSampleHemisphere u1 u2                
+                let i = cosineSampleHemisphere u1 u2   
 
+                let pdf = i.Z / PI
+
+                // let i = 2.0 * (o.Dot(m)) * m - o       
+                
                 // Check if i hits a light
                 // If it does, compute the illumination
                 for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
@@ -220,20 +226,24 @@ module GTEffect =
                             let t = rayTriangleIntersaction V3d.Zero i v0 v1 v2
 
                             if t > 1e-8 then
-                                // compute irradiance from light
-                                let irr = (Vec.dot -i (w2t * uniform.LForwards.[addr])) * uniform.LIntensities.[addr]
-                                // let irr = 1.0 // TODO
-                                illumination <-
-                                    // illumination + irr // TODO
-                                    illumination + BRDF_GGX.evaluate i o V3d.OOI alpha f0 irr atten t
-                                    
-                                ()
+                                let irr = 10.0// (Vec.dot -i (w2t * uniform.LForwards.[addr])) * uniform.LIntensities.[addr]
 
-                            
+                                illumination <-
+                                    let weight = 1.0 / PI
+                                        // BRDF_GGX.weightGGX i o V3d.OOI alpha
+                                    let albedo = 0.5
+                                    let brdf = v.c / PI
+                                    illumination + irr * brdf / pdf * i.Z // + BRDF_GGX.evaluate i o V3d.OOI alpha f0 irr atten t                                    
+                                ()                            
                             ()  
                         ()  
                 ()
-            return V4d(( v.c * illumination).XYZ, v.c.W)
+
+            illumination <- 2.0 * illumination / V4d(Config.NUM_SAMPLES);
+
+            let alpha = 1.0 / (float)(uniform.FrameCount + 1)
+
+            return V4d(illumination.XYZ, alpha)
             }
 
 
