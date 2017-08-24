@@ -13,6 +13,9 @@ module Config =
     let VERT_PER_LIGHT = 4
 
     [<Literal>]
+    let VERT_PER_LIGHT_PLUS_ONE = 5
+
+    [<Literal>]
     let VERT_ALL_LIGHT = 4
 
     [<Literal>]

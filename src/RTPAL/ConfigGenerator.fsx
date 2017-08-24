@@ -8,6 +8,8 @@ let NUM_LIGHTS = 1
 
 let VERT_PER_LIGHT = 4
 
+let VERT_PER_LIGHT_PLUS_ONE = VERT_PER_LIGHT + 1
+
 let VERT_ALL_LIGHT = NUM_LIGHTS * VERT_PER_LIGHT
 
 (*
@@ -43,19 +45,23 @@ module Config =
     let VERT_PER_LIGHT = {1}
 
     [<Literal>]
-    let VERT_ALL_LIGHT = {2}
+    let VERT_PER_LIGHT_PLUS_ONE = {2}
 
     [<Literal>]
-    let MAX_IDX_BUFFER_SIZE_PER_LIGHT = {3}
+    let VERT_ALL_LIGHT = {3}
 
     [<Literal>]
-    let MAX_IDX_BUFFER_SIZE_ALL_LIGHT = {4}
+    let MAX_IDX_BUFFER_SIZE_PER_LIGHT = {4}
 
     [<Literal>]
-    let NUM_SAMPLES = {5}
+    let MAX_IDX_BUFFER_SIZE_ALL_LIGHT = {5}
+
+    [<Literal>]
+    let NUM_SAMPLES = {6}
                            """, 
                            NUM_LIGHTS, 
                            VERT_PER_LIGHT, 
+                           VERT_PER_LIGHT_PLUS_ONE,
                            VERT_ALL_LIGHT,
                            MAX_IDX_BUFFER_SIZE_PER_LIGHT,
                            MAX_IDX_BUFFER_SIZE_ALL_LIGHT,

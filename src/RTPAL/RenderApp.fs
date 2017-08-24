@@ -51,10 +51,11 @@
                                     toEffect DefaultSurfaces.diffuseTexture
                                 ] effects)
 
-        let setupLights sg =
+        let setupLights (sg : ISg<'a>) =
             sg
                 |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
-                |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)    
+                |> Light.Sg.setLightCollectionUniforms (m.lights |> Mod.force)  
+                |> Sg.noEvents
                 
         let setupCamera (clientValues : ClientValues) sg =
             sg
@@ -67,23 +68,24 @@
             |> Sg.set
             |> Sg.trafo (m.bounds |> Mod.map normalizeTrafo)
             |> Sg.transform (Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO))
-            
-        let renderToColorWithoutClear (size : IMod<V2i>) (task : IRenderTask) =
-            let sem = (Set.singleton DefaultSemantic.Colors)
-            let runtime = task.Runtime.Value
-            let signature = task.FramebufferSignature.Value
-            
-            let fbo = runtime.CreateFramebuffer(signature, sem, size)
-
-            let res = 
-                new SequentialRenderTask([|task|]) |> renderTo fbo
-        
-            sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
+           
 
 
         let effectSg (clientValues : ClientValues) = 
             match m.renderMode |> Mod.force with
             | GroundTruth ->
+
+                let renderToColorWithoutClear (size : IMod<V2i>) (task : IRenderTask) =
+                    let sem = (Set.singleton DefaultSemantic.Colors)
+                    let runtime = task.Runtime.Value
+                    let signature = task.FramebufferSignature.Value
+            
+                    let fbo = runtime.CreateFramebuffer(signature, sem, size)
+
+                    let res = 
+                        new SequentialRenderTask([|task|]) |> renderTo fbo
+        
+                    sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
 
                 let mode = 
                     m.clear |> Mod.map ( fun c -> 
@@ -119,7 +121,7 @@
                 let iterationRender =
                     sceneSg
                         |> setupEffects [ toEffect GTEffect.groundTruthLighting ]
-                        |> setupLights |> Sg.noEvents
+                        |> setupLights
                         |> setupCamera clientValues
                         |> Sg.uniform "HaltonSamples" (m.haltonSequence |> Mod.map Seq.toArray)
                         |> Sg.uniform "FrameCount" ( m.frameCount)
@@ -134,26 +136,18 @@
                         |> Sg.compile runtime signature
                         |> renderToColorWithoutClear clientValues.size
                 
-                (*
-                // USE THIS
-                let accumulate =
-                    sceneSg
-                        |> setupEffects [ toEffect GTEffect.groundTruthLighting ]
-                        |> setupLights |> Sg.noEvents
-                        |> setupCamera clientValues
-                        |> Sg.uniform "HaltonSamples" (m.haltonSequence |> Mod.map Seq.toArray)
-                        |> Sg.uniform "FrameCount" (m.frameCount)
-                        |> Sg.blendMode mode
-                        |> Sg.compile runtime clientValues.signature
-                        |> renderToColorWithoutClear clientValues.size
-                        // |> renderToColor clientValues.size
-                *)
                 let final =
                     Sg.fullscreenQuad clientValues.size
                         |> Sg.texture DefaultSemantic.DiffuseColorTexture accumulate
                         |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
                         
                 final
+
+            | BaumFormFactor ->
+                sceneSg
+                    |> setupEffects [ toEffect BaumFFEffect.formFactorLighting ]
+                    |> setupLights 
+                    |> setupCamera clientValues
         
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
         Render.CameraController.controlledControlWithClientValues m.cameraState CAMERA
@@ -183,8 +177,6 @@
         let bounds = scenes |> Seq.map (fun s -> s.bounds) |> Box3d
         let sgs = scenes |> HSet.map Sg.adapter
 
-        GTEffect.debugOutput
-
         let lc = emptyLightCollection
         let light1 = addSquareLight lc 5.0 false
         let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
@@ -193,7 +185,7 @@
                 
         {            
             lights = lc
-            renderMode = GroundTruth
+            renderMode = BaumFormFactor
             frameCount = 0
             clear = true
             haltonSequence = HaltonSequence.init
@@ -212,7 +204,7 @@
             if state.cameraState.moving = false then
                 let rec haltonUpdate() =
                     proclist {
-                        do! Proc.Sleep 16
+                        do! Proc.Sleep 200
                         yield GROUND_TRUTH_UPDATE
                         yield! haltonUpdate()
                     }
@@ -221,13 +213,14 @@
                 let mutable cleared = false;
                 let rec clear() =
                     proclist {
-                        do! Proc.Sleep 16
+                        do! Proc.Sleep 200
                         if cleared = false then
                             yield GROUND_TRUTH_CLEAR
                             cleared <- true
                         yield! clear()
                     }
                 ThreadPool.add "clear" (clear()) pool
+        | BaumFormFactor -> pool
             
         
 

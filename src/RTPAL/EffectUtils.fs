@@ -6,6 +6,7 @@ module EffectUtils =
 
     open FShade
     open Aardvark.Base
+    open FShade.Imperative
 
     type UniformScope with
         member uniform.FrameCount : int = uniform?FrameCount
@@ -21,7 +22,6 @@ module EffectUtils =
     let fractV4d (v : V4d) = 
         v - floorV4d(v)
         
-
     (*
         Creates a hash usable as jitter computed from a 2D coordinate
         Taken from https://briansharpe.wordpress.com/2011/11/15/a-fast-and-simple-32bit-floating-point-hash-function/
@@ -145,3 +145,90 @@ module EffectUtils =
                 else 
                     ((Vec.dot e2 qVec) * invDet)
 
+    [<ReflectedDefinition>] 
+    let private Lerp (a : V3d) (b : V3d) (s : float) : V3d = (1.0 - s) * a + s * b
+
+    [<ReflectedDefinition>] 
+    let clipTriangle(p : V3d, n : V3d, vertices : Arr<N<3>, V3d>) =
+        let plane = V4d(n, -V3d.Dot(p, n))
+        let eps = 1e-9
+
+        let mutable vc = 0
+        let va = Arr<N<4>, V3d>()
+
+        let vb = V4d(vertices.[0], 1.0)
+        let hb = V4d.Dot(plane, vb) 
+        let hbv = hb > eps
+        let hbn = hb < -eps
+        
+        if (hb >= -eps) then 
+            va.[vc] <- vb.XYZ
+            vc <- vc + 1
+
+        let mutable v0 = vb
+        let mutable h0 = hb
+        let mutable h0v = hbv
+        let mutable h0n = hbn
+        
+        for vi in 1..2 do
+            let v1 = V4d(vertices.[vi], 1.0)
+            let h1 = V4d.Dot(plane, v1)
+            let h1v = h1 > eps
+            let h1n = h1 < -eps
+            if (h0v && h1n || h0n && h1v) then
+                va.[vc] <- Lerp v0.XYZ v1.XYZ (h0 / (h0 - h1))
+                vc <- vc + 1
+
+            if (h1 >= -eps) then 
+                va.[vc] <- v1.XYZ
+                vc <- vc + 1
+
+            v0 <- v1
+            h0 <- h1
+            h0v <- h1v
+            h0n <- h1n
+        
+        // last edge to vertices[0]
+        if (h0v && hbn || h0n && hbv) then
+            va.[vc] <- Lerp v0.XYZ vb.XYZ (h0 / (h0 - hb))
+            vc <- vc + 1
+
+        (va,vc)
+
+    [<ReflectedDefinition>] 
+    let private integrateSegment(a: V3d, b: V3d) =              
+        let theta = acos ( clamp -0.9999 0.9999 (V3d.Dot(a, b)))
+        V3d.Cross(a, b).Z * theta/sin(theta)
+
+    [<ReflectedDefinition>] 
+    let baumFormFactor(va : Arr<N<4>, V3d>, vc : int) =
+
+        let mutable sum = 0.0
+
+        for vi in 0 .. vc - 2 do
+            sum <- sum + integrateSegment(va.[vi], va.[vi + 1])
+
+        sum <- sum + integrateSegment(va.[vc - 1], va.[0])
+
+        sum
+
+    let debugShaderOutput shader = 
+   
+        let config =
+            EffectConfig.ofList [ 
+                Intrinsics.Color, typeof<V4d>, 0
+            ]
+
+        let cModule = 
+            Effect.ofFunction shader
+               |> Effect.toModule config
+               |> ModuleCompiler.compile glsl410
+
+        let glsl = 
+            cModule
+                |> GLSL.Assembler.assemble glsl410
+                
+        printfn "+--------- Start Shader Output ---------+"
+        printfn "%A" glsl.builtIns
+        printfn "%s" glsl.code
+        printfn "+---------- End Shader Output ----------+"

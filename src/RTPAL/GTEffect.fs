@@ -15,9 +15,7 @@ module GTEffect =
     open Utils.HaltonSequence
     open Light.Effect
     open EffectUtils
-
     
-
     type GTVertex = {
         [<Position>]        pos     : V4d
         [<WorldPosition>]   wp      : V4d
@@ -30,13 +28,13 @@ module GTEffect =
         fragment {
 
             let P = v.wp.XYZ
-            let worldV = ( uniform.CameraLocation - P) |> Vec.normalize
+            // let worldV = ( uniform.CameraLocation - P) |> Vec.normalize // not required because of diffuse lighting transport
 
             let w2t = v.n |> Vec.normalize |> basisFrisvad |> Mat.transpose
             // let t2w = w2t |> Mat.inverse
             
             // Transform view vector into tangent space
-            let o = w2t * worldV
+            // let o = w2t * worldV // not required because of diffuse lighting transport
             
             // Compute a jitter
             let jitter = (fast32Hash v.fc.XYZ).XY              

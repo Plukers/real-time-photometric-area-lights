@@ -108,6 +108,7 @@
     <Compile Include="BRDF_GGX.fs" />
     <Compile Include="EffectUtils.fs" />
     <Compile Include="GTEffect.fs" />
+    <Compile Include="BaumFFEffect.fs" />
     <Compile Include="RenderState.fs" />
     <Compile Include="CameraController.fs" />
     <Compile Include="RenderApp.fs" />

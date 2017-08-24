@@ -54,6 +54,7 @@ type Action =
 
 type RenderMode =
     | GroundTruth
+    | BaumFormFactor
 
 [<DomainType>]
 type RenderState =

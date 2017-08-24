@@ -49,6 +49,8 @@ module CameraController =
 
     let exp x =
         Math.Pow(Math.E, x)
+
+    let mutable private inputCount = 0
     
     let update (model : CameraControllerState) (message : Message) =
         match message with
@@ -88,25 +90,29 @@ module CameraController =
 
             | KeyDown Keys.W ->
                 if not model.forward then
-                    withTime { model with forward = true; moveVec = model.moveVec + V3i.OOI; moving = true }
+                    inputCount <- inputCount + 1
+                    withTime { model with forward = true; moveVec = model.moveVec + V3i.OOI; moving = (inputCount <> 0) }
                 else
                     model
 
             | KeyUp Keys.W ->
                 if model.forward then
-                    withTime { model with forward = false; moveVec = model.moveVec - V3i.OOI; moving = false }
+                    inputCount <- inputCount - 1
+                    withTime { model with forward = false; moveVec = model.moveVec - V3i.OOI; moving = (inputCount <> 0) }
                 else
                     model
 
             | KeyDown Keys.S ->
                 if not model.backward then
-                    withTime { model with backward = true; moveVec = model.moveVec - V3i.OOI; moving = true }
+                    inputCount <- inputCount + 1
+                    withTime { model with backward = true; moveVec = model.moveVec - V3i.OOI; moving = (inputCount <> 0) }
                 else
                     model
 
             | KeyUp Keys.S ->
                 if model.backward then
-                    withTime { model with backward = false; moveVec = model.moveVec + V3i.OOI; moving = false }
+                    inputCount <- inputCount - 1
+                    withTime { model with backward = false; moveVec = model.moveVec + V3i.OOI; moving = (inputCount <> 0) }
                 else
                     model
 
@@ -114,26 +120,30 @@ module CameraController =
 
             | KeyDown Keys.A ->
                 if not model.left then
-                    withTime { model with left = true; moveVec = model.moveVec - V3i.IOO; moving = true }
+                    inputCount <- inputCount + 1
+                    withTime { model with left = true; moveVec = model.moveVec - V3i.IOO; moving = (inputCount <> 0) }
                 else
                     model
 
             | KeyUp Keys.A ->
                 if model.left then
-                    withTime { model with left = false; moveVec = model.moveVec + V3i.IOO; moving = false }
+                    inputCount <- inputCount - 1
+                    withTime { model with left = false; moveVec = model.moveVec + V3i.IOO; moving = (inputCount <> 0) }
                 else
                     model
 
 
             | KeyDown Keys.D ->
                 if not model.right then
-                    withTime { model with right = true; moveVec = model.moveVec + V3i.IOO; moving = true }
+                    inputCount <- inputCount + 1
+                    withTime { model with right = true; moveVec = model.moveVec + V3i.IOO; moving = (inputCount <> 0) }
                 else
                     model
 
             | KeyUp Keys.D ->
                 if model.right then
-                    withTime { model with right = false; moveVec = model.moveVec - V3i.IOO; moving = false }
+                    inputCount <- inputCount - 1
+                    withTime { model with right = false; moveVec = model.moveVec - V3i.IOO; moving = (inputCount <> 0) }
                 else
                     model
 
@@ -143,17 +153,19 @@ module CameraController =
 
             | CameraControllerAction.Down (button,pos) ->
                 let model = { model with dragStart = pos }
+                inputCount <- inputCount + 1
                 match button with
-                    | MouseButtons.Left -> { model with look = true; moving = true }
-                    | MouseButtons.Middle -> { model with pan = true; moving = true }
-                    | MouseButtons.Right -> { model with zoom = true; moving = true }
+                    | MouseButtons.Left -> { model with look = true; moving = (inputCount <> 0) }
+                    | MouseButtons.Middle -> { model with pan = true; moving = (inputCount <> 0) }
+                    | MouseButtons.Right -> { model with zoom = true; moving = (inputCount <> 0) }
                     | _ -> model
 
             | CameraControllerAction.Up button ->
+                inputCount <- inputCount - 1
                 match button with
-                    | MouseButtons.Left -> { model with look = false; moving = false }
-                    | MouseButtons.Middle -> { model with pan = false; moving = false }
-                    | MouseButtons.Right -> { model with zoom = false; moving = false }
+                    | MouseButtons.Left -> { model with look = false; moving = (inputCount <> 0) }
+                    | MouseButtons.Middle -> { model with pan = false; moving = (inputCount <> 0) }
+                    | MouseButtons.Right -> { model with zoom = false; moving = (inputCount <> 0) }
                     | _ -> model
 
             | CameraControllerAction.Move pos  ->
