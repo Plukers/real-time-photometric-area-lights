@@ -22,5 +22,5 @@ module Config =
     let MAX_IDX_BUFFER_SIZE_ALL_LIGHT = 12
 
     [<Literal>]
-    let NUM_SAMPLES = 1
+    let NUM_SAMPLES = 8
                            
