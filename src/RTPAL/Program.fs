@@ -27,7 +27,7 @@ let main argv =
         MutableApp.toWebPart runtime a
     ]  
 
-    use form = new Form(Width = 1024, Height = 768)
+    use form = new Form(Width = 1366, Height = 768)
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl

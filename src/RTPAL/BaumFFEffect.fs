@@ -20,6 +20,7 @@ module BaumFFEffect =
     let formFactorLighting (v : FFVertex) = 
         fragment {
 
+
             let P = v.wp.XYZ
 
             let w2t = v.n |> Vec.normalize |> basisFrisvad |> Mat.transpose
@@ -45,28 +46,27 @@ module BaumFFEffect =
                             let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
                             let v2 = w2t * (uniform.LVertices.[v2Addr] - P) 
                             
-                            let T = Arr<N<3>, V3d>([| v0; v1; v2|])
+                            let (clippedVa, clippedVc) = clipTriangle(V3d.Zero, V3d.OOI, Arr<N<3>, V3d>([| v0; v1; v2|]))
 
-                            let (clippedVa, clippedVc) = clipTriangle(V3d.Zero, V3d.OOI, T)
-                            
-                            // Project polygon light onto sphere
-                            for l in 0 .. clippedVc - 1 do
-                                clippedVa.[l] <- Vec.normalize clippedVa.[l]
-                                ()
+                            if clippedVc <> 0 then                            
+                                // Project polygon light onto sphere
+                                for l in 0 .. clippedVc - 1 do
+                                    clippedVa.[l] <- Vec.normalize clippedVa.[l]
+                                    ()
+
+                                let irr = uniform.LIntensities.[addr]
                                 
-                            illumination <-
+                                illumination <-                                        
 
-                                let I = baumFormFactor(clippedVa, clippedVc)
-                                (*
-                                let I = match uniform.LTwoSided.[addr] with
-                                        | true  -> abs I
-                                        | false -> I |> clamp 0.0 -1.0
+                                    let I = baumFormFactor(clippedVa, clippedVc)
                                     
-                                    *)
-
-                                illumination + V4d(I)
-                            
-                            ()
+                                    let I = match uniform.LTwoSided.[addr] with
+                                            | true  -> abs I
+                                            | false -> I |> clamp 0.0 1.0   
+                                            
+                                    illumination + irr * I
+                                    
+                                ()
 
                         ()
 

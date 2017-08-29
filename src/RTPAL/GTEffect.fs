@@ -56,7 +56,7 @@ module GTEffect =
                 // let i = sampleHemisphere u1 u2
                 let i = cosineSampleHemisphere u1 u2   
 
-                let pdf = i.Z / PI
+                let pdf = i.Z / PI 
                 
                 // Check if i hits a light
                 // If it does, compute the illumination
@@ -82,11 +82,14 @@ module GTEffect =
                             let t = rayTriangleIntersaction V3d.Zero i v0 v1 v2
 
                             if t > 1e-8 then
+
+                                // TODO implement two sided and one sided
+
                                 let irr = uniform.LIntensities.[addr]
 
                                 illumination <-
-                                    let brdf = v.c / PI
-                                    illumination + irr * brdf / pdf * i.Z                               
+                                    let brdf = v.c / PI 
+                                    illumination + irr * (brdf / pdf) * i.Z                            
                                 ()                            
                             ()  
                         ()  

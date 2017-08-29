@@ -46,15 +46,17 @@ type CameraControllerState =
         stash : Option<CameraControllerState> 
     }
 
+type RenderMode =
+    | GroundTruth
+    | BaumFormFactor
+
 type Action =
     | IMPORT
+    | CHANGE_RENDER_MODE of RenderMode
     | GROUND_TRUTH_UPDATE 
     | GROUND_TRUTH_CLEAR
     | CAMERA of CameraControllerAction
 
-type RenderMode =
-    | GroundTruth
-    | BaumFormFactor
 
 [<DomainType>]
 type RenderState =

@@ -24,6 +24,9 @@
                 let sgs = scenes |> HSet.map Sg.adapter
                 Log.stop()
                 { s with files = []; scenes = sgs; bounds = bounds }
+            | CHANGE_RENDER_MODE mode ->
+                printfn "Change Render Mode from %A to %A" s.renderMode mode
+                { s with renderMode = mode }
             | GROUND_TRUTH_UPDATE ->
                 let newhs = (s.haltonSequence |> Seq.toArray).[(s.haltonSequence |> Seq.length) - 1] |> HaltonSequence.next 
                 let newfc = s.frameCount + 1
@@ -69,12 +72,16 @@
             |> Sg.trafo (m.bounds |> Mod.map normalizeTrafo)
             |> Sg.transform (Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO))
            
+        let effectSg (clientValues : ClientValues) =   
+       
+            let groundTruthEnabled =
+                m.renderMode |> Mod.map ( fun mode ->
+                    match mode with
+                    | GroundTruth -> true           
+                    | BaumFormFactor -> false
+                )
 
-
-        let effectSg (clientValues : ClientValues) = 
-            match m.renderMode |> Mod.force with
-            | GroundTruth ->
-
+            let groundTruthSg = 
                 let renderToColorWithoutClear (size : IMod<V2i>) (task : IRenderTask) =
                     let sem = (Set.singleton DefaultSemantic.Colors)
                     let runtime = task.Runtime.Value
@@ -143,12 +150,18 @@
                         
                 final
 
-            | BaumFormFactor ->
-                sceneSg
+            let baumFormFactorSg = 
+                 sceneSg
                     |> setupEffects [ toEffect BaumFFEffect.formFactorLighting ]
                     |> setupLights 
                     |> setupCamera clientValues
-        
+
+            [
+                groundTruthSg    |> Sg.onOff groundTruthEnabled
+                baumFormFactorSg |> Sg.onOff (groundTruthEnabled |> Mod.map not)
+            ] |> Sg.ofList
+            
+
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
         Render.CameraController.controlledControlWithClientValues m.cameraState CAMERA
             (Mod.constant frustum) 
@@ -161,12 +174,29 @@
                     { kind = Stylesheet; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
                     { kind = Script; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
                 ]  
+            
+            div [attribute "style" "display: flex; flex-direction: row; width: 100%; height: 100%; border: 0; padding: 0; margin: 0"] [
 
-            require semui (
-                    div[][
-                        render m runtime
-                    ]
-                )
+                require semui (
+                    div [ attribute "class" "ui visible sidebar inverted vertical menu"; attribute "style" "min-width: 166px" ] [
+                             div [ clazz "item"] [ 
+                                b [] [text "Render Modes"]
+                                div [ clazz "menu" ] [
+                                    div [ clazz "item "] [ 
+                                        button [clazz "ui button mini"; onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.GroundTruth) ] [text "Grund Truth"]
+                                    ]
+                                    div [ clazz "item "] [ 
+                                        button [ clazz "ui button mini"; onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.BaumFormFactor) ] [text "Baum Form Factor"]
+                                    ]
+                                ]
+                            ]
+                        
+                        ]
+                    )
+                    
+                render m runtime
+            ]
+
         viewFunc
 
     
@@ -178,14 +208,14 @@
         let sgs = scenes |> HSet.map Sg.adapter
 
         let lc = emptyLightCollection
-        let light1 = addSquareLight lc 5.0 false
+        let light1 = addSquareLight lc 5.0 true
         let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
         // For plane let t = Trafo3d.Translation(0.0, 0.0, 0.5) * (Trafo3d.Scale 1.0)
         transformLight lc light1 t |> ignore
                 
         {            
             lights = lc
-            renderMode = BaumFormFactor
+            renderMode = GroundTruth
             frameCount = 0
             clear = true
             haltonSequence = HaltonSequence.init
@@ -199,28 +229,29 @@
         
         let pool = ThreadPool.empty
 
-        match state.renderMode with 
-        | GroundTruth ->
-            if state.cameraState.moving = false then
-                let rec haltonUpdate() =
-                    proclist {
-                        do! Proc.Sleep 200
-                        yield GROUND_TRUTH_UPDATE
-                        yield! haltonUpdate()
-                    }
-                ThreadPool.add "haltonUpdate" (haltonUpdate()) pool
-            else
-                let mutable cleared = false;
-                let rec clear() =
-                    proclist {
-                        do! Proc.Sleep 200
-                        if cleared = false then
-                            yield GROUND_TRUTH_CLEAR
-                            cleared <- true
-                        yield! clear()
-                    }
-                ThreadPool.add "clear" (clear()) pool
-        | BaumFormFactor -> pool
+        //match state.renderMode with 
+        //| GroundTruth ->
+        if state.cameraState.moving = false then
+            let rec haltonUpdate() =
+                proclist {
+                    do! Proc.Sleep 200
+                    yield GROUND_TRUTH_UPDATE
+                    yield! haltonUpdate()
+                }
+            ThreadPool.add "haltonUpdate" (haltonUpdate()) pool
+        else
+            let mutable cleared = false;
+            let rec clear() =
+                proclist {
+                    do! Proc.Sleep 200
+                    if cleared = false then
+                        yield GROUND_TRUTH_CLEAR
+                        cleared <- true
+                    yield! clear()
+                }
+            ThreadPool.add "clear" (clear()) pool
+        //| BaumFormFactor ->             
+        //    pool
             
         
 
