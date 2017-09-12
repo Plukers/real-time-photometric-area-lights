@@ -56,7 +56,7 @@ module GTEffect =
                 // let i = sampleHemisphere u1 u2
                 let i = cosineSampleHemisphere u1 u2   
 
-                let pdf = i.Z / PI 
+                let pdf = i.Z / PI  
                 
                 // Check if i hits a light
                 // If it does, compute the illumination
@@ -95,7 +95,7 @@ module GTEffect =
                         ()  
                 ()
 
-            illumination <- 2.0 * illumination / V4d(Config.NUM_SAMPLES);
+            illumination <- illumination / V4d(Config.NUM_SAMPLES);
 
             let alpha = 1.0 / (float)(uniform.FrameCount + 1)
 

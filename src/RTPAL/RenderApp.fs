@@ -183,7 +183,7 @@
                                 b [] [text "Render Modes"]
                                 div [ clazz "menu" ] [
                                     div [ clazz "item "] [ 
-                                        button [clazz "ui button mini"; onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.GroundTruth) ] [text "Grund Truth"]
+                                        button [clazz "ui button mini"; onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.GroundTruth) ] [text "Ground Truth"]
                                     ]
                                     div [ clazz "item "] [ 
                                         button [ clazz "ui button mini"; onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.BaumFormFactor) ] [text "Baum Form Factor"]
