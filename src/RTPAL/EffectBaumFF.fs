@@ -3,7 +3,7 @@
 (*
     Baum Form Factor Effect
 *)
-module BaumFFEffect = 
+module EffectBaumFF = 
     open Aardvark.Base
     open Aardvark.Base.Rendering
     open FShade

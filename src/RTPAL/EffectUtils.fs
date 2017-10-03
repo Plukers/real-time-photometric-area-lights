@@ -146,7 +146,7 @@ module EffectUtils =
                     ((Vec.dot e2 qVec) * invDet)
 
     [<ReflectedDefinition>] 
-    let private Lerp (a : V3d) (b : V3d) (s : float) : V3d = (1.0 - s) * a + s * b
+    let Lerp (a : V3d) (b : V3d) (s : float) : V3d = (1.0 - s) * a + s * b
 
     [<ReflectedDefinition>] 
     let clipTriangle(p : V3d, n : V3d, vertices : Arr<N<3>, V3d>) =

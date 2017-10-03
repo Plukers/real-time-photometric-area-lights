@@ -25,7 +25,6 @@
                 Log.stop()
                 { s with files = []; scenes = sgs; bounds = bounds }
             | CHANGE_RENDER_MODE mode ->
-                printfn "Change Render Mode from %A to %A" s.renderMode mode
                 { s with renderMode = mode }
             | GROUND_TRUTH_UPDATE ->
                 let newhs = (s.haltonSequence |> Seq.toArray).[(s.haltonSequence |> Seq.length) - 1] |> HaltonSequence.next 
@@ -33,7 +32,7 @@
                 { s with haltonSequence = newhs |> Seq.ofArray; frameCount = newfc; clear = false }
             | GROUND_TRUTH_CLEAR ->
                 let newhs = HaltonSequence.init
-                let newfc = 0
+                let newfc = 1
                 { s with haltonSequence = newhs; frameCount = newfc; clear = true }
             | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
 
@@ -47,11 +46,11 @@
             Trafo3d.Translation(-center) *
             Trafo3d.Scale(scale)
 
-        let setupEffects effects sg =   
+        let setupFbEffects effects sg =   
             sg
                 |> Sg.effect ( List.append [
-                                    toEffect DefaultSurfaces.trafo
-                                    toEffect DefaultSurfaces.diffuseTexture
+                                    DefaultSurfaces.trafo |> toEffect
+                                    DefaultSurfaces.diffuseTexture |> toEffect
                                 ] effects)
 
         let setupLights (sg : ISg<'a>) =
@@ -73,15 +72,19 @@
             |> Sg.transform (Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO))
            
         let effectSg (clientValues : ClientValues) =   
-       
-            let groundTruthEnabled =
-                m.renderMode |> Mod.map ( fun mode ->
-                    match mode with
-                    | GroundTruth -> true           
-                    | BaumFormFactor -> false
-                )
 
-            let groundTruthSg = 
+            let signature =
+                runtime.CreateFramebufferSignature [
+                    DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
+                    DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
+                ]
+
+            let depthSignature = 
+                runtime.CreateFramebufferSignature [
+                    DefaultSemantic.Depth, { format = RenderbufferFormat.DepthComponent32; samples = 1 }
+                ]
+            
+            let groundTruthFb = 
                 let renderToColorWithoutClear (size : IMod<V2i>) (task : IRenderTask) =
                     let sem = (Set.singleton DefaultSemantic.Colors)
                     let runtime = task.Runtime.Value
@@ -117,17 +120,10 @@
                                 AlphaOperation = BlendOperation.Add
                             )
                         )
-
-                
-                let signature =
-                    runtime.CreateFramebufferSignature [
-                        DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
-                        DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
-                    ]
                 
                 let iterationRender =
                     sceneSg
-                        |> setupEffects [ toEffect GTEffect.groundTruthLighting ]
+                        |> setupFbEffects [ EffectGT.groundTruthLighting |> toEffect ]
                         |> setupLights
                         |> setupCamera clientValues
                         |> Sg.uniform "HaltonSamples" (m.haltonSequence |> Mod.map Seq.toArray)
@@ -135,30 +131,55 @@
                         |> Sg.compile runtime signature
                         |> RenderTask.renderToColor clientValues.size
               
-                let accumulate =
-                    Sg.fullscreenQuad clientValues.size 
-                        |> Sg.blendMode mode
-                        |> setupEffects []
-                        |> Sg.texture DefaultSemantic.DiffuseColorTexture iterationRender
-                        |> Sg.compile runtime signature
-                        |> renderToColorWithoutClear clientValues.size
-                
-                let final =
-                    Sg.fullscreenQuad clientValues.size
-                        |> Sg.texture DefaultSemantic.DiffuseColorTexture accumulate
-                        |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
-                        
-                final
+                Sg.fullscreenQuad clientValues.size 
+                    |> Sg.blendMode mode
+                    |> setupFbEffects []
+                    |> Sg.texture DefaultSemantic.DiffuseColorTexture iterationRender
+                    |> Sg.compile runtime signature
+                    |> renderToColorWithoutClear clientValues.size
 
-            let baumFormFactorSg = 
-                 sceneSg
-                    |> setupEffects [ toEffect BaumFFEffect.formFactorLighting ]
+            
+            let baumFormFactorFb = 
+                sceneSg
+                    |> setupFbEffects [ EffectBaumFF.formFactorLighting |> toEffect ]
                     |> setupLights 
                     |> setupCamera clientValues
+                    |> Sg.compile runtime signature
+                    |> RenderTask.renderToColor clientValues.size
+            
+
+            let compareSg = 
+
+                let depthFb =
+                    sceneSg
+                        |> Sg.effect [ 
+                            DefaultSurfaces.trafo |> toEffect
+                            DefaultSurfaces.vertexColor |> toEffect 
+                            ]
+                        |> setupLights                       
+                        |> setupCamera clientValues
+                        |> Sg.compile runtime depthSignature
+                        |> RenderTask.renderToDepth clientValues.size
+
+                Sg.fullscreenQuad clientValues.size
+                    |> Sg.effect [ 
+                        EffectCompare.compareV |> toEffect
+                        EffectCompare.compareF |> toEffect 
+                    ]
+                    |> Sg.texture (Sym.ofString "TexA") groundTruthFb
+                    |> Sg.texture (Sym.ofString "TexB") baumFormFactorFb
+                    |> Sg.texture (Sym.ofString "TexDepth") depthFb
+
+
+            let fbToSg fb = 
+                Sg.fullscreenQuad clientValues.size
+                    |> Sg.texture DefaultSemantic.DiffuseColorTexture fb
+                    |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
 
             [
-                groundTruthSg    |> Sg.onOff groundTruthEnabled
-                baumFormFactorSg |> Sg.onOff (groundTruthEnabled |> Mod.map not)
+                groundTruthFb |> fbToSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.GroundTruth))
+                baumFormFactorFb |> fbToSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.BaumFormFactor))
+                compareSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.Compare))
             ] |> Sg.ofList
             
 
@@ -173,24 +194,40 @@
                 [ 
                     { kind = Stylesheet; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
                     { kind = Script; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
-                ]  
-            
+                ]             
+
             div [attribute "style" "display: flex; flex-direction: row; width: 100%; height: 100%; border: 0; padding: 0; margin: 0"] [
 
                 require semui (
-                    div [ attribute "class" "ui visible sidebar inverted vertical menu"; attribute "style" "min-width: 166px" ] [
-                             div [ clazz "item"] [ 
+                    div [ attribute "class" "ui visible sidebar inverted vertical menu"; attribute "style" "min-width: 166px" ] [    
+                        
+                            div [ clazz "item"] [ 
                                 b [] [text "Render Modes"]
                                 div [ clazz "menu" ] [
-                                    div [ clazz "item "] [ 
-                                        button [clazz "ui button mini"; onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.GroundTruth) ] [text "Ground Truth"]
-                                    ]
-                                    div [ clazz "item "] [ 
-                                        button [ clazz "ui button mini"; onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.BaumFormFactor) ] [text "Baum Form Factor"]
+                                    div [ clazz "item" ] [ 
+                                        Incremental.div (AttributeMap.ofList [clazz "ui vertical buttons"]) (
+                                            alist {                                
+                                                let! mode = m.renderMode                                    
+                                                yield button [clazz ("ui button" + if mode = RenderMode.GroundTruth then " active" else "");    onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.GroundTruth) ] [text "Ground Truth"]
+                                                yield button [clazz ("ui button" + if mode = RenderMode.BaumFormFactor then " active" else ""); onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.BaumFormFactor) ] [text "Baum Form Factor"] 
+                                                yield button [clazz ("ui button" + if mode = RenderMode.Compare then " active" else ""); onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.Compare) ] [text "Compare"] 
+                                            }     
+                                        )
                                     ]
                                 ]
-                            ]
-                        
+                            ] 
+                            
+                            Incremental.div (AttributeMap.ofList [clazz "Item"]) (
+                                alist {                                
+                                    let! mode = m.renderMode
+                                    
+                                    match mode with
+                                    | GroundTruth ->
+                                        let! fc = m.frameCount                                        
+                                        yield p[] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
+                                    | _ -> ()
+                                }     
+                            )
                         ]
                     )
                     
@@ -216,7 +253,7 @@
         {            
             lights = lc
             renderMode = GroundTruth
-            frameCount = 0
+            frameCount = 1
             clear = true
             haltonSequence = HaltonSequence.init
             files = []

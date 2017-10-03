@@ -202,12 +202,8 @@ module Light =
                                     ]
                             )
             
-                        let lightTrafo =  
-                            adaptive {
-                                let! trafo =  lc.Trafos
-                                return trafo.[addr]
-                            }
-
+                        let lightTrafo = Mod.map (fun (trafos : Trafo3d[]) -> trafos.[addr]) lc.Trafos
+                           
                         let lightSg = lightGeometry 
                                         |> Sg.ofIndexedGeometry 
                                         |> Sg.trafo lightTrafo
@@ -218,7 +214,7 @@ module Light =
 
                         yield lightSg
             ]
-
+            
             Sg.group (sg :: lightSgList) :> ISg
 
         let setLightCollectionUniforms ( lc : LightCollection ) sg =

@@ -4,7 +4,7 @@
     Ground Truth Rendering Effect
     Single Bounce Path Tracing
 *)
-module GTEffect = 
+module EffectGT = 
     open System
 
     open FShade
@@ -97,33 +97,10 @@ module GTEffect =
 
             illumination <- illumination / V4d(Config.NUM_SAMPLES);
 
-            let alpha = 1.0 / (float)(uniform.FrameCount + 1)
+            let alpha = 1.0 / (float)(uniform.FrameCount)
 
             return V4d(illumination.XYZ, alpha)
             }
 
-
-       
-    let debugOutput = 
-   
-        let config =
-            EffectConfig.ofList [ 
-                Intrinsics.Color, typeof<V4d>, 0
-            ]
-
-        let cModule = 
-            Effect.ofFunction groundTruthLighting
-               |> Effect.toModule config
-               |> ModuleCompiler.compile glsl410
-
-        let glsl = 
-            cModule
-                |> GLSL.Assembler.assemble glsl410
-
-        printfn "+-------- Ground Truth Lighting --------+"
-        printfn "+--------- Start Shader Output ---------+"
-        printfn "%A" glsl.builtIns
-        printfn "%s" glsl.code
-        printfn "+---------- End Shader Output ----------+"
         
     

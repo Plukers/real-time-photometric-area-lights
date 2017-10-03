@@ -49,6 +49,7 @@ type CameraControllerState =
 type RenderMode =
     | GroundTruth
     | BaumFormFactor
+    | Compare
 
 type Action =
     | IMPORT
