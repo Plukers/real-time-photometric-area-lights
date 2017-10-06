@@ -8,7 +8,7 @@ open Aardvark.Application.WinForms
 open Aardvark.UI
 open Aardvark.SceneGraph.IO
 
-[<EntryPoint>]
+[<EntryPoint; STAThread>]
 let main argv = 
     
     Xilium.CefGlue.ChromiumUtilities.unpackCef()
@@ -21,13 +21,13 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime
     
-    let a = RenderApp.app runtime |> App.start
+    use form = new Form(Width = 1366, Height = 768)
+    let a = RenderApp.app runtime form |> App.start
 
     WebPart.startServer 4321 [ 
         MutableApp.toWebPart runtime a
     ]  
 
-    use form = new Form(Width = 1366, Height = 768)
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl

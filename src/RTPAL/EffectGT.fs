@@ -15,6 +15,7 @@ module EffectGT =
     open Utils.HaltonSequence
     open Light.Effect
     open EffectUtils
+    open PhotometricLight
     
     type GTVertex = {
         [<Position>]        pos     : V4d
@@ -83,14 +84,20 @@ module EffectGT =
 
                             if t > 1e-8 then
 
-                                // TODO implement two sided and one sided
+                                if uniform.LTwoSided.[vAddr] || (Vec.dot -i uniform.LForwards.[vAddr]) > 0.0 then
 
-                                let irr = uniform.LIntensities.[addr]
+                                    // TODO implement two sided and one sided
 
-                                illumination <-
-                                    let brdf = v.c / PI 
-                                    illumination + irr * (brdf / pdf) * i.Z                            
-                                ()                            
+                                    // let irr = uniform.LIntensities.[addr]
+                                    let irr = 
+                                        let p = getPhotometricIntensity -i
+
+                                        p / (abs(Vec.dot -i uniform.LForwards.[vAddr]) * 0.045) // TODO divide by area, currently 0.045 because of scaled rectangular light
+
+                                    illumination <-
+                                        let brdf = v.c / PI 
+                                        illumination + irr * (brdf / pdf) * i.Z                            
+                                    ()                            
                             ()  
                         ()  
                 ()

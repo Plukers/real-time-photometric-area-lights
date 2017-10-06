@@ -7,9 +7,10 @@ Aardvark.Application.WinForms.GL
 Aardvark.SceneGraph
 Aardvark.SceneGraph.IO
 Aardvark.Rendering.NanoVg
-
 Aardvark.Rendering.Text
-       
+
+Aardvark.Data.Photometry
+
 Aardvark.UI.Primitives
 Aardvark.Service      
 Aardvark.Cef.WinForms

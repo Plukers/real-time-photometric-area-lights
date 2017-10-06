@@ -11,19 +11,37 @@
     open Aardvark.Base.Rendering
     open Aardvark.UI
 
+    open Aardvark.Data.Photometry
+
     open Utils
     open Light
     open Aardvark.Base.RenderTask
+    open Aardvark.UI.Html.SemUi
+    open System.Windows.Forms
     
+
     let update (s : RenderState) (a : Action) =
         match a with            
-            | IMPORT ->
-                Log.startTimed "importing %A" s.files
-                let scenes = s.files |> HSet.ofList |> HSet.map (Loader.Assimp.load)
+            | IMPORT_GEOMETRY ->
+                Log.startTimed "importing %A" s.geometryFiles
+                let scenes = s.geometryFiles |> HSet.ofList |> HSet.map (Loader.Assimp.load)
                 let bounds = scenes |> Seq.map (fun s -> s.bounds) |> Box3d
                 let sgs = scenes |> HSet.map Sg.adapter
                 Log.stop()
-                { s with files = []; scenes = sgs; bounds = bounds }
+                { s with geometryFiles = []; scenes = sgs; bounds = bounds }
+            | IMPORT_PHOTOMETRY p ->
+                let lmd = 
+                    try
+                        Some(LightMeasurementData.FromFile(p))
+                    with
+                    | Failure msg -> 
+                        printfn "%s" msg
+                        None
+                
+                match lmd with
+                | Some v ->            
+                    { s with photometryData = Some(IntensityProfileSampler(v)); photometryName = Some(System.IO.Path.GetFileName p) }
+                | None -> s
             | CHANGE_RENDER_MODE mode ->
                 { s with renderMode = mode }
             | GROUND_TRUTH_UPDATE ->
@@ -34,6 +52,10 @@
                 let newhs = HaltonSequence.init
                 let newfc = 1
                 { s with haltonSequence = newhs; frameCount = newfc; clear = true }
+            | CHANGE_COMPARE_A mode ->
+                { s with compareA = mode }
+            | CHANGE_COMPARE_B mode ->
+                { s with compareB = mode }
             | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
 
     let render (m : MRenderState) (runtime : Aardvark.Rendering.GL.Runtime) =
@@ -64,6 +86,19 @@
                 |> Sg.viewTrafo clientValues.viewTrafo
                 |> Sg.projTrafo clientValues.projTrafo
                 |> Sg.uniform "ViewportSize" clientValues.size
+
+        let setupPhotometricData (sg : ISg<'a>) = 
+            Mod.map( fun (pd : Option<IntensityProfileSampler>) ->
+                match pd with 
+                | Some data -> 
+                    sg
+                        |> Sg.uniform "ProfileAddressing" (data.AddressingParameters |> Mod.init)
+                        |> Sg.uniform "TextureOffsetScale" (data.ImageOffsetScale |> Mod.init)
+                        |> Sg.texture Render.PhotometricLight.IntensityTexture (((PixTexture2d(PixImageMipMap(data.Image), false)) :> ITexture) |> Mod.constant)
+                | None -> sg
+            ) m.photometryData
+            |> Sg.dynamic
+
 
         let sceneSg = 
             m.scenes
@@ -125,6 +160,7 @@
                     sceneSg
                         |> setupFbEffects [ EffectGT.groundTruthLighting |> toEffect ]
                         |> setupLights
+                        |> setupPhotometricData
                         |> setupCamera clientValues
                         |> Sg.uniform "HaltonSamples" (m.haltonSequence |> Mod.map Seq.toArray)
                         |> Sg.uniform "FrameCount" ( m.frameCount)
@@ -166,8 +202,24 @@
                         EffectCompare.compareV |> toEffect
                         EffectCompare.compareF |> toEffect 
                     ]
-                    |> Sg.texture (Sym.ofString "TexA") groundTruthFb
-                    |> Sg.texture (Sym.ofString "TexB") baumFormFactorFb
+                    |> Sg.texture (Sym.ofString "TexA") 
+                        (
+                            Mod.bind (fun rm ->
+                                match rm with
+                                    | RenderMode.GroundTruth -> groundTruthFb
+                                    | RenderMode.BaumFormFactor -> baumFormFactorFb
+                                    | _ -> groundTruthFb
+                                ) m.compareA
+                        )
+                    |> Sg.texture (Sym.ofString "TexB") 
+                        (
+                            Mod.bind (fun rm ->
+                                match rm with
+                                    | RenderMode.GroundTruth -> groundTruthFb
+                                    | RenderMode.BaumFormFactor -> baumFormFactorFb
+                                    | _ -> groundTruthFb
+                                ) m.compareB
+                        )
                     |> Sg.texture (Sym.ofString "TexDepth") depthFb
 
 
@@ -187,8 +239,24 @@
         Render.CameraController.controlledControlWithClientValues m.cameraState CAMERA
             (Mod.constant frustum) 
             (AttributeMap.ofList [ attribute "style" "width:100%; height: 100%"]) effectSg
-    
-    let view (runtime : Aardvark.Rendering.GL.Runtime) =
+
+
+
+    let openFileDialog (form : System.Windows.Forms.Form) =
+        let mutable final = ""
+
+        let action : System.Action = 
+            new System.Action( fun () -> 
+                let d = new System.Windows.Forms.OpenFileDialog()
+                if d.ShowDialog() = DialogResult.OK then
+                    final <- d.FileName
+            ) 
+
+        form.Invoke action |> ignore
+        IMPORT_PHOTOMETRY final
+            
+
+    let view (runtime : Aardvark.Rendering.GL.Runtime) (form : System.Windows.Forms.Form) =
         let viewFunc (m : MRenderState) =
             let semui =
                 [ 
@@ -199,20 +267,25 @@
             div [attribute "style" "display: flex; flex-direction: row; width: 100%; height: 100%; border: 0; padding: 0; margin: 0"] [
 
                 require semui (
-                    div [ attribute "class" "ui visible sidebar inverted vertical menu"; attribute "style" "min-width: 166px" ] [    
+                    div [ attribute "class" "ui visible sidebar inverted vertical menu"; attribute "style" "min-width: 166px" ] [  
+                        
+                            Incremental.div (AttributeMap.ofList [clazz "Item"]) (
+                                alist {       
+                                    yield button [clazz "ui button" ; onClick (fun _ -> openFileDialog form)] [text "Load Photometric Data"]
+
+                                    let! photometryName = m.photometryName
+
+                                    match photometryName with
+                                    | Some name -> yield p[] [ text ("Loaded " + name)]
+                                    | None -> ()
+                                }
+                            )
                         
                             div [ clazz "item"] [ 
-                                b [] [text "Render Modes"]
+                                b [] [text "Render Mode"]
                                 div [ clazz "menu" ] [
-                                    div [ clazz "item" ] [ 
-                                        Incremental.div (AttributeMap.ofList [clazz "ui vertical buttons"]) (
-                                            alist {                                
-                                                let! mode = m.renderMode                                    
-                                                yield button [clazz ("ui button" + if mode = RenderMode.GroundTruth then " active" else "");    onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.GroundTruth) ] [text "Ground Truth"]
-                                                yield button [clazz ("ui button" + if mode = RenderMode.BaumFormFactor then " active" else ""); onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.BaumFormFactor) ] [text "Baum Form Factor"] 
-                                                yield button [clazz ("ui button" + if mode = RenderMode.Compare then " active" else ""); onClick (fun _ -> CHANGE_RENDER_MODE RenderMode.Compare) ] [text "Compare"] 
-                                            }     
-                                        )
+                                    div [ clazz "item" ] [
+                                        dropDown m.renderMode (fun mode -> CHANGE_RENDER_MODE mode)
                                     ]
                                 ]
                             ] 
@@ -222,9 +295,20 @@
                                     let! mode = m.renderMode
                                     
                                     match mode with
-                                    | GroundTruth ->
+                                    | RenderMode.GroundTruth ->
                                         let! fc = m.frameCount                                        
                                         yield p[] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
+                                    | RenderMode.Compare ->
+
+                                        let! cA = m.compareA
+                                        let! cB = m.compareB
+
+                                        if cA = RenderMode.Compare || cB = RenderMode.Compare then
+                                            yield p [ clazz "ui label red" ] [ text ("Render mode Compare cannot be compared.") ]
+                                            yield div [ clazz "ui divider"] []
+                         
+                                        yield p [] [ dropDown m.compareA (fun mode -> CHANGE_COMPARE_A mode) ]
+                                        yield p [] [ dropDown m.compareB (fun mode -> CHANGE_COMPARE_B mode) ]
                                     | _ -> ()
                                 }     
                             )
@@ -238,27 +322,37 @@
 
     
     let initialState =     
-        let files = [Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]]
+
+        // Load geometry
+        let geometryFiles = [Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]]
         // let files = [Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.obj"]]
-        let scenes = files |> HSet.ofList |> HSet.map (Loader.Assimp.load)
+        let scenes = geometryFiles |> HSet.ofList |> HSet.map (Loader.Assimp.load)
         let bounds = scenes |> Seq.map (fun s -> s.bounds) |> Box3d
         let sgs = scenes |> HSet.map Sg.adapter
 
+        // Setup Lights
         let lc = emptyLightCollection
         let light1 = addSquareLight lc 5.0 true
         let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
         // For plane let t = Trafo3d.Translation(0.0, 0.0, 0.5) * (Trafo3d.Scale 1.0)
         transformLight lc light1 t |> ignore
+
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"D31267AA_NE2.ldt"]
+        let photometryData = Some(IntensityProfileSampler(LightMeasurementData.FromFile(photometryPath)))    
                 
         {            
             lights = lc
-            renderMode = GroundTruth
+            renderMode = RenderMode.GroundTruth
             frameCount = 1
             clear = true
             haltonSequence = HaltonSequence.init
-            files = []
+            compareA = RenderMode.GroundTruth
+            compareB = RenderMode.BaumFormFactor 
+            geometryFiles = []
             scenes = sgs
             bounds = bounds
+            photometryName = Some(System.IO.Path.GetFileName photometryPath)
+            photometryData = photometryData
             cameraState = Render.CameraController.initial
         }
 
@@ -292,7 +386,7 @@
             
         
 
-    let app (runtime : Aardvark.Rendering.GL.Runtime) =
+    let app (runtime : Aardvark.Rendering.GL.Runtime) (form : System.Windows.Forms.Form) =
         {
             unpersist = Unpersist.instance
             threads = fun model -> 
@@ -301,5 +395,5 @@
                 |> ThreadPool.union (appThreads model)
             initial = initialState
             update = update
-            view = view runtime
+            view = view runtime form
         }

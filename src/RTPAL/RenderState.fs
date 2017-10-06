@@ -7,6 +7,7 @@ open Aardvark.Application
 
 open Utils
 open Light
+open Aardvark.Data.Photometry
 
 type CameraControllerAction = 
         | Down of button : MouseButtons * pos : V2i
@@ -47,23 +48,24 @@ type CameraControllerState =
     }
 
 type RenderMode =
-    | GroundTruth
-    | BaumFormFactor
-    | Compare
+    | GroundTruth = 0
+    | BaumFormFactor = 1
+    | Compare = 2
 
 type Action =
-    | IMPORT
+    | IMPORT_GEOMETRY
+    | IMPORT_PHOTOMETRY of string
     | CHANGE_RENDER_MODE of RenderMode
     | GROUND_TRUTH_UPDATE 
     | GROUND_TRUTH_CLEAR
+    | CHANGE_COMPARE_A of RenderMode
+    | CHANGE_COMPARE_B of RenderMode
     | CAMERA of CameraControllerAction
 
 
 [<DomainType>]
 type RenderState =
     {    
-
-
         lights          : LightCollection
 
         renderMode      : RenderMode
@@ -72,10 +74,16 @@ type RenderState =
         frameCount      : int
         haltonSequence  : seq<V2d>
 
-        files           : list<string>
+        compareA        : RenderMode
+        compareB        : RenderMode
+
+        geometryFiles   : list<string>
         scenes          : hset<ISg<Action>>
         bounds          : Box3d
+        
+        photometryName  : Option<string>
+        photometryData  : Option<IntensityProfileSampler>
 
         cameraState     : CameraControllerState
     }
-
+    

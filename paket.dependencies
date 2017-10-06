@@ -1,6 +1,7 @@
 framework: net45
 source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
+source https://vrvis.myget.org/F/aardvark/api/v3/index.json
 
 nuget Aardvark.Base                        ~> 3.0.23
 nuget Aardvark.Base.Incremental            ~> 3.0.23
@@ -13,12 +14,15 @@ nuget Aardvark.SceneGraph                  ~> 3.2.3
 nuget Aardvark.SceneGraph.IO               ~> 3.2.3
 nuget Aardvark.Rendering.NanoVg            ~> 3.2.3
 nuget Aardvark.Rendering.Text              ~> 3.2.3
+
+nuget Aardvark.Data.Photometry			   ~> 3.1.11
  
 nuget Aardvark.UI            ~> 3.3.8
 nuget Aardvark.UI.Primitives ~> 3.3.8
 nuget Aardvark.Service       ~> 3.3.8
 nuget Aardvark.Cef.WinForms  ~> 3.3.8
 nuget Aardvark.Cef           ~> 3.3.8
+
 
 
 group Build
