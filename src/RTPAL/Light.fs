@@ -8,7 +8,7 @@ module Light =
     open Aardvark.Base.Camera
 
     type LightCollection = {
-        Lights       : ModRef<Option<int>[]> // Size: Config.NUM_LIGHTS      
+        Lights       : ModRef<        int[]> // Size: Config.NUM_LIGHTS      
         Vertices     : ModRef<        V3d[]> // Size: Config.VERT_ALL_LIGHT  Modified as defined by the corresponding trafo.
         NumVertices  : ModRef<        int[]> // Size: Config.NUM_LIGHTS
         Indices      : ModRef<        int[]> // Size: Config.MAX_IDX_BUFFER_SIZE_ALL_LIGHT
@@ -16,7 +16,7 @@ module Light =
         Forwards     : ModRef<        V3d[]> // Size: Config.NUM_LIGHTS.     Direction the light is facing, corresponding to normal. Only one normal is needed because a light is a plane.  Modified as defined by the corresponding trafo.
         Ups          : ModRef<        V3d[]> // Size: Config.NUM_LIGHTS.     The up direction of the light, has to be orthonormal to Forward. Modified as defined by the corresponding trafo.
         Intensities  : ModRef<     double[]> // Size: Config.NUM_LIGHTS.
-        Area         : ModRef<     double[]> // Size: Config.NUM_LIGHTS.
+        Areas         : ModRef<     double[]> // Size: Config.NUM_LIGHTS.
         TwoSided     : ModRef<       bool[]> // Size: Config.NUM_LIGHTS.
         Trafos       : ModRef<    Trafo3d[]> // Size: Config.NUM_LIGHTS.
         NextFreeAddr : ModRef<  Option<int>> //                              Indicates the next free address in Lights array, -1 indicates no free space.
@@ -25,7 +25,7 @@ module Light =
     } 
 
     let emptyLightCollection = {    
-        Lights       =      Option.None |> Array.create Config.NUM_LIGHTS                    |> Mod.init
+        Lights       =               -1 |> Array.create Config.NUM_LIGHTS                    |> Mod.init
         Vertices     =         V3d.Zero |> Array.create Config.VERT_ALL_LIGHT                |> Mod.init
         NumVertices  =                0 |> Array.create Config.NUM_LIGHTS                    |> Mod.init
         Indices      =                0 |> Array.create Config.MAX_IDX_BUFFER_SIZE_ALL_LIGHT |> Mod.init
@@ -33,7 +33,7 @@ module Light =
         Forwards     =         V3d.Zero |> Array.create Config.NUM_LIGHTS                    |> Mod.init
         Ups          =         V3d.Zero |> Array.create Config.NUM_LIGHTS                    |> Mod.init                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
         Intensities  =              0.0 |> Array.create Config.NUM_LIGHTS                    |> Mod.init
-        Area         =              0.0 |> Array.create Config.NUM_LIGHTS                    |> Mod.init
+        Areas         =              0.0 |> Array.create Config.NUM_LIGHTS                    |> Mod.init
         TwoSided     =            false |> Array.create Config.NUM_LIGHTS                    |> Mod.init
         Trafos       = Trafo3d.Identity |> Array.create Config.NUM_LIGHTS                    |> Mod.init 
         NextFreeAddr =    Option.Some 0 |>                                                      Mod.init  
@@ -57,13 +57,13 @@ module Light =
             lc.IDCounter.Value <- lc.IDCounter.Value + 1
             
             // add the index of the light to the lights array
-            lc.Lights.Value.[addr] <- Option.Some lightID
+            lc.Lights.Value.[addr] <- lightID
 
             lc.NextFreeAddr.Value <-
                 let mutable foundAddr = Option.None
 
                 for i in 0 .. lc.Lights.Value.Length - 1 do
-                    if Array.get lc.Lights.Value i <> Option.None then
+                    if Array.get lc.Lights.Value i <> -1 then
                         foundAddr <- Option.Some i
 
                 foundAddr
@@ -131,7 +131,7 @@ module Light =
                     lc.Forwards.Value.[addr]    <- V3d(1, 0, 0)
                     lc.Ups.Value.[addr]         <- V3d(0, 0, 1)
                     lc.Intensities.Value.[addr] <- intensity
-                    lc.Area.Value.[addr]        <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
+                    lc.Areas.Value.[addr]        <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
                     lc.TwoSided.Value.[addr]    <- twoSided
                     lc.Trafos.Value.[addr]      <- Trafo3d.Identity
                 | None -> ()       
@@ -161,8 +161,8 @@ module Light =
             lc.Forwards.Value.[addr] <- Mat.transformDir trafo.Forward lc.Forwards.Value.[addr] |> Vec.normalize
             lc.Ups.Value.[addr] <- Mat.transformDir trafo.Forward lc.Ups.Value.[addr] |> Vec.normalize
             
-            lc.Area.Value.[addr] <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
-             
+            lc.Areas.Value.[addr] <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
+
             lc.Trafos.Value.[addr] <- trafo * lc.Trafos.Value.[addr]
             )
 
@@ -171,7 +171,7 @@ module Light =
         open Aardvark.Base.Rendering
 
         type UniformScope with
-            member uniform.Lights       : Arr<N<Config.NUM_LIGHTS>,            Option<int>> = uniform?Lights
+            member uniform.Lights       : Arr<N<Config.NUM_LIGHTS>,                    int> = uniform?Lights
             member uniform.LVertices    : Arr<N<Config.VERT_ALL_LIGHT>,                V3d> = uniform?LVertices
             member uniform.LNumVertices : Arr<N<Config.NUM_LIGHTS>,                    int> = uniform?LNumVertices
             member uniform.LIndices     : Arr<N<Config.MAX_IDX_BUFFER_SIZE_ALL_LIGHT>, int> = uniform?LIndices
@@ -179,6 +179,7 @@ module Light =
             member uniform.LForwards    : Arr<N<Config.NUM_LIGHTS>,                    V3d> = uniform?LForwards
             member uniform.LUps         : Arr<N<Config.NUM_LIGHTS>,                    V3d> = uniform?LUps
             member uniform.LIntensities : Arr<N<Config.NUM_LIGHTS>,                 double> = uniform?LIntensities
+            member uniform.LAreas       : Arr<N<Config.NUM_LIGHTS>,                 double> = uniform?LAreas
             member uniform.LTwoSided    : Arr<N<Config.NUM_LIGHTS>,                   bool> = uniform?LTwoSided
 
     module Sg = 
@@ -190,9 +191,9 @@ module Light =
 
             let lightSgList = [
 
-                for i in 0 .. lc.Lights.Value.Length - 1 do
-                    match Array.get lc.Lights.Value i with
-                    | Some addr ->
+                for addr in 0 .. lc.Lights.Value.Length - 1 do
+                    if Array.get lc.Lights.Value addr <> -1 then
+
                         let vAddr = addr * Config.VERT_PER_LIGHT
                         let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
 
@@ -237,7 +238,6 @@ module Light =
                                             ]
 
                         yield lightSg
-                    | None -> ()
             ]
             
             Sg.group (sg :: lightSgList) :> ISg
@@ -253,4 +253,5 @@ module Light =
                 |> Sg.uniform "LForwards"       lc.Forwards
                 |> Sg.uniform "LUps"            lc.Ups
                 |> Sg.uniform "LIntensities"    lc.Intensities
+                |> Sg.uniform "LAreas"          lc.Areas
                 |> Sg.uniform "LTwoSided"       lc.TwoSided
