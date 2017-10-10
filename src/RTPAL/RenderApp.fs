@@ -263,7 +263,7 @@
                     { kind = Stylesheet; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
                     { kind = Script; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
                 ]             
-
+            
             div [attribute "style" "display: flex; flex-direction: row; width: 100%; height: 100%; border: 0; padding: 0; margin: 0"] [
 
                 require semui (
@@ -332,10 +332,14 @@
 
         // Setup Lights
         let lc = emptyLightCollection
-        let light1 = addSquareLight lc 5.0 true
-        let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
-        // For plane let t = Trafo3d.Translation(0.0, 0.0, 0.5) * (Trafo3d.Scale 1.0)
-        transformLight lc light1 t |> ignore
+        let light1 = addSquareLight lc 1.0 true
+        
+        match light1 with
+        | Some lightId ->             
+            let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
+            // For plane let t = Trafo3d.Translation(0.0, 0.0, 0.5) * (Trafo3d.Scale 1.0)
+            transformLight lc lightId t |> ignore
+        | None -> ()
 
         let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"D31267AA_NE2.ldt"]
         let photometryData = Some(IntensityProfileSampler(LightMeasurementData.FromFile(photometryPath)))    

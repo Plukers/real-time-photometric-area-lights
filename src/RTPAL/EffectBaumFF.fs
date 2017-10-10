@@ -29,9 +29,7 @@ module EffectBaumFF =
 
             for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
                     match uniform.Lights.[addr] with
-                    | -1 -> ()
-                    |  _ ->
-
+                    | Some _ ->
                         let vAddr = addr * Config.VERT_PER_LIGHT
                         let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
 
@@ -69,6 +67,7 @@ module EffectBaumFF =
                                 ()
 
                         ()
+                    | None -> ()
 
             illumination <- v.c * illumination / (2.0 * PI)
 

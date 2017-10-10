@@ -63,8 +63,7 @@ module EffectGT =
                 // If it does, compute the illumination
                 for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
                     match uniform.Lights.[addr] with
-                    | -1 -> ()
-                    |  _ ->
+                    | Some afa ->
                         
                         let vAddr = addr * Config.VERT_PER_LIGHT
                         let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
@@ -92,14 +91,15 @@ module EffectGT =
                                     let irr = 
                                         let p = getPhotometricIntensity -i
 
-                                        p / (abs(Vec.dot -i uniform.LForwards.[vAddr]) * 0.045) // TODO divide by area, currently 0.045 because of scaled rectangular light
+                                        p / ((*abs(Vec.dot -i uniform.LForwards.[vAddr]) *) 0.045) // TODO divide by area, currently 0.045 because of scaled rectangular light
 
                                     illumination <-
                                         let brdf = v.c / PI 
                                         illumination + irr * (brdf / pdf) * i.Z                            
                                     ()                            
                             ()  
-                        ()  
+                        ()                      
+                    | None -> ()
                 ()
 
             illumination <- illumination / V4d(Config.NUM_SAMPLES);
