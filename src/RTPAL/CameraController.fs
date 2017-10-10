@@ -53,152 +53,153 @@ module CameraController =
     let mutable private inputCount = 0
     
     let update (model : CameraControllerState) (message : Message) =
-        match message with
-            | Blur ->
-                { model with 
-                    lastTime = None
-                    moveVec = V3i.Zero
-                    dragStart = V2i.Zero
-                    look = false; zoom = false; pan = false                    
-                    forward = false; backward = false; left = false; right = false
-                }
+        let nextModel = match message with
+                        | Blur ->
+                            { model with 
+                                lastTime = None
+                                moveVec = V3i.Zero
+                                dragStart = V2i.Zero
+                                look = false; zoom = false; pan = false                    
+                                forward = false; backward = false; left = false; right = false
+                            }
 
-            | StepTime ->
-                let now = sw.Elapsed.TotalSeconds
-                let cam = model.view
+                        | StepTime ->
+                            let now = sw.Elapsed.TotalSeconds
+                            let cam = model.view
 
-                let cam = 
-                    match model.lastTime with
-                        | Some last ->
-                            let dt = now - last
+                            let cam = 
+                                match model.lastTime with
+                                    | Some last ->
+                                        let dt = now - last
 
-                            let dir = 
-                                cam.Forward * float model.moveVec.Z +
-                                cam.Right * float model.moveVec.X +
-                                cam.Sky * float model.moveVec.Y
+                                        let dir = 
+                                            cam.Forward * float model.moveVec.Z +
+                                            cam.Right * float model.moveVec.X +
+                                            cam.Sky * float model.moveVec.Y
 
-                            if model.moveVec = V3i.Zero then
-                                printfn "useless time %A" now
+                                        if model.moveVec = V3i.Zero then
+                                            printfn "useless time %A" now
 
-                            cam.WithLocation(model.view.Location + dir * (exp model.sensitivity) * dt)
+                                        cam.WithLocation(model.view.Location + dir * (exp model.sensitivity) * dt)
 
-                        | None -> 
-                            cam
-
-
-                { model with lastTime = Some now; view = cam }
-
-            | KeyDown Keys.W ->
-                if not model.forward then
-                    inputCount <- inputCount + 1
-                    withTime { model with forward = true; moveVec = model.moveVec + V3i.OOI; moving = (inputCount <> 0) }
-                else
-                    model
-
-            | KeyUp Keys.W ->
-                if model.forward then
-                    inputCount <- inputCount - 1
-                    withTime { model with forward = false; moveVec = model.moveVec - V3i.OOI; moving = (inputCount <> 0) }
-                else
-                    model
-
-            | KeyDown Keys.S ->
-                if not model.backward then
-                    inputCount <- inputCount + 1
-                    withTime { model with backward = true; moveVec = model.moveVec - V3i.OOI; moving = (inputCount <> 0) }
-                else
-                    model
-
-            | KeyUp Keys.S ->
-                if model.backward then
-                    inputCount <- inputCount - 1
-                    withTime { model with backward = false; moveVec = model.moveVec + V3i.OOI; moving = (inputCount <> 0) }
-                else
-                    model
+                                    | None -> 
+                                        cam
 
 
+                            { model with lastTime = Some now; view = cam; }
 
-            | KeyDown Keys.A ->
-                if not model.left then
-                    inputCount <- inputCount + 1
-                    withTime { model with left = true; moveVec = model.moveVec - V3i.IOO; moving = (inputCount <> 0) }
-                else
-                    model
+                        | KeyDown Keys.W ->
+                            if not model.forward then
+                                inputCount <- inputCount + 1
+                                withTime { model with forward = true; moveVec = model.moveVec + V3i.OOI; }
+                            else
+                                model
 
-            | KeyUp Keys.A ->
-                if model.left then
-                    inputCount <- inputCount - 1
-                    withTime { model with left = false; moveVec = model.moveVec + V3i.IOO; moving = (inputCount <> 0) }
-                else
-                    model
+                        | KeyUp Keys.W ->
+                            if model.forward then
+                                inputCount <- inputCount - 1
+                                withTime { model with forward = false; moveVec = model.moveVec - V3i.OOI; }
+                            else
+                                model
 
+                        | KeyDown Keys.S ->
+                            if not model.backward then
+                                inputCount <- inputCount + 1
+                                withTime { model with backward = true; moveVec = model.moveVec - V3i.OOI; }
+                            else
+                                model
 
-            | KeyDown Keys.D ->
-                if not model.right then
-                    inputCount <- inputCount + 1
-                    withTime { model with right = true; moveVec = model.moveVec + V3i.IOO; moving = (inputCount <> 0) }
-                else
-                    model
-
-            | KeyUp Keys.D ->
-                if model.right then
-                    inputCount <- inputCount - 1
-                    withTime { model with right = false; moveVec = model.moveVec - V3i.IOO; moving = (inputCount <> 0) }
-                else
-                    model
-
-            | KeyDown _ | KeyUp _ ->
-                model
+                        | KeyUp Keys.S ->
+                            if model.backward then
+                                inputCount <- inputCount - 1
+                                withTime { model with backward = false; moveVec = model.moveVec + V3i.OOI; }
+                            else
+                                model
 
 
-            | CameraControllerAction.Down (button,pos) ->
-                let model = { model with dragStart = pos }
-                inputCount <- inputCount + 1
-                match button with
-                    | MouseButtons.Left -> { model with look = true; moving = (inputCount <> 0) }
-                    | MouseButtons.Middle -> { model with pan = true; moving = (inputCount <> 0) }
-                    | MouseButtons.Right -> { model with zoom = true; moving = (inputCount <> 0) }
-                    | _ -> model
 
-            | CameraControllerAction.Up button ->
-                inputCount <- inputCount - 1
-                match button with
-                    | MouseButtons.Left -> { model with look = false; moving = (inputCount <> 0) }
-                    | MouseButtons.Middle -> { model with pan = false; moving = (inputCount <> 0) }
-                    | MouseButtons.Right -> { model with zoom = false; moving = (inputCount <> 0) }
-                    | _ -> model
+                        | KeyDown Keys.A ->
+                            if not model.left then
+                                inputCount <- inputCount + 1
+                                withTime { model with left = true; moveVec = model.moveVec - V3i.IOO; }
+                            else
+                                model
 
-            | CameraControllerAction.Move pos  ->
-                let cam = model.view
-                let delta = pos - model.dragStart
+                        | KeyUp Keys.A ->
+                            if model.left then
+                                inputCount <- inputCount - 1
+                                withTime { model with left = false; moveVec = model.moveVec + V3i.IOO; }
+                            else
+                                model
 
-                let cam =
-                    if model.look then
-                        let trafo =
-                            M44d.Rotation(cam.Right, float delta.Y * -model.rotationFactor) *
-                            M44d.Rotation(cam.Sky,   float delta.X * -model.rotationFactor)
 
-                        let newForward = trafo.TransformDir cam.Forward |> Vec.normalize
-                        cam.WithForward newForward
-                    else
-                        cam
+                        | KeyDown Keys.D ->
+                            if not model.right then
+                                inputCount <- inputCount + 1
+                                withTime { model with right = true; moveVec = model.moveVec + V3i.IOO; }
+                            else
+                                model
 
-                let cam =
-                    if model.zoom then
-                        let step = -model.zoomFactor * (cam.Forward * float delta.Y) * (exp model.sensitivity)
-                        cam.WithLocation(cam.Location + step)
-                    else
-                        cam
+                        | KeyUp Keys.D ->
+                            if model.right then
+                                inputCount <- inputCount - 1
+                                withTime { model with right = false; moveVec = model.moveVec - V3i.IOO; }
+                            else
+                                model
 
-                let cam =
-                    if model.pan then
-                        let step = model.panFactor * (cam.Down * float delta.Y + cam.Right * float delta.X) * (exp model.sensitivity)
-                        cam.WithLocation(cam.Location + step)
-                    else
-                        cam
+                        | KeyDown _ | KeyUp _ ->
+                            model
 
-                { model with view = cam; dragStart = pos }
 
+                        | CameraControllerAction.Down (button,pos) ->
+                            let model = { model with dragStart = pos }
+                            inputCount <- inputCount + 1
+                            match button with
+                                | MouseButtons.Left -> { model with look = true; }
+                                | MouseButtons.Middle -> { model with pan = true; }
+                                | MouseButtons.Right -> { model with zoom = true; }
+                                | _ -> model
+
+                        | CameraControllerAction.Up button ->
+                            inputCount <- inputCount - 1
+                            match button with
+                                | MouseButtons.Left -> { model with look = false; }
+                                | MouseButtons.Middle -> { model with pan = false; }
+                                | MouseButtons.Right -> { model with zoom = false; }
+                                | _ -> model
+
+                        | CameraControllerAction.Move pos  ->
+                            let cam = model.view
+                            let delta = pos - model.dragStart
+
+                            let cam =
+                                if model.look then
+                                    let trafo =
+                                        M44d.Rotation(cam.Right, float delta.Y * -model.rotationFactor) *
+                                        M44d.Rotation(cam.Sky,   float delta.X * -model.rotationFactor)
+
+                                    let newForward = trafo.TransformDir cam.Forward |> Vec.normalize
+                                    cam.WithForward newForward
+                                else
+                                    cam
+
+                            let cam =
+                                if model.zoom then
+                                    let step = -model.zoomFactor * (cam.Forward * float delta.Y) * (exp model.sensitivity)
+                                    cam.WithLocation(cam.Location + step)
+                                else
+                                    cam
+
+                            let cam =
+                                if model.pan then
+                                    let step = model.panFactor * (cam.Down * float delta.Y + cam.Right * float delta.X) * (exp model.sensitivity)
+                                    cam.WithLocation(cam.Location + step)
+                                else
+                                    cam
+
+                            { model with view = cam; dragStart = pos; moving = cam <> model.view }
+                   
+        { nextModel with moving = nextModel.view <> model.view }
 
     let controlledControlWithClientValues (state : MCameraControllerState) (f : Message -> 'msg) (frustum : IMod<Frustum>) (att : AttributeMap<'msg>) (sg : Aardvark.Service.ClientValues -> ISg<'msg>) =        
         let attributes =

@@ -162,7 +162,7 @@ module Light =
             lc.Ups.Value.[addr] <- Mat.transformDir trafo.Forward lc.Ups.Value.[addr] |> Vec.normalize
             
             lc.Areas.Value.[addr] <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
-
+            printfn "Computed Area: %A" lc.Areas.Value.[addr]
             lc.Trafos.Value.[addr] <- trafo * lc.Trafos.Value.[addr]
             )
 

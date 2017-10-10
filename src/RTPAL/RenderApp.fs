@@ -29,19 +29,22 @@
 
         match a with            
             | IMPORT_PHOTOMETRY p ->
-                let lmd = 
-                    try
-                        Some(LightMeasurementData.FromFile(p))
-                    with
-                    | Failure msg -> 
-                        printfn "%s" msg
-                        None
+                if System.String.IsNullOrEmpty p = false then 
+                    let lmd = 
+                        try
+                            Some(LightMeasurementData.FromFile(p))
+                        with
+                        | Failure msg -> 
+                            printfn "%s" msg
+                            None
                 
-                match lmd with
-                | Some v ->  
-                    let clearedS = clear s
-                    { clearedS with photometryData = Some(IntensityProfileSampler(v)); photometryName = Some(System.IO.Path.GetFileName p) }
-                | None -> s
+                    match lmd with
+                    | Some v ->  
+                        let clearedS = clear s
+                        { clearedS with photometryData = Some(IntensityProfileSampler(v)); photometryName = Some(System.IO.Path.GetFileName p) }
+                    | None -> s
+                else 
+                    s
             | CHANGE_RENDER_MODE mode ->
                 { s with renderMode = mode }
             | GROUND_TRUTH_UPDATE ->
@@ -366,14 +369,11 @@
                 }
             ThreadPool.add "haltonUpdate" (haltonUpdate()) pool
         else
-            let mutable cleared = false;
             let rec clear() =
                 proclist {
-                    do! Proc.Sleep 200
-                    if cleared = false then
-                        yield GROUND_TRUTH_CLEAR
-                        cleared <- true
-                    yield! clear()
+                    do! Proc.Sleep 200                    
+                    printfn "%s" "Clear"
+                    yield GROUND_TRUTH_CLEAR
                 }
             ThreadPool.add "clear" (clear()) pool            
         
