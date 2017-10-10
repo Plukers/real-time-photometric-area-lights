@@ -21,14 +21,13 @@
     
 
     let update (s : RenderState) (a : Action) =
+
+        let clear (s : RenderState) = 
+            let newhs = HaltonSequence.init
+            let newfc = 1
+            { s with haltonSequence = newhs; frameCount = newfc; clear = true }
+
         match a with            
-            | IMPORT_GEOMETRY ->
-                Log.startTimed "importing %A" s.geometryFiles
-                let scenes = s.geometryFiles |> HSet.ofList |> HSet.map (Loader.Assimp.load)
-                let bounds = scenes |> Seq.map (fun s -> s.bounds) |> Box3d
-                let sgs = scenes |> HSet.map Sg.adapter
-                Log.stop()
-                { s with geometryFiles = []; scenes = sgs; bounds = bounds }
             | IMPORT_PHOTOMETRY p ->
                 let lmd = 
                     try
@@ -39,8 +38,9 @@
                         None
                 
                 match lmd with
-                | Some v ->            
-                    { s with photometryData = Some(IntensityProfileSampler(v)); photometryName = Some(System.IO.Path.GetFileName p) }
+                | Some v ->  
+                    let clearedS = clear s
+                    { clearedS with photometryData = Some(IntensityProfileSampler(v)); photometryName = Some(System.IO.Path.GetFileName p) }
                 | None -> s
             | CHANGE_RENDER_MODE mode ->
                 { s with renderMode = mode }
@@ -49,9 +49,7 @@
                 let newfc = s.frameCount + 1
                 { s with haltonSequence = newhs |> Seq.ofArray; frameCount = newfc; clear = false }
             | GROUND_TRUTH_CLEAR ->
-                let newhs = HaltonSequence.init
-                let newfc = 1
-                { s with haltonSequence = newhs; frameCount = newfc; clear = true }
+                clear s
             | CHANGE_COMPARE_A mode ->
                 { s with compareA = mode }
             | CHANGE_COMPARE_B mode ->
@@ -101,10 +99,9 @@
 
 
         let sceneSg = 
-            m.scenes
-            |> Sg.set
-            |> Sg.trafo (m.bounds |> Mod.map normalizeTrafo)
-            |> Sg.transform (Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO))
+            Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) m.scenePath
+            |> Sg.dynamic
+            |> Sg.scale 18.0 // because sponza is so small
            
         let effectSg (clientValues : ClientValues) =   
 
@@ -324,19 +321,15 @@
     let initialState =     
 
         // Load geometry
-        let geometryFiles = [Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]]
-        // let files = [Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.obj"]]
-        let scenes = geometryFiles |> HSet.ofList |> HSet.map (Loader.Assimp.load)
-        let bounds = scenes |> Seq.map (fun s -> s.bounds) |> Box3d
-        let sgs = scenes |> HSet.map Sg.adapter
-
+        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
+        
         // Setup Lights
         let lc = emptyLightCollection
         let light1 = addSquareLight lc 1.0 true
         
         match light1 with
         | Some lightId ->             
-            let t = Trafo3d.Translation(0.0, 0.0, -1.7) * (Trafo3d.Scale 0.3)
+            let t = Trafo3d.Translation(8.0, 0.0, -5.0)
             // For plane let t = Trafo3d.Translation(0.0, 0.0, 0.5) * (Trafo3d.Scale 1.0)
             transformLight lc lightId t |> ignore
         | None -> ()
@@ -353,8 +346,7 @@
             compareA = RenderMode.GroundTruth
             compareB = RenderMode.BaumFormFactor 
             geometryFiles = []
-            scenes = sgs
-            bounds = bounds
+            scenePath = geometryFile
             photometryName = Some(System.IO.Path.GetFileName photometryPath)
             photometryData = photometryData
             cameraState = Render.CameraController.initial
@@ -364,13 +356,12 @@
         
         let pool = ThreadPool.empty
 
-        //match state.renderMode with 
-        //| GroundTruth ->
         if state.cameraState.moving = false then
             let rec haltonUpdate() =
                 proclist {
                     do! Proc.Sleep 200
                     yield GROUND_TRUTH_UPDATE
+                    printfn "%s" "Update"
                     yield! haltonUpdate()
                 }
             ThreadPool.add "haltonUpdate" (haltonUpdate()) pool
@@ -384,10 +375,7 @@
                         cleared <- true
                     yield! clear()
                 }
-            ThreadPool.add "clear" (clear()) pool
-        //| BaumFormFactor ->             
-        //    pool
-            
+            ThreadPool.add "clear" (clear()) pool            
         
 
     let app (runtime : Aardvark.Rendering.GL.Runtime) (form : System.Windows.Forms.Form) =

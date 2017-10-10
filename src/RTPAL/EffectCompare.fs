@@ -75,7 +75,7 @@ module EffectCompare =
             let s2 = texDepth.Sample(v.es.[2]).X
             let s3 = texDepth.Sample(v.es.[3]).X
 
-            let threshold = 0.0045
+            let threshold = 0.007
 
             let diffA = abs(s0 - s3) > (threshold * (s0 + s3))
             let diffB = abs(s1 - s2) > (threshold * (s1 + s2))

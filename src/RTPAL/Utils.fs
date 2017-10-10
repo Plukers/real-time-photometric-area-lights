@@ -16,6 +16,16 @@ module Utils =
                 |> Sg.vertexAttribute DefaultSemantic.DiffuseColorCoordinates (Mod.constant [|V2f.OO; V2f.IO; V2f.OI; V2f.II|])
                 |> Sg.depthTest ~~DepthTestMode.None
                 |> Sg.uniform "ViewportSize" size
+
+    module Assimp =
+        open Aardvark.Base
+        open Aardvark.UI
+
+        let loadFromFile zUp f =  
+            f |> Aardvark.SceneGraph.IO.Loader.Assimp.load 
+              |> Sg.adapter 
+              |> Sg.noEvents
+              |> Sg.transform (if zUp then Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO) else Trafo3d.Identity)
     
     module HaltonSequence = 
         open FShade

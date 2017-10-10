@@ -53,7 +53,6 @@ type RenderMode =
     | Compare = 2
 
 type Action =
-    | IMPORT_GEOMETRY
     | IMPORT_PHOTOMETRY of string
     | CHANGE_RENDER_MODE of RenderMode
     | GROUND_TRUTH_UPDATE 
@@ -78,8 +77,7 @@ type RenderState =
         compareB        : RenderMode
 
         geometryFiles   : list<string>
-        scenes          : hset<ISg<Action>>
-        bounds          : Box3d
+        scenePath       : string
         
         photometryName  : Option<string>
         photometryData  : Option<IntensityProfileSampler>
