@@ -57,8 +57,9 @@ type Action =
     | CHANGE_RENDER_MODE of RenderMode
     | GROUND_TRUTH_UPDATE 
     | GROUND_TRUTH_CLEAR
-    | CHANGE_COMPARE_A of RenderMode
-    | CHANGE_COMPARE_B of RenderMode
+    | CHANGE_COMPARE of RenderMode
+    | COMPUTE_ERROR of bool
+    | FINISHED_ERROR_COMPUTATION of double
     | CAMERA of CameraControllerAction
 
 
@@ -73,8 +74,10 @@ type RenderState =
         frameCount      : int
         haltonSequence  : seq<V2d>
 
-        compareA        : RenderMode
-        compareB        : RenderMode
+        compare        : RenderMode
+
+        computeError    : bool
+        error           : double
 
         geometryFiles   : list<string>
         scenePath       : string

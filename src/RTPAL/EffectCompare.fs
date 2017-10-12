@@ -91,7 +91,7 @@ module EffectCompare =
             
             let err = 
                 let diff = V3d(ta - tb)  
-                clamp 0.0 upp ((dot diff diff) / 3.0)
+                clamp 0.0 upp (sqrt (dot diff diff))
 
             let cGood = V3d(1.0)
             let cBad = V3d(1.0, 0.35686, 0.14902)

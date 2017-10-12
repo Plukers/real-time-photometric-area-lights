@@ -53,10 +53,10 @@
                 { s with haltonSequence = newhs |> Seq.ofArray; frameCount = newfc; clear = false }
             | GROUND_TRUTH_CLEAR ->
                 clear s
-            | CHANGE_COMPARE_A mode ->
-                { s with compareA = mode }
-            | CHANGE_COMPARE_B mode ->
-                { s with compareB = mode }
+            | CHANGE_COMPARE mode ->
+                { s with compare = mode }
+            | COMPUTE_ERROR compute -> { s with computeError = compute }
+            | FINISHED_ERROR_COMPUTATION error -> { s with error = error }
             | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
 
     let render (m : MRenderState) (runtime : Aardvark.Rendering.GL.Runtime) =
@@ -202,15 +202,7 @@
                         EffectCompare.compareV |> toEffect
                         EffectCompare.compareF |> toEffect 
                     ]
-                    |> Sg.texture (Sym.ofString "TexA") 
-                        (
-                            Mod.bind (fun rm ->
-                                match rm with
-                                    | RenderMode.GroundTruth -> groundTruthFb
-                                    | RenderMode.BaumFormFactor -> baumFormFactorFb
-                                    | _ -> groundTruthFb
-                                ) m.compareA
-                        )
+                    |> Sg.texture (Sym.ofString "TexA") groundTruthFb
                     |> Sg.texture (Sym.ofString "TexB") 
                         (
                             Mod.bind (fun rm ->
@@ -218,7 +210,7 @@
                                     | RenderMode.GroundTruth -> groundTruthFb
                                     | RenderMode.BaumFormFactor -> baumFormFactorFb
                                     | _ -> groundTruthFb
-                                ) m.compareB
+                                ) m.compare
                         )
                     |> Sg.texture (Sym.ofString "TexDepth") depthFb
 
@@ -297,18 +289,23 @@
                                     match mode with
                                     | RenderMode.GroundTruth ->
                                         let! fc = m.frameCount                                        
-                                        yield p[] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
+                                        yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
                                     | RenderMode.Compare ->
+                                        
+                                        let! c = m.compare
 
-                                        let! cA = m.compareA
-                                        let! cB = m.compareB
-
-                                        if cA = RenderMode.Compare || cB = RenderMode.Compare then
+                                        if c = RenderMode.Compare then
                                             yield p [ clazz "ui label red" ] [ text ("Render mode Compare cannot be compared.") ]
                                             yield div [ clazz "ui divider"] []
                          
-                                        yield p [] [ dropDown m.compareA (fun mode -> CHANGE_COMPARE_A mode) ]
-                                        yield p [] [ dropDown m.compareB (fun mode -> CHANGE_COMPARE_B mode) ]
+                                        yield p [] [ text ("Compare Ground Truth with")]
+                                        yield p [] [ dropDown m.compare (fun mode -> CHANGE_COMPARE mode) ]
+                                        
+                                        yield div [ clazz "ui divider"] []
+                                        yield button [clazz "ui button" ; onClick (fun _ -> COMPUTE_ERROR true)] [text "Compute Error"]
+
+                                        let! error = m.error
+                                        yield p [] [ text ("Error " + error.ToString())]
                                     | _ -> ()
                                 }     
                             )
@@ -346,8 +343,9 @@
             frameCount = 1
             clear = true
             haltonSequence = HaltonSequence.init
-            compareA = RenderMode.GroundTruth
-            compareB = RenderMode.BaumFormFactor 
+            compare = RenderMode.BaumFormFactor 
+            computeError = false
+            error = 0.0
             geometryFiles = []
             scenePath = geometryFile
             photometryName = Some(System.IO.Path.GetFileName photometryPath)
