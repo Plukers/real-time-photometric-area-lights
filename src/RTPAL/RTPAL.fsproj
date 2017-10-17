@@ -97,6 +97,7 @@
     <Compile Include="EffectGT.fs" />
     <Compile Include="EffectBaumFF.fs" />
     <Compile Include="EffectCompare.fs" />
+    <Compile Include="EffectOutline.fs" />
     <Compile Include="RenderState.fs" />
     <Compile Include="CameraController.fs" />
     <Compile Include="RenderApp.fs" />

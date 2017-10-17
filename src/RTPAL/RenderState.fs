@@ -58,8 +58,7 @@ type Action =
     | GROUND_TRUTH_UPDATE 
     | GROUND_TRUTH_CLEAR
     | CHANGE_COMPARE of RenderMode
-    | COMPUTE_ERROR of bool
-    | FINISHED_ERROR_COMPUTATION of double
+    | COMPUTED_ERROR of double
     | CAMERA of CameraControllerAction
 
 
@@ -75,8 +74,7 @@ type RenderState =
         haltonSequence  : seq<V2d>
 
         compare        : RenderMode
-
-        computeError    : bool
+        
         error           : double
 
         geometryFiles   : list<string>

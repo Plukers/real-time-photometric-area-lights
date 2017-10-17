@@ -19,6 +19,10 @@
     open Aardvark.UI.Html.SemUi
     open System.Windows.Forms
     
+    module ``VERY EVIL DESTROY ME``=
+        let mutable computeError = Unchecked.defaultof<_>
+
+    open ``VERY EVIL DESTROY ME``
 
     let update (s : RenderState) (a : Action) =
 
@@ -45,18 +49,14 @@
                     | None -> s
                 else 
                     s
-            | CHANGE_RENDER_MODE mode ->
-                { s with renderMode = mode }
+            | CHANGE_RENDER_MODE mode -> { s with renderMode = mode }
             | GROUND_TRUTH_UPDATE ->
                 let newhs = (s.haltonSequence |> Seq.toArray).[(s.haltonSequence |> Seq.length) - 1] |> HaltonSequence.next 
                 let newfc = s.frameCount + 1
                 { s with haltonSequence = newhs |> Seq.ofArray; frameCount = newfc; clear = false }
-            | GROUND_TRUTH_CLEAR ->
-                clear s
-            | CHANGE_COMPARE mode ->
-                { s with compare = mode }
-            | COMPUTE_ERROR compute -> { s with computeError = compute }
-            | FINISHED_ERROR_COMPUTATION error -> { s with error = error }
+            | GROUND_TRUTH_CLEAR -> clear s
+            | CHANGE_COMPARE mode -> { s with compare = mode }
+            | COMPUTED_ERROR error -> { s with error = error }
             | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
 
     let render (m : MRenderState) (runtime : Aardvark.Rendering.GL.Runtime) =
@@ -106,6 +106,7 @@
             |> Sg.dynamic
             |> Sg.scale 18.0 // because sponza is so small
            
+
         let effectSg (clientValues : ClientValues) =   
 
             let signature =
@@ -174,7 +175,6 @@
                     |> Sg.compile runtime signature
                     |> renderToColorWithoutClear clientValues.size
 
-            
             let baumFormFactorFb = 
                 sceneSg
                     |> setupFbEffects [ EffectBaumFF.formFactorLighting |> toEffect ]
@@ -182,9 +182,59 @@
                     |> setupCamera clientValues
                     |> Sg.compile runtime signature
                     |> RenderTask.renderToColor clientValues.size
-            
 
             let compareSg = 
+                
+                let renderToFbo (fbo : IOutputMod<IFramebuffer>) (task : IRenderTask) =
+                    let sem = (Set.singleton DefaultSemantic.Colors)
+                    let res = 
+                        new SequentialRenderTask([|task|]) |> renderTo fbo
+        
+                    sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
+
+                
+                let diffSignature =
+                    runtime.CreateFramebufferSignature [
+                        DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
+                    ]
+                       
+                //let diffTex = Mod.map ( fun size -> runtime.CreateTexture( size, TextureFormat.Rgba32f, 1, 1, 1)) clientValues.size
+                //let diffFb =
+                //    runtime.CreateFramebuffer(diffSignature, 
+                //        [
+                //            DefaultSemantic.Colors, { texture = tex; level = 0; slice = 0 } :> IFramebufferOutput
+                //        ])
+
+                    
+                                        
+                let diffFb = Sg.fullscreenQuad clientValues.size
+                                |> Sg.effect [ 
+                                    EffectCompare.compare |> toEffect 
+                                ]
+                                |> Sg.texture (Sym.ofString "TexA") groundTruthFb
+                                |> Sg.texture (Sym.ofString "TexB") 
+                                    (
+                                        Mod.bind (fun rm ->
+                                            match rm with
+                                                | RenderMode.GroundTruth -> groundTruthFb
+                                                | RenderMode.BaumFormFactor -> baumFormFactorFb
+                                                | _ -> groundTruthFb
+                                            ) m.compare
+                                    )
+                                |> Sg.compile runtime diffSignature
+                                |> RenderTask.renderToColor clientValues.size
+                                
+
+                computeError <- (fun _ -> 
+                    let diff = diffFb.GetValue()
+                            
+                    let diffPixData = runtime.Download(diff |> unbox<_>)
+                    let downlaoded = diffPixData.ToPixImage<float32>()
+                    let data = downlaoded.GetMatrix<C4f>()
+                    let ec = data.Elements |> Seq.fold ( fun cs c-> (C4f.White - c) + cs ) C4f.Black
+                                        
+                    COMPUTED_ERROR (float (sqrt (ec.R * ec.R + ec.G * ec.G + ec.B  * ec.B)))
+                )
 
                 let depthFb =
                     sceneSg
@@ -197,40 +247,36 @@
                         |> Sg.compile runtime depthSignature
                         |> RenderTask.renderToDepth clientValues.size
 
-                Sg.fullscreenQuad clientValues.size
-                    |> Sg.effect [ 
-                        EffectCompare.compareV |> toEffect
-                        EffectCompare.compareF |> toEffect 
-                    ]
-                    |> Sg.texture (Sym.ofString "TexA") groundTruthFb
-                    |> Sg.texture (Sym.ofString "TexB") 
-                        (
-                            Mod.bind (fun rm ->
-                                match rm with
-                                    | RenderMode.GroundTruth -> groundTruthFb
-                                    | RenderMode.BaumFormFactor -> baumFormFactorFb
-                                    | _ -> groundTruthFb
-                                ) m.compare
-                        )
-                    |> Sg.texture (Sym.ofString "TexDepth") depthFb
+                let sg = 
+                    Sg.fullscreenQuad clientValues.size
+                        |> Sg.effect [ 
+                            EffectOutline.outlineV |> toEffect 
+                            EffectOutline.outlineF |> toEffect 
+                        ]
+                        |> Sg.texture (Sym.ofString "Tex") diffFb
+                        |> Sg.texture (Sym.ofString "TexDepth") depthFb
 
+                sg
 
             let fbToSg fb = 
                 Sg.fullscreenQuad clientValues.size
                     |> Sg.texture DefaultSemantic.DiffuseColorTexture fb
                     |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
+                    
+            let sg = 
+                [
+                    groundTruthFb |> fbToSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.GroundTruth))
+                    baumFormFactorFb |> fbToSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.BaumFormFactor))
+                    compareSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.Compare))
+                ] |> Sg.ofList
 
-            [
-                groundTruthFb |> fbToSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.GroundTruth))
-                baumFormFactorFb |> fbToSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.BaumFormFactor))
-                compareSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.Compare))
-            ] |> Sg.ofList
-            
+            sg
+                
 
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
         Render.CameraController.controlledControlWithClientValues m.cameraState CAMERA
             (Mod.constant frustum) 
-            (AttributeMap.ofList [ attribute "style" "width:100%; height: 100%"]) effectSg
+            (AttributeMap.ofList [ attribute "style" "width:100%; height: 100%"]) (effectSg)
 
 
 
@@ -281,7 +327,7 @@
                                     ]
                                 ]
                             ] 
-                            
+                                                        
                             Incremental.div (AttributeMap.ofList [clazz "Item"]) (
                                 alist {                                
                                     let! mode = m.renderMode
@@ -302,7 +348,7 @@
                                         yield p [] [ dropDown m.compare (fun mode -> CHANGE_COMPARE mode) ]
                                         
                                         yield div [ clazz "ui divider"] []
-                                        yield button [clazz "ui button" ; onClick (fun _ -> COMPUTE_ERROR true)] [text "Compute Error"]
+                                        yield button [clazz "ui button" ; onClick (fun _ -> computeError())] [text "Compute Error"]
 
                                         let! error = m.error
                                         yield p [] [ text ("Error " + error.ToString())]
@@ -344,7 +390,6 @@
             clear = true
             haltonSequence = HaltonSequence.init
             compare = RenderMode.BaumFormFactor 
-            computeError = false
             error = 0.0
             geometryFiles = []
             scenePath = geometryFile
@@ -362,15 +407,13 @@
                 proclist {
                     do! Proc.Sleep 200
                     yield GROUND_TRUTH_UPDATE
-                    printfn "%s" "Update"
                     yield! haltonUpdate()
                 }
             ThreadPool.add "haltonUpdate" (haltonUpdate()) pool
         else
             let rec clear() =
                 proclist {
-                    do! Proc.Sleep 200                    
-                    printfn "%s" "Clear"
+                    do! Proc.Sleep 200         
                     yield GROUND_TRUTH_CLEAR
                 }
             ThreadPool.add "clear" (clear()) pool            
