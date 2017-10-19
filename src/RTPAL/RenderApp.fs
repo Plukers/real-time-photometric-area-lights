@@ -23,7 +23,7 @@
         let mutable computeError = Unchecked.defaultof<_>
 
     open ``VERY EVIL DESTROY ME``
-
+    
     let update (s : RenderState) (a : Action) =
 
         let clear (s : RenderState) = 
@@ -58,6 +58,9 @@
             | CHANGE_COMPARE mode -> { s with compare = mode }
             | COMPUTED_ERROR error -> { s with error = error }
             | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
+            | OPEN_GT_WINDOW ->
+                openWindow RenderMode.GroundTruth
+                s
 
     let render (m : MRenderState) (runtime : Aardvark.Rendering.GL.Runtime) =
         let normalizeTrafo (b : Box3d) =

@@ -60,6 +60,7 @@ type Action =
     | CHANGE_COMPARE of RenderMode
     | COMPUTED_ERROR of double
     | CAMERA of CameraControllerAction
+    | OPEN_GT_WINDOW
 
 
 [<DomainType>]
