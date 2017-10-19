@@ -100,6 +100,8 @@
     <Compile Include="EffectOutline.fs" />
     <Compile Include="RenderState.fs" />
     <Compile Include="CameraController.fs" />
+    <Compile Include="RenderWindow.fs" />
+    <Compile Include="Rendering.fs" />
     <Compile Include="RenderApp.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
