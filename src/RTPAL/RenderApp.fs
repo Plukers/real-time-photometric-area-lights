@@ -109,6 +109,13 @@
 
         let effectSg (clientValues : ClientValues) =   
 
+            let fbToSg fb = 
+                Sg.fullscreenQuad clientValues.size
+                    |> Sg.texture DefaultSemantic.DiffuseColorTexture fb
+                    |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
+
+            let sgs = Map.empty
+
             let signature =
                 runtime.CreateFramebufferSignature [
                     DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
@@ -175,6 +182,8 @@
                     |> Sg.compile runtime signature
                     |> renderToColorWithoutClear clientValues.size
 
+            let sgs = sgs |> Map.add RenderMode.GroundTruth (groundTruthFb |> fbToSg) 
+
             let baumFormFactorFb = 
                 sceneSg
                     |> setupFbEffects [ EffectBaumFF.formFactorLighting |> toEffect ]
@@ -182,6 +191,8 @@
                     |> setupCamera clientValues
                     |> Sg.compile runtime signature
                     |> RenderTask.renderToColor clientValues.size
+
+            let sgs = sgs |> Map.add RenderMode.BaumFormFactor (baumFormFactorFb |> fbToSg) 
 
             let compareSg = 
                 
@@ -197,15 +208,6 @@
                     runtime.CreateFramebufferSignature [
                         DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
                     ]
-                       
-                //let diffTex = Mod.map ( fun size -> runtime.CreateTexture( size, TextureFormat.Rgba32f, 1, 1, 1)) clientValues.size
-                //let diffFb =
-                //    runtime.CreateFramebuffer(diffSignature, 
-                //        [
-                //            DefaultSemantic.Colors, { texture = tex; level = 0; slice = 0 } :> IFramebufferOutput
-                //        ])
-
-                    
                                         
                 let diffFb = Sg.fullscreenQuad clientValues.size
                                 |> Sg.effect [ 
@@ -258,19 +260,22 @@
 
                 sg
 
-            let fbToSg fb = 
-                Sg.fullscreenQuad clientValues.size
-                    |> Sg.texture DefaultSemantic.DiffuseColorTexture fb
-                    |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
-                    
+            let sgs = sgs |> Map.add RenderMode.Compare compareSg
+            (*        
+            let onOff (b : IMod<bool>) (s : ISg<'a>) =
+                b |> Mod.map (function true -> s | false -> Sg.empty)
+            *)
+            let sg (mode : IMod<RenderMode>) (sceneGraphs : Map<RenderMode, ISg<'a>>) =
+                mode |> Mod.map(fun m -> sgs.[m]) |> Sg.dynamic
+            (*
             let sg = 
                 [
                     groundTruthFb |> fbToSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.GroundTruth))
                     baumFormFactorFb |> fbToSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.BaumFormFactor))
                     compareSg |> Sg.onOff (m.renderMode |> Mod.map ( fun mode -> mode = RenderMode.Compare))
                 ] |> Sg.ofList
-
-            sg
+            *)
+            sg m.renderMode sgs
                 
 
         let frustum = Frustum.perspective 60.0 0.1 100.0 1.0
@@ -385,7 +390,7 @@
                 
         {            
             lights = lc
-            renderMode = RenderMode.GroundTruth
+            renderMode = RenderMode.Compare
             frameCount = 1
             clear = true
             haltonSequence = HaltonSequence.init
