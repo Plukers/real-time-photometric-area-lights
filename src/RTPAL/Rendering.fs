@@ -10,8 +10,7 @@ module Rendering =
     open Aardvark.Base.Incremental
 
     open Aardvark.Data.Photometry
-
-
+    
     open Aardvark.SceneGraph
 
     open Light
@@ -139,13 +138,14 @@ module Rendering =
             |> fbToSg viewportSize
 
     module BaumFormFactor = 
+        open RenderWindow
            
-        let baumFormFactorRenderTask (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) = 
+        let baumFormFactorRenderTask (data : SharedRenderData) = 
             sceneSg
                 |> setupFbEffects [ EffectBaumFF.formFactorLighting |> toEffect ]
-                |> setupLights lights
-                |> setupCamera viewTrafo projTrafo viewportSize
-                |> Sg.compile runtime (signature runtime)        
+                |> setupLights data.lights
+                |> setupCamera data.viewTrafo data.projTrafo data.viewportSize
+                |> Sg.compile data.runtime (signature data.runtime)        
 
         let baumFormFactorFb (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) = 
             baumFormFactorRenderTask runtime viewTrafo projTrafo viewportSize lights
@@ -159,6 +159,12 @@ module Rendering =
         
         open GroundTruth
         open BaumFormFactor
+        open RenderWindow
+
+        type CompareData = {
+            baseBridge : SharedRenderData
+            compare : IMod<RenderMode>
+            }
 
         let private renderToFbo (fbo : IOutputMod<IFramebuffer>) (task : IRenderTask) =
             let sem = (Set.singleton DefaultSemantic.Colors)

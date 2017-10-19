@@ -5,12 +5,19 @@ module RenderWindow =
     open Aardvark.Base.Incremental
 
     open Aardvark.Application.WinForms
-        
-    type RenderWindowBridge = {
-        view : IMod<CameraView>
-        proj : IMod<Frustum>
+    open Aardvark.Data.Photometry
 
+    open Light
+            
+    type SharedRenderData = {
         runtime : Aardvark.Rendering.GL.Runtime
+
+        viewTrafo : IMod<Trafo3d>
+        projTrafo : IMod<Trafo3d>
+        viewportSize : IMod<V2i>
+
+        lights : LightCollection
+        photometricData : IMod<Option<IntensityProfileSampler>>
         }
 
     let openWindow (app : OpenGlApplication) (title : string) (task : IRenderTask) = 
