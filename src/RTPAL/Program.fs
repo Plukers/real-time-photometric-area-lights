@@ -21,8 +21,8 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime
     
-    use form = new Form(Width = 1366, Height = 768)
-    let a = RenderApp.app runtime form |> App.start
+    use form = new Form(Width = 200, Height = 768)
+    let a = RenderApp.app app runtime form |> App.start
 
     WebPart.startServer 4321 [ 
         MutableApp.toWebPart runtime a

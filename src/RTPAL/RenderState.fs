@@ -60,7 +60,7 @@ type Action =
     | CHANGE_COMPARE of RenderMode
     | COMPUTED_ERROR of double
     | CAMERA of CameraControllerAction
-    | OPEN_GT_WINDOW
+    | OPEN_GROUND_TRUTH_WINDOW
 
 
 [<DomainType>]
@@ -80,7 +80,8 @@ type RenderState =
 
         geometryFiles   : list<string>
         scenePath       : string
-        
+        sceneSg         : Aardvark.SceneGraph.ISg
+
         photometryName  : Option<string>
         photometryData  : Option<IntensityProfileSampler>
 

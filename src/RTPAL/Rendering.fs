@@ -15,6 +15,19 @@ module Rendering =
 
     open Light
     open Utils
+    
+    type SharedRenderData = {
+        runtime : Aardvark.Rendering.GL.Runtime
+
+        sceneSg : ISg
+
+        view : IMod<CameraView>
+        frustum : IMod<Frustum>
+        viewportSize : IMod<V2i>
+
+        lights : LightCollection
+        photometricData : IMod<Option<IntensityProfileSampler>>
+        }
 
     let private normalizeTrafo (b : Box3d) =
             let size = b.Size
@@ -37,10 +50,10 @@ module Rendering =
             |> Light.Sg.addLightCollectionSg lights
             |> Light.Sg.setLightCollectionUniforms lights
                 
-    let private setupCamera (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) sg =
+    let private setupCamera (view : IMod<CameraView>) (frustum : IMod<Frustum>) (viewportSize : IMod<V2i>) sg =
         sg
-            |> Sg.viewTrafo viewTrafo
-            |> Sg.projTrafo projTrafo
+            |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
+            |> Sg.projTrafo (frustum |> Mod.map Frustum.projTrafo)
             |> Sg.uniform "ViewportSize" viewportSize
 
     let private setupPhotometricData (photometricData : IMod<Option<IntensityProfileSampler>>) (sg : ISg) = 
@@ -54,25 +67,25 @@ module Rendering =
             | None -> sg
         ) photometricData
         |> Sg.dynamic
-
-
-    let private sceneSg = 
-        Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) m.scenePath
-        |> Sg.dynamic
-        |> Sg.scale 18.0 // because sponza is so small
-
-    let private fbToSg (viewportSize : IMod<V2i>) fb= 
+        
+    let private fbToSg (viewportSize : IMod<V2i>) fb = 
         Sg.fullscreenQuad viewportSize
             |> Sg.texture DefaultSemantic.DiffuseColorTexture fb
             |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
 
-    let private signature (runtime : Aardvark.Rendering.GL.Runtime)=
+    let private signature (runtime : Aardvark.Rendering.GL.Runtime) =
         runtime.CreateFramebufferSignature [
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
             DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
 
     module GroundTruth = 
+
+        type GroundTruthData = {
+            haltonSequence : ResetMod<seq<V2d>>
+            clear : ResetMod<bool>
+            frameCount : ResetMod<int>
+            }
         
         let private renderToColorWithoutClear (size : IMod<V2i>) (task : IRenderTask) =
                 let sem = (Set.singleton DefaultSemantic.Colors)
@@ -86,10 +99,10 @@ module Rendering =
         
                 sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
 
-        let groundTruthRenderTask (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) (photometricData : IMod<Option<IntensityProfileSampler>>) = 
-
+        let private basicRenderTask (data : SharedRenderData) (gtData : GroundTruthData) = 
+            
             let mode = 
-                m.clear |> Mod.map ( fun c -> 
+                gtData.clear |> Mod.map ( fun c -> 
                     if c then
                         BlendMode(
                             true, 
@@ -113,57 +126,92 @@ module Rendering =
                     )
                 
             let iterationRender =
-                sceneSg
+                data.sceneSg
                     |> setupFbEffects [ EffectGT.groundTruthLighting |> toEffect ]
-                    |> setupLights lights
-                    |> setupPhotometricData photometricData
-                    |> setupCamera viewTrafo projTrafo viewportSize 
-                    |> Sg.uniform "HaltonSamples" (m.haltonSequence |> Mod.map Seq.toArray)
-                    |> Sg.uniform "FrameCount" ( m.frameCount)
-                    |> Sg.compile runtime (signature runtime)
-                    |> RenderTask.renderToColor viewportSize
+                    |> setupLights data.lights
+                    |> setupPhotometricData data.photometricData
+                    |> setupCamera data.view data.frustum data.viewportSize 
+                    |> Sg.uniform "HaltonSamples" (gtData.haltonSequence |> Mod.map Seq.toArray)
+                    |> Sg.uniform "FrameCount" ( gtData.frameCount)
+                    |> Sg.compile data.runtime (signature data.runtime)
+                    |> RenderTask.renderToColor data.viewportSize
               
-            Sg.fullscreenQuad viewportSize
+            Sg.fullscreenQuad data.viewportSize
                 |> Sg.blendMode mode
                 |> setupFbEffects []
                 |> Sg.texture DefaultSemantic.DiffuseColorTexture iterationRender
-                |> Sg.compile runtime (signature runtime)
+                |> Sg.compile data.runtime (signature data.runtime)
 
-        let groundTruthFb (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) (photometricData : IMod<Option<IntensityProfileSampler>>) = 
-            groundTruthRenderTask runtime viewTrafo projTrafo viewportSize lights photometricData
-            |> renderToColorWithoutClear viewportSize
+        let groundTruthFb (data : SharedRenderData) (gtData : GroundTruthData) = 
+            basicRenderTask data gtData
+            |> renderToColorWithoutClear data.viewportSize
      
-        let groundTruthSg (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) (photometricData : IMod<Option<IntensityProfileSampler>>) = 
-            groundTruthFb runtime viewTrafo projTrafo viewportSize lights photometricData
-            |> fbToSg viewportSize
+        let groundTruthSg (data : SharedRenderData) (gtData : GroundTruthData) = 
+            groundTruthFb data gtData
+            |> fbToSg data.viewportSize
+        
+        let groundTruthRenderTask (data : SharedRenderData) (gtData : GroundTruthData) =
+            data.runtime.CompileRender((signature data.runtime), (groundTruthSg data gtData))
+
+        let groundTruthRenderUpdate (data : SharedRenderData) (gtData : GroundTruthData) =
+
+            let update (args : OpenTK.FrameEventArgs) =
+
+                let mutable prevView = Trafo3d.Identity
+
+                transact (fun _ -> 
+                    
+                    let currentView = data.view |> Mod.force |> CameraView.viewTrafo
+                    let mutable currentClear = gtData.clear |> Mod.force
+
+                    if prevView <> currentView then
+                        if not currentClear then 
+                            currentClear <- true
+                            ResetMod.Update(gtData.clear, true)
+                    else
+                        if currentClear then 
+                            currentClear <- false
+                            ResetMod.Update(gtData.clear, false)
+
+                    prevView <- currentView
+                    
+                    let newhs = if currentClear then
+                                    HaltonSequence.init
+                                else
+                                    let hs = gtData.haltonSequence |> Mod.force
+                                    (hs |> Seq.toArray).[(hs |> Seq.length) - 1] |> HaltonSequence.next                
+                    ResetMod.Update(gtData.haltonSequence, newhs :> seq<V2d>)
+                    
+                    let newfc = (gtData.frameCount |> Mod.force) + 1
+                    ResetMod.Update(gtData.frameCount, newfc)
+                )
+
+            update
 
     module BaumFormFactor = 
-        open RenderWindow
            
         let baumFormFactorRenderTask (data : SharedRenderData) = 
-            sceneSg
+            data.sceneSg
                 |> setupFbEffects [ EffectBaumFF.formFactorLighting |> toEffect ]
                 |> setupLights data.lights
-                |> setupCamera data.viewTrafo data.projTrafo data.viewportSize
+                |> setupCamera data.view data.frustum data.viewportSize
                 |> Sg.compile data.runtime (signature data.runtime)        
 
-        let baumFormFactorFb (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) = 
-            baumFormFactorRenderTask runtime viewTrafo projTrafo viewportSize lights
-            |> RenderTask.renderToColor viewportSize
+        let baumFormFactorFb (data : SharedRenderData) = 
+            baumFormFactorRenderTask data
+            |> RenderTask.renderToColor data.viewportSize
      
-        let baumFormFactorSg (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) = 
-            baumFormFactorFb runtime viewTrafo projTrafo viewportSize lights
-            |> fbToSg viewportSize
+        let baumFormFactorSg (data : SharedRenderData) = 
+            baumFormFactorFb data
+            |> fbToSg data.viewportSize
 
     module Compare = 
         
         open GroundTruth
         open BaumFormFactor
-        open RenderWindow
 
         type CompareData = {
-            baseBridge : SharedRenderData
-            compare : IMod<RenderMode>
+            compare : ResetMod<RenderMode>
             }
 
         let private renderToFbo (fbo : IOutputMod<IFramebuffer>) (task : IRenderTask) =
@@ -183,44 +231,45 @@ module Rendering =
                 DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
             ]
                                         
-        let private diffFb (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) (photometricData : IMod<Option<IntensityProfileSampler>>)=
-            Sg.fullscreenQuad viewportSize
+        let private diffFb (data : SharedRenderData) (gtData : GroundTruthData) (compData : CompareData) =
+            
+            Sg.fullscreenQuad data.viewportSize
                 |> Sg.effect [ 
                     EffectCompare.compare |> toEffect 
                 ]
-                |> Sg.texture (Sym.ofString "TexA") (groundTruthFb runtime viewTrafo projTrafo viewportSize lights photometricData)
+                |> Sg.texture (Sym.ofString "TexA") (groundTruthFb data gtData)
                 |> Sg.texture (Sym.ofString "TexB") 
                     (
                         Mod.bind (fun rm ->
                             match rm with
-                                | RenderMode.GroundTruth -> (groundTruthFb runtime viewTrafo projTrafo viewportSize lights photometricData)
-                                | RenderMode.BaumFormFactor -> (baumFormFactorFb runtime viewTrafo projTrafo viewportSize lights)
-                                | _ -> (groundTruthFb runtime viewTrafo projTrafo viewportSize lights photometricData)
-                            ) m.compare
+                                | RenderMode.GroundTruth -> (groundTruthFb data gtData)
+                                | RenderMode.BaumFormFactor -> (baumFormFactorFb data)
+                                | _ -> (groundTruthFb data gtData)
+                            ) compData.compare
                     )
-                |> Sg.compile runtime (diffSignature runtime)
-                |> RenderTask.renderToColor viewportSize
+                |> Sg.compile data.runtime (diffSignature data.runtime)
+                |> RenderTask.renderToColor data.viewportSize
                                 
-        let private depthFb (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) (photometricData : IMod<Option<IntensityProfileSampler>>)=
-            sceneSg
+        let private depthFb (data : SharedRenderData) =
+            data.sceneSg
                 |> Sg.effect [ 
                     DefaultSurfaces.trafo |> toEffect
                     DefaultSurfaces.vertexColor |> toEffect 
                     ]
-                |> setupLights lights                   
-                |> setupCamera viewTrafo projTrafo viewportSize
-                |> Sg.compile runtime (depthSignature runtime)
-                |> RenderTask.renderToDepth viewportSize
+                |> setupLights data.lights                   
+                |> setupCamera data.view data.frustum data.viewportSize
+                |> Sg.compile data.runtime (depthSignature data.runtime)
+                |> RenderTask.renderToDepth data.viewportSize
 
-        let compareRenderTask (runtime : Aardvark.Rendering.GL.Runtime) (viewTrafo : IMod<Trafo3d>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) (lights : LightCollection) (photometricData : IMod<Option<IntensityProfileSampler>>)= 
-            Sg.fullscreenQuad viewportSize
+        let compareRenderTask (data : SharedRenderData) (gtData : GroundTruthData) (compData : CompareData) = 
+            Sg.fullscreenQuad data.viewportSize
                 |> Sg.effect [ 
                     EffectOutline.outlineV |> toEffect 
                     EffectOutline.outlineF |> toEffect 
                 ]
-                |> Sg.texture (Sym.ofString "Tex") (diffFb runtime viewTrafo projTrafo viewportSize lights photometricData)
-                |> Sg.texture (Sym.ofString "TexDepth") (depthFb runtime viewTrafo projTrafo viewportSize lights photometricData)
-                |> Sg.compile runtime (signature runtime) 
+                |> Sg.texture (Sym.ofString "Tex") (diffFb data gtData compData)
+                |> Sg.texture (Sym.ofString "TexDepth") (depthFb data)
+                |> Sg.compile data.runtime (signature data.runtime) 
 
         (*
         let a = (fun _ -> 

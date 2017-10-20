@@ -5,6 +5,9 @@
     open Aardvark.Base.Incremental
     open Aardvark.Base.Incremental.Operators
     open Aardvark.Service
+    open Aardvark.Base.RenderTask
+    open Aardvark.UI.Html.SemUi
+    open System.Windows.Forms
 
     open Aardvark.SceneGraph.IO
     open Aardvark.SceneGraph.RuntimeSgExtensions
@@ -12,17 +15,24 @@
     open Aardvark.UI
 
     open Aardvark.Data.Photometry
+    
+    open Aardvark.Application.WinForms
 
     open Utils
     open Light
-    open Aardvark.Base.RenderTask
-    open Aardvark.UI.Html.SemUi
-    open System.Windows.Forms
-    
+    open Rendering
+
     module ``VERY EVIL DESTROY ME``=
         let mutable computeError = Unchecked.defaultof<_>
 
     open ``VERY EVIL DESTROY ME``
+
+    module GlobalApplicationData = 
+        
+        let mutable renderingApp : Option<OpenGlApplication> = None
+        let mutable appToRenderInterop : Option<SharedRenderData> = None 
+
+    open GlobalApplicationData
     
     let update (s : RenderState) (a : Action) =
 
@@ -58,9 +68,15 @@
             | CHANGE_COMPARE mode -> { s with compare = mode }
             | COMPUTED_ERROR error -> { s with error = error }
             | CAMERA a -> { s with cameraState = Render.CameraController.update s.cameraState a }
-            | OPEN_GT_WINDOW ->
-                openWindow RenderMode.GroundTruth
-                s
+            | OPEN_GROUND_TRUTH_WINDOW ->
+                match renderingApp with
+                | Some app -> 
+                    match appToRenderInterop with
+                    | Some sharedData ->
+                        WindowCreator.create app sharedData RenderMode.GroundTruth
+                        s
+                    | None -> s
+                | None -> s
 
     let render (m : MRenderState) (runtime : Aardvark.Rendering.GL.Runtime) =
         let normalizeTrafo (b : Box3d) =
@@ -286,8 +302,6 @@
             (Mod.constant frustum) 
             (AttributeMap.ofList [ attribute "style" "width:100%; height: 100%"]) (effectSg)
 
-
-
     let openFileDialog (form : System.Windows.Forms.Form) =
         let mutable final = ""
 
@@ -303,13 +317,23 @@
             
 
     let view (runtime : Aardvark.Rendering.GL.Runtime) (form : System.Windows.Forms.Form) =
+        
         let viewFunc (m : MRenderState) =
+
+            // interop
+            match appToRenderInterop with 
+            | Some interop ->                
+                appToRenderInterop <- Some({ interop with photometricData = m.photometryData })
+                ()
+            | None -> ()
+
+            // view
             let semui =
                 [ 
                     { kind = Stylesheet; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
                     { kind = Script; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
-                ]             
-            
+                ]   
+
             div [attribute "style" "display: flex; flex-direction: row; width: 100%; height: 100%; border: 0; padding: 0; margin: 0"] [
 
                 require semui (
@@ -342,6 +366,8 @@
                                     
                                     match mode with
                                     | RenderMode.GroundTruth ->
+                                        yield button [clazz "ui button" ; onClick (fun _ -> OPEN_GROUND_TRUTH_WINDOW)] [text "Open"]
+
                                         let! fc = m.frameCount                                        
                                         yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
                                     | RenderMode.Compare ->
@@ -366,7 +392,7 @@
                         ]
                     )
                     
-                render m runtime
+                // render m runtime
             ]
 
         viewFunc
@@ -376,7 +402,10 @@
 
         // Load geometry
         let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
-        
+        let sceneSg = 
+            geometryFile |> Utils.Assimp.loadFromFile true |> Sg.normalize
+            |> Sg.scale 18.0 // because sponza is so small
+
         // Setup Lights
         let lc = emptyLightCollection
         let light1 = addSquareLight lc 1.0 true
@@ -384,13 +413,13 @@
         match light1 with
         | Some lightId ->             
             let t = Trafo3d.Translation(8.0, 0.0, -5.0)
-            // For plane let t = Trafo3d.Translation(0.0, 0.0, 0.5) * (Trafo3d.Scale 1.0)
             transformLight lc lightId t |> ignore
         | None -> ()
 
         let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"D31267AA_NE2.ldt"]
         let photometryData = Some(IntensityProfileSampler(LightMeasurementData.FromFile(photometryPath)))    
                 
+        // initial state
         {            
             lights = lc
             renderMode = RenderMode.Compare
@@ -401,15 +430,34 @@
             error = 0.0
             geometryFiles = []
             scenePath = geometryFile
+            sceneSg = sceneSg
             photometryName = Some(System.IO.Path.GetFileName photometryPath)
             photometryData = photometryData
             cameraState = Render.CameraController.initial
         }
 
+    let initialInterop (runtime : Aardvark.Rendering.GL.Runtime) (initialRenderState : RenderState) =
+
+        let view = CameraView.lookAt (V3d(-1.0, 0.0, 0.0)) (V3d(1.0, 0.0, -1.0)) V3d.OOI |> Mod.init
+        let frustum = Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.init
+        
+        let init = {
+                        runtime = runtime
+                        sceneSg = initialRenderState.sceneSg
+                        view = view 
+                        frustum = frustum 
+                        viewportSize = V2i(1024, 768) |> Mod.init
+                        lights = initialRenderState.lights
+                        photometricData = None |> Mod.init
+                    }
+         
+        Some(init)
+
     let appThreads (state : RenderState) =
         
         let pool = ThreadPool.empty
-
+        pool
+        (*
         if state.cameraState.moving = false then
             let rec haltonUpdate() =
                 proclist {
@@ -424,10 +472,20 @@
                     do! Proc.Sleep 200         
                     yield GROUND_TRUTH_CLEAR
                 }
-            ThreadPool.add "clear" (clear()) pool            
+            ThreadPool.add "clear" (clear()) pool  
+            *)
         
 
-    let app (runtime : Aardvark.Rendering.GL.Runtime) (form : System.Windows.Forms.Form) =
+    let app (app : OpenGlApplication) (runtime : Aardvark.Rendering.GL.Runtime) (form : System.Windows.Forms.Form) =
+
+        let initialState = initialState
+
+        // interop
+        renderingApp <- Some(app)
+
+        appToRenderInterop <- initialInterop runtime initialState
+
+        // app
         {
             unpersist = Unpersist.instance
             threads = fun model -> 
