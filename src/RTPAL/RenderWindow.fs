@@ -33,7 +33,10 @@ module WindowCreator =
         
         DefaultCameraController.control win.Mouse win.Keyboard win.Time 
 
-    let create (app : OpenGlApplication) (srd : SharedRenderData) (mode : RenderMode) = 
+    let create (app : OpenGlApplication) (srd : RenderData) (mode : IMod<RenderMode>) = 
+
+
+        (*
 
         match mode with 
         | RenderMode.GroundTruth -> 
@@ -85,5 +88,6 @@ module WindowCreator =
             ()
         | _ -> ()
 
+        *)
         
 

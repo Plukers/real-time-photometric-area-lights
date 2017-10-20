@@ -30,7 +30,7 @@
     module GlobalApplicationData = 
         
         let mutable renderingApp : Option<OpenGlApplication> = None
-        let mutable appToRenderInterop : Option<SharedRenderData> = None 
+        let mutable appToRenderInterop : Option<RenderData> = None 
 
     open GlobalApplicationData
     
@@ -285,7 +285,7 @@
                 b |> Mod.map (function true -> s | false -> Sg.empty)
             *)
             let sg (mode : IMod<RenderMode>) (sceneGraphs : Map<RenderMode, ISg<'a>>) =
-                mode |> Mod.map(fun m -> sgs.[m]) |> Sg.dynamic
+                mode |> Mod.map(fun m -> sceneGraphs.[m]) |> Sg.dynamic
             (*
             let sg = 
                 [
