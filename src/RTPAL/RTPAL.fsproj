@@ -89,10 +89,10 @@
   <ItemGroup>
     <Compile Include="ConfigGenerator.fsx" />
     <Compile Include="Config.fs" />
-    <Compile Include="Utils.fs" />
     <Compile Include="Light.fs" />
-    <Compile Include="BRDF_GGX.fs" />
     <Compile Include="PhotometricLight.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="BRDF_GGX.fs" />
     <Compile Include="EffectUtils.fs" />
     <Compile Include="EffectGT.fs" />
     <Compile Include="EffectBaumFF.fs" />
@@ -101,7 +101,6 @@
     <Compile Include="RenderState.fs" />
     <Compile Include="CameraController.fs" />
     <Compile Include="Rendering.fs" />
-    <Compile Include="RenderWindow.fs" />
     <Compile Include="RenderApp.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />

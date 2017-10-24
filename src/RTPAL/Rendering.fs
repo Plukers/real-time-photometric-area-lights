@@ -17,14 +17,16 @@ module Rendering =
     open Utils
     
     type RenderData = {
+        // GUI WINDOW --> RENDER WINDOW
         runtime : Aardvark.Rendering.GL.Runtime
 
-        sceneSg : ISg
+        scenePath : IMod<string>
 
         view : IMod<CameraView>
         frustum : IMod<Frustum>
         viewportSize : IMod<V2i>
 
+        mode : IMod<RenderMode>
         lights : LightCollection
         photometricData : IMod<Option<IntensityProfileSampler>>
         }
@@ -78,7 +80,7 @@ module Rendering =
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
             DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
-
+     
     module GroundTruth = 
 
         type GroundTruthData = {
@@ -99,7 +101,7 @@ module Rendering =
         
                 sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
 
-        let private basicRenderTask (data : RenderData) (gtData : GroundTruthData) = 
+        let private basicRenderTask (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
             
             let mode = 
                 gtData.clear |> Mod.map ( fun c -> 
@@ -126,7 +128,7 @@ module Rendering =
                     )
                 
             let iterationRender =
-                data.sceneSg
+                sceneSg
                     |> setupFbEffects [ EffectGT.groundTruthLighting |> toEffect ]
                     |> setupLights data.lights
                     |> setupPhotometricData data.photometricData
@@ -142,22 +144,22 @@ module Rendering =
                 |> Sg.texture DefaultSemantic.DiffuseColorTexture iterationRender
                 |> Sg.compile data.runtime (signature data.runtime)
 
-        let groundTruthFb (data : RenderData) (gtData : GroundTruthData) = 
-            basicRenderTask data gtData
+        let groundTruthFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
+            basicRenderTask data gtData sceneSg
             |> renderToColorWithoutClear data.viewportSize
      
-        let groundTruthSg (data : RenderData) (gtData : GroundTruthData) = 
-            groundTruthFb data gtData
+        let groundTruthSg (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
+            groundTruthFb data gtData sceneSg
             |> fbToSg data.viewportSize
         
-        let groundTruthRenderTask (data : RenderData) (gtData : GroundTruthData) =
-            data.runtime.CompileRender((signature data.runtime), (groundTruthSg data gtData))
+        let groundTruthRenderTask (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) =
+            data.runtime.CompileRender((signature data.runtime), (groundTruthSg data gtData sceneSg))
 
         let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
+            
+            let mutable prevView = Trafo3d.Identity
 
             let update (args : OpenTK.FrameEventArgs) =
-
-                let mutable prevView = Trafo3d.Identity
 
                 transact (fun _ -> 
                     
@@ -187,22 +189,29 @@ module Rendering =
                 )
 
             update
-
+        
+        let initGTData =
+            {
+                haltonSequence = ResetMod.Create(HaltonSequence.init :> seq<V2d>)
+                clear = ResetMod.Create(false) 
+                frameCount = ResetMod.Create(0)
+            }
+                         
     module BaumFormFactor = 
            
-        let baumFormFactorRenderTask (data : RenderData) = 
-            data.sceneSg
+        let baumFormFactorRenderTask (data : RenderData) (sceneSg : ISg) = 
+            sceneSg
                 |> setupFbEffects [ EffectBaumFF.formFactorLighting |> toEffect ]
                 |> setupLights data.lights
                 |> setupCamera data.view data.frustum data.viewportSize
                 |> Sg.compile data.runtime (signature data.runtime)        
 
-        let baumFormFactorFb (data : RenderData) = 
-            baumFormFactorRenderTask data
+        let baumFormFactorFb (data : RenderData) (sceneSg : ISg) = 
+            baumFormFactorRenderTask data sceneSg
             |> RenderTask.renderToColor data.viewportSize
      
-        let baumFormFactorSg (data : RenderData) = 
-            baumFormFactorFb data
+        let baumFormFactorSg (data : RenderData) (sceneSg : ISg) = 
+            baumFormFactorFb data sceneSg
             |> fbToSg data.viewportSize
 
     module Compare = 
@@ -231,27 +240,27 @@ module Rendering =
                 DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
             ]
                                         
-        let private diffFb (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) =
+        let diffFb (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) (sceneSg : ISg) =
             
             Sg.fullscreenQuad data.viewportSize
                 |> Sg.effect [ 
                     EffectCompare.compare |> toEffect 
                 ]
-                |> Sg.texture (Sym.ofString "TexA") (groundTruthFb data gtData)
+                |> Sg.texture (Sym.ofString "TexA") (groundTruthFb data gtData sceneSg)
                 |> Sg.texture (Sym.ofString "TexB") 
                     (
-                        Mod.bind (fun rm ->
+                        compData.compare |> Mod.bind (fun rm ->
                             match rm with
-                                | RenderMode.GroundTruth -> (groundTruthFb data gtData)
-                                | RenderMode.BaumFormFactor -> (baumFormFactorFb data)
-                                | _ -> (groundTruthFb data gtData)
-                            ) compData.compare
+                                | RenderMode.GroundTruth -> (groundTruthFb data gtData sceneSg)
+                                | RenderMode.BaumFormFactor -> (baumFormFactorFb data sceneSg)
+                                | _ -> (groundTruthFb data gtData sceneSg)
+                            )
                     )
                 |> Sg.compile data.runtime (diffSignature data.runtime)
                 |> RenderTask.renderToColor data.viewportSize
                                 
-        let private depthFb (data : RenderData) =
-            data.sceneSg
+        let private depthFb (data : RenderData) (sceneSg : ISg)=
+            sceneSg
                 |> Sg.effect [ 
                     DefaultSurfaces.trafo |> toEffect
                     DefaultSurfaces.vertexColor |> toEffect 
@@ -261,23 +270,28 @@ module Rendering =
                 |> Sg.compile data.runtime (depthSignature data.runtime)
                 |> RenderTask.renderToDepth data.viewportSize
 
-        let compareRenderTask (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) = 
+        let compareRenderTask (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) (sceneSg : ISg) (diffFb : IOutputMod<ITexture>) = 
             Sg.fullscreenQuad data.viewportSize
                 |> Sg.effect [ 
                     EffectOutline.outlineV |> toEffect 
                     EffectOutline.outlineF |> toEffect 
                 ]
-                |> Sg.texture (Sym.ofString "Tex") (diffFb data gtData compData)
-                |> Sg.texture (Sym.ofString "TexDepth") (depthFb data)
+                |> Sg.texture (Sym.ofString "Tex") diffFb
+                |> Sg.texture (Sym.ofString "TexDepth") (depthFb data sceneSg)
                 |> Sg.compile data.runtime (signature data.runtime) 
 
-        let compareFb (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) = 
-            compareRenderTask data gtData compData
+        let compareFb (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) (sceneSg : ISg) (diffFb : IOutputMod<ITexture>) = 
+            compareRenderTask data gtData compData sceneSg diffFb
             |> RenderTask.renderToColor data.viewportSize
      
-        let compareSg (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) = 
-            compareFb data gtData compData
+        let compareSg (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) (sceneSg : ISg) (diffFb : IOutputMod<ITexture>) = 
+            compareFb data gtData compData sceneSg diffFb
             |> fbToSg data.viewportSize
+
+        let initCompData = 
+            {
+                compare = ResetMod.Create(RenderMode.BaumFormFactor)
+            }
 
         (*
         let a = (fun _ -> 
@@ -293,19 +307,50 @@ module Rendering =
         *)
                 
     module Effects = 
+        open Aardvark.Application.WinForms
 
         open GroundTruth
         open BaumFormFactor
         open Compare
 
-        let RenderTask (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) (mode : IMod<RenderMode>) =
+        let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (viewportSize : V2i) (m : MRenderState) =
+             {
+                runtime = app.Runtime
+                scenePath = m.scenePath
+                view = view
+                frustum = Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.init 
+                viewportSize = viewportSize |> Mod.init
+                lights = m.lights |> Mod.force // mod  force necessary ? 
+                photometricData = m.photometryData
+                mode = m.renderMode
+            }
 
+        let CreateAndLinkRenderTask (data : RenderData) (gtData : GroundTruthData) (compData : CompareData) =
+
+            let sceneSg = 
+                Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) data.scenePath
+                |> Sg.dynamic
+                |> Sg.scale 18.0
+
+            let diffFrameBuffer = diffFb data gtData compData sceneSg
+
+            let sg = 
+                [
+                    groundTruthSg data gtData sceneSg |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.GroundTruth))
+                    baumFormFactorSg data sceneSg |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.BaumFormFactor))
+                    compareSg data gtData compData sceneSg diffFrameBuffer |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.Compare))
+                ] |> Sg.ofList
+
+            (*    
             let sgs = 
                 Map.empty
-                |> Map.add RenderMode.GroundTruth (groundTruthSg data gtData)
-                |> Map.add RenderMode.BaumFormFactor (baumFormFactorSg data)
-                |> Map.add RenderMode.Compare (compareSg data gtData compData)
+                |> Map.add RenderMode.GroundTruth (groundTruthSg data gtData sceneSg)
+                |> Map.add RenderMode.BaumFormFactor (baumFormFactorSg data sceneSg)
+                |> Map.add RenderMode.Compare (compareSg data gtData compData sceneSg diffFrameBuffer)
 
-            let sg = mode |> Mod.map(fun m -> sgs.[m]) |> Sg.dynamic
+            let sg = data.mode |> Mod.map(fun m -> sgs.[m]) |> Sg.dynamic
+            *)
 
-            data.runtime.CompileRender((signature data.runtime), sg)
+            let renderTask = data.runtime.CompileRender((signature data.runtime), sg)
+
+            (renderTask, diffFrameBuffer, (gtData.frameCount) )

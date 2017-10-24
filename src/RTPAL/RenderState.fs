@@ -55,12 +55,9 @@ type RenderMode =
 type Action =
     | IMPORT_PHOTOMETRY of string
     | CHANGE_RENDER_MODE of RenderMode
-    | GROUND_TRUTH_UPDATE 
-    | GROUND_TRUTH_CLEAR
     | CHANGE_COMPARE of RenderMode
     | COMPUTED_ERROR of double
-    | CAMERA of CameraControllerAction
-    | OPEN_GROUND_TRUTH_WINDOW
+    | OPENED_WINDOW 
 
 
 [<DomainType>]
@@ -70,21 +67,13 @@ type RenderState =
 
         renderMode      : RenderMode
         
-        clear           : bool
-        frameCount      : int
-        haltonSequence  : seq<V2d>
-
-        compare        : RenderMode
-        
+        compare        : RenderMode        
         error           : double
 
         geometryFiles   : list<string>
         scenePath       : string
-        sceneSg         : Aardvark.SceneGraph.ISg
 
         photometryName  : Option<string>
         photometryData  : Option<IntensityProfileSampler>
-
-        cameraState     : CameraControllerState
     }
     

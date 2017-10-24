@@ -69,11 +69,3 @@ module Utils =
             h.[1..]
             
         let addSequenceToSg (sequence : IMod<V2d[]>) sg = sg |> Sg.uniform "HaltonSamples" sequence
-
-
-     
-
-
-
-
-
