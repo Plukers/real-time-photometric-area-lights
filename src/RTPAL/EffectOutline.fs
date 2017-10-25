@@ -13,6 +13,9 @@ module EffectOutline =
 
     open EffectUtils
 
+    type UniformScope with
+        member uniform.PixelSize : V2d = uniform?PixelSize
+
     let private texDepth = 
         sampler2d {
             texture uniform?TexDepth
@@ -38,13 +41,12 @@ module EffectOutline =
         vertex {
 
             let sampleDistance = 1.0
-            let pixelSize = V2d(0.000732, 0.0013) // TODO get from uniform
 
             let edgeSamples = Arr<N<4>, V2d>([|
-                                                v.tc + V2d( 1.0,  1.0) * sampleDistance * pixelSize
-                                                v.tc + V2d( 1.0, -1.0) * sampleDistance * pixelSize
-                                                v.tc + V2d(-1.0,  1.0) * sampleDistance * pixelSize
-                                                v.tc + V2d(-1.0, -1.0) * sampleDistance * pixelSize
+                                                v.tc + V2d( 1.0,  1.0) * sampleDistance * uniform.PixelSize
+                                                v.tc + V2d( 1.0, -1.0) * sampleDistance * uniform.PixelSize
+                                                v.tc + V2d(-1.0,  1.0) * sampleDistance * uniform.PixelSize
+                                                v.tc + V2d(-1.0, -1.0) * sampleDistance * uniform.PixelSize
                                             |])
             
             return {
@@ -61,7 +63,7 @@ module EffectOutline =
             let s2 = texDepth.Sample(v.es.[2]).X
             let s3 = texDepth.Sample(v.es.[3]).X
 
-            let threshold = 0.007
+            let threshold = 0.001
 
             let diffA = abs(s0 - s3) > (threshold * (s0 + s3))
             let diffB = abs(s1 - s2) > (threshold * (s1 + s2))

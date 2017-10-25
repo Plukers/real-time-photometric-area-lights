@@ -48,6 +48,7 @@
         win.RenderTask <- renderTask
         
         win.UpdateFrame.Add(groundTruthRenderUpdate renderData gtData)
+        win.UpdateFrame.Add(fpsUpdate renderFeedback)
 
         (win, renderFeedback)
         
@@ -130,6 +131,12 @@
                                     | None -> ()
                                 }
                             )
+
+                            Incremental.div (AttributeMap.ofList [clazz "Item"]) (
+                                alist {      
+                                    let! fps = renderFeedback.fps
+                                    yield p [] [ text ("FPS: " + (sprintf "%.2f" fps))]
+                                    })
                         
                             div [ clazz "item"] [ 
                                 b [] [text "Render Mode"]
@@ -146,8 +153,10 @@
                                     
                                     match mode with
                                     | RenderMode.GroundTruth ->
-                                        let! fc = renderFeedback.frameCount                                        
+                                        let! fps = renderFeedback.fps
+                                        let! fc = renderFeedback.frameCount   
                                         yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
+                                        yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
                                     | RenderMode.Compare ->
                                         
                                         let! c = m.compare
@@ -182,8 +191,6 @@
                             )
                         ]
                     )
-                    
-                // render m runtime
             ]
 
         viewFunc

@@ -32,6 +32,8 @@ module Rendering =
         }
 
     type RenderFeedback = {
+        // global
+        fps : ModRef<float>
 
         // ground truth
         frameCount : ModRef<int>
@@ -170,7 +172,6 @@ module Rendering =
             let mutable prevView = Trafo3d.Identity
 
             let update (args : OpenTK.FrameEventArgs) =
-
                 transact (fun _ -> 
                     
                     let currentView = data.view |> Mod.force |> CameraView.viewTrafo
@@ -227,12 +228,7 @@ module Rendering =
         
         open GroundTruth
         open BaumFormFactor
-
-        (*
-        type CompareData = {
-            compare : ModRef<RenderMode>
-            }
-            *)
+        
         let private renderToFbo (fbo : IOutputMod<IFramebuffer>) (task : IRenderTask) =
             let sem = (Set.singleton DefaultSemantic.Colors)
             let res = 
@@ -289,6 +285,7 @@ module Rendering =
                     EffectOutline.outlineV |> toEffect 
                     EffectOutline.outlineF |> toEffect 
                 ]
+                |> Sg.uniform "PixelSize" (data.viewportSize |> Mod.map (fun vs -> V2d(1.0 / (float) vs.X, 1.0 / (float) vs.Y)))
                 |> Sg.texture (Sym.ofString "Tex") diffFb
                 |> Sg.texture (Sym.ofString "TexDepth") (depthFb data sceneSg)
                 |> Sg.compile data.runtime (signature data.runtime) 
@@ -321,6 +318,29 @@ module Rendering =
                 compare = m.compare
             }
 
+        let fpsUpdate (feedback : RenderFeedback) =
+
+            let mutable dTSum = 0.0 // in seconds
+            let mutable updateCount = 0
+
+            let update (args : OpenTK.FrameEventArgs) =
+                transact (fun _ ->
+                    if dTSum > 0.5 then
+                        let avgDT = dTSum / (float)updateCount
+                        
+                        feedback.fps.Value <- 1.0 / avgDT
+                        
+                        dTSum <- 0.0
+                        updateCount <- 0
+                    else
+                        dTSum <- dTSum + args.Time
+                        updateCount <- updateCount + 1
+                )
+
+                ()
+
+            update
+
         let CreateAndLinkRenderTask (data : RenderData) (gtData : GroundTruthData) =
 
             let sceneSg = 
@@ -351,6 +371,7 @@ module Rendering =
 
             let renderFeedback = 
                 {
+                    fps = ModRef(0.0)
                     frameCount = gtData.frameCount                      
                     compareTexture = diffFrameBuffer
                 }
