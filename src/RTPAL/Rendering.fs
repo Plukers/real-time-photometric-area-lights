@@ -242,19 +242,22 @@ module Rendering =
             ]
                                         
         let diffFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) =
-            
+
+            let groundTruthFb = groundTruthFb data gtData sceneSg
+            let baumFormFactorFb = baumFormFactorFb data sceneSg
+
             Sg.fullscreenQuad data.viewportSize
                 |> Sg.effect [ 
                     EffectCompare.compare |> toEffect 
                 ]
-                |> Sg.texture (Sym.ofString "TexA") (groundTruthFb data gtData sceneSg)
+                |> Sg.texture (Sym.ofString "TexA") groundTruthFb
                 |> Sg.texture (Sym.ofString "TexB") 
                     (
                         data.compare |> Mod.bind (fun rm ->
                             match rm with
-                                | RenderMode.GroundTruth -> (groundTruthFb data gtData sceneSg)
-                                | RenderMode.BaumFormFactor -> (baumFormFactorFb data sceneSg)
-                                | _ -> (groundTruthFb data gtData sceneSg)
+                                | RenderMode.GroundTruth -> groundTruthFb
+                                | RenderMode.BaumFormFactor -> baumFormFactorFb
+                                | _ -> groundTruthFb
                             )
                     )
                 |> Sg.compile data.runtime (diffSignature data.runtime)
