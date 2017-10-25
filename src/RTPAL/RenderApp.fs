@@ -100,7 +100,7 @@
                 new System.Action( fun () -> 
                     win.Run()
                 ) 
-
+            
             // view
             let semui =
                 [ 
@@ -211,7 +211,7 @@
         // initial state
         {            
             lights = lc
-            renderMode = RenderMode.BaumFormFactor
+            renderMode = RenderMode.GroundTruth
             compare = RenderMode.BaumFormFactor 
             error = 0.0
             geometryFiles = []

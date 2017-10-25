@@ -17,7 +17,6 @@ module Rendering =
     open Utils
     
     type RenderData = {
-        // GUI WINDOW --> RENDER WINDOW
         runtime : Aardvark.Rendering.GL.Runtime
 
         scenePath : IMod<string>
@@ -165,9 +164,10 @@ module Rendering =
                     
                     let currentView = data.view |> Mod.force |> CameraView.viewTrafo
                     let mutable currentClear = gtData.clear |> Mod.force
-
+                    
                     if prevView <> currentView then
                         if not currentClear then 
+                            printfn "CLEAR"
                             currentClear <- true
                             ResetMod.Update(gtData.clear, true)
                     else
@@ -178,10 +178,13 @@ module Rendering =
                     prevView <- currentView
                     
                     let newhs = if currentClear then
+                                    printfn "SEQUENCE INIT"
                                     HaltonSequence.init
                                 else
+                                    printfn "SEQUENCE UPDATE"
                                     let hs = gtData.haltonSequence |> Mod.force
-                                    (hs |> Seq.toArray).[(hs |> Seq.length) - 1] |> HaltonSequence.next                
+                                    (hs |> Seq.toArray).[(hs |> Seq.length) - 1] |> HaltonSequence.next     
+                                    
                     ResetMod.Update(gtData.haltonSequence, newhs :> seq<V2d>)
                     
                     let newfc = (gtData.frameCount |> Mod.force) + 1
@@ -292,19 +295,6 @@ module Rendering =
             {
                 compare = ResetMod.Create(RenderMode.BaumFormFactor)
             }
-
-        (*
-        let a = (fun _ -> 
-            let diff = diffFb.GetValue()
-                            
-            let diffPixData = runtime.Download(diff |> unbox<_>)
-            let downlaoded = diffPixData.ToPixImage<float32>()
-            let data = downlaoded.GetMatrix<C4f>()
-            let ec = data.Elements |> Seq.fold ( fun cs c-> (C4f.White - c) + cs ) C4f.Black
-                                        
-            COMPUTED_ERROR (float (sqrt (ec.R * ec.R + ec.G * ec.G + ec.B  * ec.B)))
-        )
-        *)
                 
     module Effects = 
         open Aardvark.Application.WinForms
