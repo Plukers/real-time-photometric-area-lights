@@ -350,24 +350,33 @@ module Rendering =
 
             let diffFrameBuffer = diffFb data gtData sceneSg
 
-            let sg = 
-                [
-                    (groundTruthSg data gtData sceneSg)             |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.GroundTruth))
-                    (baumFormFactorSg data sceneSg)                 |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.BaumFormFactor))
-                    (compareSg data gtData sceneSg diffFrameBuffer) |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.Compare))
-                ] |> Sg.ofList
-
-            (*    
-            let sgs = 
+            let signature = signature data.runtime
+            let tasks = 
                 Map.empty
-                |> Map.add RenderMode.GroundTruth (groundTruthSg data gtData sceneSg)
-                |> Map.add RenderMode.BaumFormFactor (baumFormFactorSg data sceneSg)
-                |> Map.add RenderMode.Compare (compareSg data gtData compData sceneSg diffFrameBuffer)
+                |> Map.add RenderMode.GroundTruth (groundTruthSg data gtData sceneSg |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.BaumFormFactor (baumFormFactorSg data sceneSg |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.Compare (compareSg data gtData sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
+                
+            tasks |> Map.iter (fun _ t -> t.Update(AdaptiveToken.Top, RenderToken.Empty)) // iterate over tasks initially one time to create them
 
-            let sg = data.mode |> Mod.map(fun m -> sgs.[m]) |> Sg.dynamic
-            *)
+            let renderTask = 
+                { new AbstractRenderTask() with
+                    override x.Dispose() = ()
+                    override x.Perform(a,b,c) =
+                        let m = data.mode.GetValue(a)
+                        let task = tasks.[m]
+                        task.Run(a,b,c)
 
-            let renderTask = data.runtime.CompileRender((signature data.runtime), sg)
+                    override x.PerformUpdate(a,b) =
+                        let m = data.mode.GetValue(a)
+                        let task = tasks.[m]
+                        task.Update(a,b)
+
+                    override x.Use f = f()
+                    override x.FramebufferSignature = Some signature
+                    override x.Runtime = Some (data.runtime :> _)
+
+                }
 
             let renderFeedback = 
                 {
@@ -376,4 +385,4 @@ module Rendering =
                     compareTexture = diffFrameBuffer
                 }
 
-            (renderTask, renderFeedback )
+            (renderTask, renderFeedback)
