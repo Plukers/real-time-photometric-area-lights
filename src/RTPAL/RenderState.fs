@@ -25,17 +25,17 @@ type Action =
 [<DomainType>]
 type RenderState =
     {    
-        lights          : LightCollection
+        lights         : LightCollection
 
-        renderMode      : RenderMode
+        renderMode     : RenderMode
         
         compare        : RenderMode        
-        error           : double
+        error          : double
 
-        geometryFiles   : list<string>
-        scenePath       : string
+        geometryFiles  : list<string>
+        scenePath      : string
 
-        photometryName  : Option<string>
-        photometryData  : Option<IntensityProfileSampler>
+        photometryName : Option<string>
+        photometryData : Option<IntensityProfileSampler>
     }
     

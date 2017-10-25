@@ -41,10 +41,9 @@
         let view = CameraView.lookAt (V3d(-1.0, 0.0, 0.0)) (V3d(1.0, 0.0, -1.0)) V3d.OOI
         let renderData = initialRenderData app (DefaultCameraController.control win.Mouse win.Keyboard win.Time view) viewportSize m 
         
-        let gtData = initGTData            
-        let compData = initCompData
+        let gtData = initGTData        
 
-        let (renderTask, diffFb, frameCount) = Effects.CreateAndLinkRenderTask renderData gtData compData
+        let (renderTask, diffFb, frameCount) = Effects.CreateAndLinkRenderTask renderData gtData
 
         win.RenderTask <- renderTask
         
@@ -87,7 +86,7 @@
                     final <- d.FileName
             ) 
 
-        form.BeginInvoke action |> ignore
+        form.Invoke action |> ignore
         IMPORT_PHOTOMETRY final
         
     let view (app : OpenGlApplication) (form : System.Windows.Forms.Form) =
@@ -100,7 +99,7 @@
                 new System.Action( fun () -> 
                     win.Run()
                 ) 
-            
+
             // view
             let semui =
                 [ 
