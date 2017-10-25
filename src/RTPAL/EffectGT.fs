@@ -106,6 +106,4 @@ module EffectGT =
 
             return V4d(illumination.XYZ, alpha)
             }
-
-        
-    
+                

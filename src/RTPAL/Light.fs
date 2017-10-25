@@ -16,7 +16,7 @@ module Light =
         Forwards     : ModRef<        V3d[]> // Size: Config.NUM_LIGHTS.     Direction the light is facing, corresponding to normal. Only one normal is needed because a light is a plane.  Modified as defined by the corresponding trafo.
         Ups          : ModRef<        V3d[]> // Size: Config.NUM_LIGHTS.     The up direction of the light, has to be orthonormal to Forward. Modified as defined by the corresponding trafo.
         Intensities  : ModRef<     double[]> // Size: Config.NUM_LIGHTS.
-        Areas         : ModRef<     double[]> // Size: Config.NUM_LIGHTS.
+        Areas         : ModRef<    double[]> // Size: Config.NUM_LIGHTS.
         TwoSided     : ModRef<       bool[]> // Size: Config.NUM_LIGHTS.
         Trafos       : ModRef<    Trafo3d[]> // Size: Config.NUM_LIGHTS.
         NextFreeAddr : ModRef<  Option<int>> //                              Indicates the next free address in Lights array, -1 indicates no free space.
