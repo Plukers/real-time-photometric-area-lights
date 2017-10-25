@@ -31,6 +31,15 @@ module Rendering =
         photometricData : IMod<Option<IntensityProfileSampler>>
         }
 
+    type RenderFeedback = {
+
+        // ground truth
+        frameCount : ModRef<int>
+
+        // compare
+        compareTexture : IOutputMod<ITexture>
+        }
+
     let private normalizeTrafo (b : Box3d) =
             let size = b.Size
             let scale = 4.0 / size.NormMax
@@ -340,4 +349,10 @@ module Rendering =
 
             let renderTask = data.runtime.CompileRender((signature data.runtime), sg)
 
-            (renderTask, diffFrameBuffer, (gtData.frameCount) )
+            let renderFeedback = 
+                {
+                    frameCount = gtData.frameCount                      
+                    compareTexture = diffFrameBuffer
+                }
+
+            (renderTask, renderFeedback )

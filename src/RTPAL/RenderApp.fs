@@ -43,13 +43,13 @@
         
         let gtData = initGTData        
 
-        let (renderTask, diffFb, frameCount) = Effects.CreateAndLinkRenderTask renderData gtData
+        let (renderTask, renderFeedback) = Effects.CreateAndLinkRenderTask renderData gtData
 
         win.RenderTask <- renderTask
         
         win.UpdateFrame.Add(groundTruthRenderUpdate renderData gtData)
 
-        (win, diffFb, frameCount)
+        (win, renderFeedback)
         
 
     let update (s : RenderState) (a : Action) =
@@ -93,7 +93,7 @@
         
         let viewFunc (m : MRenderState) =
             
-            let (win, diffFb, frameCount) = createGameWindow app (V2i(1024, 768)) m
+            let (win, renderFeedback) = createGameWindow app (V2i(1024, 768)) m
             
             let openGameWindowAction : System.Action = 
                 new System.Action( fun () -> 
@@ -146,7 +146,7 @@
                                     
                                     match mode with
                                     | RenderMode.GroundTruth ->
-                                        let! fc = frameCount                                        
+                                        let! fc = renderFeedback.frameCount                                        
                                         yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
                                     | RenderMode.Compare ->
                                         
@@ -161,10 +161,10 @@
 
                                         let computeError = (fun _ -> 
             
-                                            let diff = diffFb.GetValue()
+                                            let comp = renderFeedback.compareTexture.GetValue()
                             
-                                            let diffPixData = app.Runtime.Download(diff |> unbox<_>)
-                                            let downlaoded = diffPixData.ToPixImage<float32>()
+                                            let compPixData = app.Runtime.Download(comp |> unbox<_>)
+                                            let downlaoded = compPixData.ToPixImage<float32>()
                                             let data = downlaoded.GetMatrix<C4f>()
                                             let ec = data.Elements |> Seq.fold ( fun cs c-> (C4f.White - c) + cs ) C4f.Black
                                         
