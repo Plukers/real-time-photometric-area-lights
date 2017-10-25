@@ -87,7 +87,7 @@
                     final <- d.FileName
             ) 
 
-        form.Invoke action |> ignore
+        form.BeginInvoke action |> ignore
         IMPORT_PHOTOMETRY final
         
     let view (app : OpenGlApplication) (form : System.Windows.Forms.Form) =
@@ -95,12 +95,8 @@
         let viewFunc (m : MRenderState) =
             
             let (win, diffFb, frameCount) = createGameWindow app (V2i(1024, 768)) m
-
-
-            // TODO open game window in new thread
-
             
-            let openWindowAction : System.Action = 
+            let openGameWindowAction : System.Action = 
                 new System.Action( fun () -> 
                     win.Run()
                 ) 
@@ -119,7 +115,7 @@
 
                             div [ clazz "item" ] [
                                     button [ clazz "ui button" ; onClick (fun _ -> 
-                                            form.Invoke openWindowAction |> ignore
+                                            form.BeginInvoke openGameWindowAction |> ignore
                                             OPENED_WINDOW
                                         )] [text "Open Window"]
                                 ]
