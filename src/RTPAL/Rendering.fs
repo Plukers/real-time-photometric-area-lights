@@ -83,9 +83,9 @@ module Rendering =
     module GroundTruth = 
 
         type GroundTruthData = {
-            haltonSequence : ResetMod<seq<V2d>>
-            clear : ResetMod<bool>
-            frameCount : ResetMod<int>
+            haltonSequence : ModRef<V2d[]>
+            clear : ModRef<bool>
+            frameCount : ModRef<int>
             }
         
         let private renderToColorWithoutClear (size : IMod<V2i>) (task : IRenderTask) =
@@ -132,8 +132,8 @@ module Rendering =
                     |> setupLights data.lights
                     |> setupPhotometricData data.photometricData
                     |> setupCamera data.view data.frustum data.viewportSize 
-                    |> Sg.uniform "HaltonSamples" (gtData.haltonSequence |> Mod.map Seq.toArray)
-                    |> Sg.uniform "FrameCount" ( gtData.frameCount)
+                    |> Sg.uniform "HaltonSamples" gtData.haltonSequence
+                    |> Sg.uniform "FrameCount" gtData.frameCount
                     |> Sg.compile data.runtime (signature data.runtime)
                     |> RenderTask.renderToColor data.viewportSize
               
@@ -163,41 +163,38 @@ module Rendering =
                 transact (fun _ -> 
                     
                     let currentView = data.view |> Mod.force |> CameraView.viewTrafo
-                    let mutable currentClear = gtData.clear |> Mod.force
                     
                     if prevView <> currentView then
-                        if not currentClear then 
-                            printfn "CLEAR"
-                            currentClear <- true
-                            ResetMod.Update(gtData.clear, true)
+                        if not gtData.clear.Value then 
+                            gtData.clear.Value <- true
                     else
-                        if currentClear then 
-                            currentClear <- false
-                            ResetMod.Update(gtData.clear, false)
+                        if gtData.clear.Value then 
+                            gtData.clear.Value <- false
 
                     prevView <- currentView
                     
-                    let newhs = if currentClear then
-                                    printfn "SEQUENCE INIT"
-                                    HaltonSequence.init
-                                else
-                                    printfn "SEQUENCE UPDATE"
-                                    let hs = gtData.haltonSequence |> Mod.force
-                                    (hs |> Seq.toArray).[(hs |> Seq.length) - 1] |> HaltonSequence.next     
+                    gtData.haltonSequence.Value <-
+                        if gtData.clear.Value then
+                            printfn "SEQUENCE INIT"
+                            HaltonSequence.init
+                        else
+                            printfn "SEQUENCE UPDATE"
+                            gtData.haltonSequence.Value.[Config.NUM_SAMPLES - 1] |> HaltonSequence.next     
                                     
-                    ResetMod.Update(gtData.haltonSequence, newhs :> seq<V2d>)
-                    
-                    let newfc = (gtData.frameCount |> Mod.force) + 1
-                    ResetMod.Update(gtData.frameCount, newfc)
+                    gtData.frameCount.Value <- 
+                        if gtData.clear.Value then
+                            1
+                        else
+                            gtData.frameCount.Value + 1
                 )
 
             update
         
         let initGTData =
             {
-                haltonSequence = ResetMod.Create(HaltonSequence.init :> seq<V2d>)
-                clear = ResetMod.Create(false) 
-                frameCount = ResetMod.Create(0)
+                haltonSequence = ModRef(HaltonSequence.init)
+                clear = ModRef(false) 
+                frameCount = ModRef(0)
             }
                          
     module BaumFormFactor = 
@@ -326,9 +323,9 @@ module Rendering =
 
             let sg = 
                 [
-                    groundTruthSg data gtData sceneSg |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.GroundTruth))
-                    baumFormFactorSg data sceneSg |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.BaumFormFactor))
-                    compareSg data gtData compData sceneSg diffFrameBuffer |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.Compare))
+                    (groundTruthSg data gtData sceneSg)                         |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.GroundTruth))
+                    (baumFormFactorSg data sceneSg)                             |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.BaumFormFactor))
+                    (compareSg data gtData compData sceneSg diffFrameBuffer)    |> Sg.onOff (data.mode |> Mod.map ( fun mode -> mode = RenderMode.Compare))
                 ] |> Sg.ofList
 
             (*    
