@@ -152,19 +152,30 @@ module Light =
             
             let vAddr = addr * Config.VERT_PER_LIGHT
             let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+
+            let newTrafo = lc.Trafos.Value.[addr]
+
+            lc.Trafos.Value.[addr] <- trafo * lc.Trafos.Value.[addr]
+            lc.Trafos.MarkOutdated()
+
             for i = vAddr to vAddr + Config.VERT_PER_LIGHT - 1 do
                 lc.Vertices.Value.[i] <- 
                     V3d(
                         trafo.Forward * V4d(lc.Vertices.Value.[i], 1.0)
                        )
+
+            printfn "New Vertices %A"  lc.Vertices.Value
              
             lc.Forwards.Value.[addr] <- Mat.transformDir trafo.Forward lc.Forwards.Value.[addr] |> Vec.normalize
             lc.Ups.Value.[addr] <- Mat.transformDir trafo.Forward lc.Ups.Value.[addr] |> Vec.normalize
             
             lc.Areas.Value.[addr] <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
-            printfn "Computed Area: %A" lc.Areas.Value.[addr]
-            lc.Trafos.Value.[addr] <- trafo * lc.Trafos.Value.[addr]
-            )
+            
+            lc.Trafos.Value.[addr] <- trafo * lc.Trafos.Value.[addr] // TODO copy and update
+            lc.Trafos.MarkOutdated()
+           )
+        
+        
 
     module Effect =
         open FShade
@@ -227,7 +238,9 @@ module Light =
                                     ]
                             )
             
-                        let lightTrafo = Mod.map (fun (trafos : Trafo3d[]) -> trafos.[addr]) lc.Trafos
+                        let lightTrafo = Mod.map (fun (trafos : Trafo3d[]) -> 
+                            printfn "Trafo Changed %A" trafos.[addr]
+                            trafos.[addr]) lc.Trafos
                            
                         let lightSg = lightGeometry 
                                         |> Sg.ofIndexedGeometry 

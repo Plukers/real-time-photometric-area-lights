@@ -29,6 +29,7 @@
     open Rendering.BaumFormFactor
     open Rendering.Compare
     open Rendering.Effects
+    open Aardvark.Rendering.GL
     
     let createGameWindow (app : OpenGlApplication) (viewportSize : V2i) (m : MRenderState) =
         
@@ -76,6 +77,13 @@
             | CHANGE_COMPARE mode -> { s with compare = mode }
             | COMPUTED_ERROR error -> { s with error = error }
             | OPENED_WINDOW -> s
+            | CHANGE_LIGHT_TRANSFORM_MODE mode -> { s with lightTransformMode = mode }
+            | TRANSLATE_LIGHT (lightID, dir) ->             
+                transformLight s.lights lightID (Trafo3d.Translation(dir))
+                s
+            | ROTATE_LIGHT (lightID, euler) ->
+                transformLight s.lights lightID (Trafo3d.Rotation(euler))
+                s
 
     let openFileDialog (form : System.Windows.Forms.Form) =
         let mutable final = ""
@@ -108,88 +116,171 @@
                     { kind = Script; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
                 ]   
 
-            div [attribute "style" "display: flex; flex-direction: row; width: 100%; height: 100%; border: 0; padding: 0; margin: 0"] [
+            let activeTrafoLightId = 0      // TODO make changeable
+            let translationStepSize = 0.5   // TODO make changeable
+
+            body [attribute "style" "display: flex; flex-direction: row; width: 100%; height: 100%; border: 0; margin: 0; padding: 1rem;"] [
 
                 require semui (
-                    div [ attribute "class" "ui visible sidebar inverted vertical menu"; attribute "style" "min-width: 166px" ] [  
+                        div [] [
 
-                            div [ clazz "item" ] [
-                                    button [ clazz "ui button" ; onClick (fun _ -> 
-                                            form.BeginInvoke openGameWindowAction |> ignore
-                                            OPENED_WINDOW
-                                        )] [text "Open Window"]
-                                ]
-                        
-                            Incremental.div (AttributeMap.ofList [clazz "Item"]) (
-                                alist {       
-                                    yield button [ clazz "ui button" ; onClick (fun _ -> openFileDialog form)] [text "Load Photometric Data"]
+                            div [ clazz "ui stackable equal width grid" ] [
 
-                                    let! photometryName = m.photometryName
+                                div [ clazz "column" ][ 
+                                        button [ clazz "ui button" ; onClick (fun _ -> 
+                                                form.BeginInvoke openGameWindowAction |> ignore
+                                                OPENED_WINDOW
+                                            )] [text "Open Window"]
 
-                                    match photometryName with
-                                    | Some name -> yield p[] [ text ("Loaded " + name)]
-                                    | None -> ()
-                                }
-                            )
-
-                            Incremental.div (AttributeMap.ofList [clazz "Item"]) (
-                                alist {      
-                                    let! fps = renderFeedback.fps
-                                    yield p [] [ text ("FPS: " + (sprintf "%.2f" fps))]
-                                    })
-                        
-                            div [ clazz "item"] [ 
-                                b [] [text "Render Mode"]
-                                div [ clazz "menu" ] [
-                                    div [ clazz "item" ] [
-                                        dropDown m.renderMode (fun mode -> CHANGE_RENDER_MODE mode)
+                                        button [ clazz "ui button" ; onClick (fun _ -> 
+                                                openFileDialog form
+                                            )] [text "Load Photometric Data"]                                        
                                     ]
-                                ]
-                            ] 
-                                                        
-                            Incremental.div (AttributeMap.ofList [clazz "Item"]) (
-                                alist {                                
-                                    let! mode = m.renderMode
-                                    
-                                    match mode with
-                                    | RenderMode.GroundTruth ->
-                                        let! fps = renderFeedback.fps
-                                        let! fc = renderFeedback.frameCount   
-                                        yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
-                                        yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
-                                    | RenderMode.Compare ->
-                                        
-                                        let! c = m.compare
+                            ]
 
-                                        if c = RenderMode.Compare then
-                                            yield p [ clazz "ui label red" ] [ text ("Render mode Compare cannot be compared.") ]
-                                            yield div [ clazz "ui divider"] []
-                         
-                                        yield p [] [ text ("Compare Ground Truth with")]
-                                        yield p [] [ dropDown m.compare (fun mode -> CHANGE_COMPARE mode) ]
+                            div [ clazz "ui stackable two column vertically divided grid container" ] [
+                                div [ clazz "row" ] [
+                                    div [ clazz "column" ] [ 
+                                        div [ clazz "ui segment" ] [
+                                            Incremental.div (AttributeMap.ofList []) (
+                                                alist {      
+                                                    let! photometryName = m.photometryName
+                                                    match photometryName with
+                                                    | Some name -> yield p[] [ text ("Loaded Photometry: " + name)]
+                                                    | None -> ()
 
-                                        let computeError = (fun _ -> 
-            
-                                            let comp = renderFeedback.compareTexture.GetValue()
-                            
-                                            let compPixData = app.Runtime.Download(comp |> unbox<_>)
-                                            let downlaoded = compPixData.ToPixImage<float32>()
-                                            let data = downlaoded.GetMatrix<C4f>()
-                                            let ec = data.Elements |> Seq.fold ( fun cs c-> (C4f.White - c) + cs ) C4f.Black
-                                        
-                                            COMPUTED_ERROR (double (sqrt (ec.R * ec.R + ec.G * ec.G + ec.B  * ec.B)))
+                                                    let! fps = renderFeedback.fps
+                                                    yield p [] [ text ("FPS: " + (sprintf "%.2f" fps))]
+                                                })
+
+                                            div [ clazz "ui divider"] []
+
+                                            div [ clazz "ui buttons"] [
+                                                button [ clazz "ui button"; onClick (fun _ -> CHANGE_LIGHT_TRANSFORM_MODE Translate) ] [ text "Translate" ]
+                                                div [ clazz "or" ] []
+                                                button [ clazz "ui button"; onClick (fun _ -> CHANGE_LIGHT_TRANSFORM_MODE Rotate) ] [ text "Rotate" ]
+                                            ]
+
+                                            
+
+                                            Incremental.div (AttributeMap.ofList [clazz "ui icon buttons"]) (
+                                                alist {
+                                                    let! mode = m.lightTransformMode
                                                     
-                                        )
-                                        
-                                        yield div [ clazz "ui divider"] []
-                                        yield button [clazz "ui button" ; onClick (fun _ -> computeError())] [text "Compute Error"]
+                                                    yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                                    match mode with 
+                                                                    | Translate ->
+                                                                        TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, translationStepSize, 0.0)) 
+                                                                    | Rotate ->
+                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.1, 0.0, 0.0)) 
+                                                                )] [
+                                                                i [ clazz "arrow left icon"][]
+                                                            ]
+                                                    yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                                    match mode with 
+                                                                    | Translate ->
+                                                                        TRANSLATE_LIGHT (activeTrafoLightId, V3d(translationStepSize, 0.0, 0.0))
+                                                                    | Rotate ->
+                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.0, 0.1, 0.0)) 
+                                                                )] [
+                                                                i [ clazz "arrow down icon"][]
+                                                            ]
+                                                    yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                                    match mode with 
+                                                                    | Translate ->
+                                                                        TRANSLATE_LIGHT (activeTrafoLightId, V3d(-translationStepSize, 0.0, 0.0))
+                                                                    | Rotate ->
+                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.0, -0.1, 0.0))
+                                                                )] [
+                                                                i [ clazz "arrow up icon"][]
+                                                            ]
+                                                    yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                                    match mode with 
+                                                                    | Translate ->
+                                                                        TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, -translationStepSize, 0.0))
+                                                                    | Rotate ->
+                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(-0.1, 0.0, 0.0)) 
+                                                                )] [
+                                                                i [ clazz "arrow right icon"][]
+                                                            ]
+                                                }
+                                            )
+                                            text " "
+                                            Incremental.div (AttributeMap.ofList [clazz "ui icon buttons"]) (
+                                                alist {      
+                                                    let! mode = m.lightTransformMode
 
-                                        let! error = m.error
-                                        yield p [] [ text ("Error " + error.ToString())]
-                                    | _ -> ()
-                                }     
-                            )
+                                                    match mode with
+                                                    | Translate ->
+                                                        yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                                    TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, 0.0, -translationStepSize)) 
+                                                                )] [
+                                                                    i [ clazz "chevron down icon"][]
+                                                                ]
+                                                        yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                                    TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, 0.0, translationStepSize)) 
+                                                                )] [
+                                                                    i [ clazz "chevron up icon"][]
+                                                                ]
+                                                    | Rotate -> ()
+                                                })                                            
+                                        ]
+                                    ]  
+                                    div [ clazz "column" ] [ 
+                                        Incremental.div (AttributeMap.ofList [clazz "ui segment" ]) (
+                                            alist {           
+                                                
+                                                yield dropDown m.renderMode (fun mode -> CHANGE_RENDER_MODE mode)
+
+                                                yield div [ clazz "ui divider"] []
+
+                                                let! mode = m.renderMode
+                                    
+                                                match mode with
+                                                | RenderMode.GroundTruth ->
+                                                    let! fps = renderFeedback.fps
+                                                    let! fc = renderFeedback.frameCount   
+                                                    yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
+                                                    yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
+                                                | RenderMode.Compare ->
+                                        
+                                                    let! c = m.compare
+
+                                                    if c = RenderMode.Compare then
+                                                        yield p [ clazz "ui label red" ] [ text ("Render mode Compare cannot be compared.") ]
+                                                        yield div [ clazz "ui divider"] []
+                         
+                                                    yield p [] [ text ("Compare Ground Truth with")]
+                                                    yield p [] [ dropDown m.compare (fun mode -> CHANGE_COMPARE mode) ]
+
+                                                    let computeError = (fun _ -> 
+            
+                                                        let comp = renderFeedback.compareTexture.GetValue()
+                            
+                                                        let compPixData = app.Runtime.Download(comp |> unbox<_>)
+                                                        let downlaoded = compPixData.ToPixImage<float32>()
+                                                        let data = downlaoded.GetMatrix<C4f>()
+                                                        let ec = data.Elements |> Seq.fold ( fun cs c-> (C4f.White - c) + cs ) C4f.Black
+                                        
+                                                        COMPUTED_ERROR (double (sqrt (ec.R * ec.R + ec.G * ec.G + ec.B  * ec.B)))
+                                                    
+                                                    )
+                                        
+                                                    yield div [ clazz "ui divider"] []
+
+                                                    let! error = m.error
+                                                    yield p [] [ text ("Error: " + error.ToString())]
+                                                    yield p [] [ button [clazz "ui button" ; onClick (fun _ -> computeError())] [text "Compute Error"] ]
+
+                                                    
+                                                | _ -> ()
+                                            }     
+                                        )
+                                    ]                                  
+                                ]
+                            ]
                         ]
+                        
                     )
             ]
 
@@ -224,6 +315,7 @@
             scenePath = geometryFile
             photometryName = Some(System.IO.Path.GetFileName photometryPath)
             photometryData = photometryData
+            lightTransformMode = Translate
         }
        
 

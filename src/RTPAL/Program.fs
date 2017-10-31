@@ -21,7 +21,7 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime
     
-    use form = new Form(Width = 220, Height = 768)
+    use form = new Form(Width = 408, Height = 630)
     let a = RenderApp.app app form |> App.start
 
     WebPart.startServer 4321 [ 
