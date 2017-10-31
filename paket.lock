@@ -168,6 +168,7 @@ NUGET
       FShade.Imperative (>= 3.2.13)
       FSharp.Core (>= 4.0 < 4.1)
     Unofficial.AssimpNet (3.3.3)
+    Unofficial.LibTessDotNet (1.0.2)
   remote: https://api.nuget.org/v3/index.json
     Aardvark.Base (3.0.42)
       DevILSharp (>= 0.1.1 < 0.2)
@@ -246,7 +247,6 @@ NUGET
       System.Reactive.Core (>= 3.0)
       System.Reactive.Interfaces (>= 3.0)
     System.Runtime.InteropServices.RuntimeInformation (4.3)
-    Unofficial.LibTessDotNet (1.0.2)
   remote: https://vrvis.myget.org/F/aardvark/api/v3/index.json
     Aardvark.Data.Photometry (3.1.12)
       Aardvark.Base (>= 3.0.39 < 3.1)
