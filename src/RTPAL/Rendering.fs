@@ -361,7 +361,7 @@ module Rendering =
 
             let renderTask = 
                 { new AbstractRenderTask() with
-                    override x.Dispose() = ()
+                    override x.Release() = ()
                     override x.Perform(a,b,c) =
                         let m = data.mode.GetValue(a)
                         let task = tasks.[m]
