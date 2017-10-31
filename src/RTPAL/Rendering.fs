@@ -375,7 +375,6 @@ module Rendering =
                     override x.Use f = f()
                     override x.FramebufferSignature = Some signature
                     override x.Runtime = Some (data.runtime :> _)
-
                 }
 
             let renderFeedback = 
