@@ -116,8 +116,9 @@
                     { kind = Script; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
                 ]   
 
-            let activeTrafoLightId = 0      // TODO make changeable
-            let translationStepSize = 0.5   // TODO make changeable
+            let activeTrafoLightId = 0                   // TODO make changeable
+            let translationStepSize = 0.5                // TODO make changeable
+            let rotationStepSize = System.Math.PI / 18.0 // TODO make changelable
 
             body [attribute "style" "display: flex; flex-direction: row; width: 100%; height: 100%; border: 0; margin: 0; padding: 1rem;"] [
 
@@ -172,25 +173,25 @@
                                                                     | Translate ->
                                                                         TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, translationStepSize, 0.0)) 
                                                                     | Rotate ->
-                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.1, 0.0, 0.0)) 
+                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.0, 0.0, rotationStepSize)) 
                                                                 )] [
                                                                 i [ clazz "arrow left icon"][]
                                                             ]
                                                     yield   button [clazz "ui button"; onClick (fun _ -> 
                                                                     match mode with 
                                                                     | Translate ->
-                                                                        TRANSLATE_LIGHT (activeTrafoLightId, V3d(translationStepSize, 0.0, 0.0))
+                                                                        TRANSLATE_LIGHT (activeTrafoLightId, V3d(-translationStepSize, 0.0, 0.0))
                                                                     | Rotate ->
-                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.0, 0.1, 0.0)) 
+                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.0, rotationStepSize, 0.0)) 
                                                                 )] [
                                                                 i [ clazz "arrow down icon"][]
                                                             ]
                                                     yield   button [clazz "ui button"; onClick (fun _ -> 
                                                                     match mode with 
                                                                     | Translate ->
-                                                                        TRANSLATE_LIGHT (activeTrafoLightId, V3d(-translationStepSize, 0.0, 0.0))
+                                                                        TRANSLATE_LIGHT (activeTrafoLightId, V3d(translationStepSize, 0.0, 0.0))
                                                                     | Rotate ->
-                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.0, -0.1, 0.0))
+                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.0, -rotationStepSize, 0.0))
                                                                 )] [
                                                                 i [ clazz "arrow up icon"][]
                                                             ]
@@ -199,7 +200,7 @@
                                                                     | Translate ->
                                                                         TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, -translationStepSize, 0.0))
                                                                     | Rotate ->
-                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(-0.1, 0.0, 0.0)) 
+                                                                        ROTATE_LIGHT (activeTrafoLightId, V3d(0.0, 0.0, -rotationStepSize)) 
                                                                 )] [
                                                                 i [ clazz "arrow right icon"][]
                                                             ]

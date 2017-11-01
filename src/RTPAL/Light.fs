@@ -141,38 +141,49 @@ module Light =
 
         | None -> Option.None
 
+        (*
+    let translateLight (lc : LightCollection) lightID (dir : V3d) =
+        let addr = lc.IDToAddr.Item lightID
 
+        let translationTrafo = Trafo3d.Translation(dir)
 
+        transact(fun _ -> 
+
+            
+        
+        )
+        *)
 
     // Transforms a given light with the given trafo
     let transformLight (lc : LightCollection) lightID (trafo : Trafo3d) =
         let addr = lc.IDToAddr.Item lightID
 
+        let vAddr = addr * Config.VERT_PER_LIGHT
+        let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+
+        let update array updateFunc = 
+            array |> Array.mapi (fun i v -> if i = addr then (updateFunc v) else v)
+
         transact (fun _ -> 
+
+            let vertexTrafo = lc.Trafos.Value.[addr].Forward * trafo.Forward * lc.Trafos.Value.[addr].Backward
+
+            lc.Vertices.Value <-
+                lc.Vertices.Value |> Array.mapi (
+                    fun i v -> 
+                        if vAddr <= i && i < (vAddr + Config.VERT_PER_LIGHT) then
+                            V3d(vertexTrafo * V4d(v, 1.0))
+                        else
+                            v
+                    )
+                       
+            lc.Forwards.Value <- update lc.Forwards.Value (fun forward -> Mat.transformDir trafo.Forward forward |> Vec.normalize)
+            lc.Ups.Value <- update lc.Ups.Value (fun up -> Mat.transformDir trafo.Forward up |> Vec.normalize)
+                  
+            lc.Areas.Value <- update lc.Areas.Value (fun _ -> computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr])
             
-            let vAddr = addr * Config.VERT_PER_LIGHT
-            let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+            lc.Trafos.Value <- update lc.Trafos.Value (fun t -> trafo * t)
 
-            let newTrafo = lc.Trafos.Value.[addr]
-
-            lc.Trafos.Value.[addr] <- trafo * lc.Trafos.Value.[addr]
-            lc.Trafos.MarkOutdated()
-
-            for i = vAddr to vAddr + Config.VERT_PER_LIGHT - 1 do
-                lc.Vertices.Value.[i] <- 
-                    V3d(
-                        trafo.Forward * V4d(lc.Vertices.Value.[i], 1.0)
-                       )
-
-            printfn "New Vertices %A"  lc.Vertices.Value
-             
-            lc.Forwards.Value.[addr] <- Mat.transformDir trafo.Forward lc.Forwards.Value.[addr] |> Vec.normalize
-            lc.Ups.Value.[addr] <- Mat.transformDir trafo.Forward lc.Ups.Value.[addr] |> Vec.normalize
-            
-            lc.Areas.Value.[addr] <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
-            
-            lc.Trafos.Value.[addr] <- trafo * lc.Trafos.Value.[addr] // TODO copy and update
-            lc.Trafos.MarkOutdated()
            )
         
         
@@ -239,7 +250,6 @@ module Light =
                             )
             
                         let lightTrafo = Mod.map (fun (trafos : Trafo3d[]) -> 
-                            printfn "Trafo Changed %A" trafos.[addr]
                             trafos.[addr]) lc.Trafos
                            
                         let lightSg = lightGeometry 
