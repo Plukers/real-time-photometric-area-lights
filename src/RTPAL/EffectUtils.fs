@@ -211,7 +211,7 @@ module EffectUtils =
         sum <- sum + integrateSegment(va.[vc - 1], va.[0])
 
         sum
-
+        
     let debugShaderOutput shader = 
    
         let config =

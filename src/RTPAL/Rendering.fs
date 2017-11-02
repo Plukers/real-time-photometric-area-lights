@@ -168,22 +168,44 @@ module Rendering =
             data.runtime.CompileRender((signature data.runtime), (groundTruthSg data gtData sceneSg))
 
         let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
+
             
             let mutable prevView = Trafo3d.Identity
+            let mutable prevLightTrafos : Trafo3d[] = Array.create Config.NUM_LIGHTS Trafo3d.Identity
+            
+            let lightDemandsClear = 
+                data.lights.Trafos |> Mod.map (
+                    fun trafos -> 
+                        let clear = Array.forall2 (fun elem1 elem2 -> elem1 <> elem2) trafos prevLightTrafos
+                        prevLightTrafos <- trafos        
+                        clear
+                    )
 
+            let camDemandsClear =
+                data.view |> Mod.map (
+                    fun view ->
+                        let currentView  = CameraView.viewTrafo view
+                        let clear = currentView <> prevView 
+                        prevView <- currentView
+                        clear
+                    )
+
+            let clearRequired = 
+                Mod.map2 (fun l c -> l || c) lightDemandsClear camDemandsClear
+            
             let update (args : OpenTK.FrameEventArgs) =
                 transact (fun _ -> 
                     
-                    let currentView = data.view |> Mod.force |> CameraView.viewTrafo
-                    
-                    if prevView <> currentView then
+                    let clear = clearRequired |> Mod.force 
+                                        
+                    if clear then
                         if not gtData.clear.Value then 
                             gtData.clear.Value <- true
                     else
                         if gtData.clear.Value then 
-                            gtData.clear.Value <- false
-
-                    prevView <- currentView
+                            gtData.clear.Value <- false       
+                            
+                    //printfn "Clear %A" gtData.clear.Value
                     
                     gtData.haltonSequence.Value <-
                         if gtData.clear.Value then
@@ -196,6 +218,11 @@ module Rendering =
                             1
                         else
                             gtData.frameCount.Value + 1
+                        
+
+                    // TODO find better solution than marking outdated
+                    lightDemandsClear.MarkOutdated()
+                    camDemandsClear.MarkOutdated()
                 )
 
             update

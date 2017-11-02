@@ -140,19 +140,7 @@ module Light =
             returnID
 
         | None -> Option.None
-
-        (*
-    let translateLight (lc : LightCollection) lightID (dir : V3d) =
-        let addr = lc.IDToAddr.Item lightID
-
-        let translationTrafo = Trafo3d.Translation(dir)
-
-        transact(fun _ -> 
-
-            
         
-        )
-        *)
 
     // Transforms a given light with the given trafo
     let transformLight (lc : LightCollection) lightID (trafo : Trafo3d) =
@@ -176,10 +164,15 @@ module Light =
                         else
                             v
                     )
+            
+            printfn "Vertices %A" lc.Vertices.Value
                        
             lc.Forwards.Value <- update lc.Forwards.Value (fun forward -> Mat.transformDir trafo.Forward forward |> Vec.normalize)
             lc.Ups.Value <- update lc.Ups.Value (fun up -> Mat.transformDir trafo.Forward up |> Vec.normalize)
                   
+            printfn "Forward  %A" lc.Forwards.Value.[addr]
+            printfn "Up       %A" lc.Ups.Value.[addr]
+
             lc.Areas.Value <- update lc.Areas.Value (fun _ -> computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr])
             
             lc.Trafos.Value <- update lc.Trafos.Value (fun t -> trafo * t)
@@ -260,7 +253,27 @@ module Light =
                                                 DefaultSurfaces.vertexColor |> toEffect
                                             ]
 
-                        yield lightSg
+                        let lightCoordSysSg = 
+                            [
+                                yield IndexedGeometryPrimitives.wireframeCone
+                                    V3d.Zero V3d.OOI 0.3 0.05 10 C4b.Green 
+
+                                yield IndexedGeometryPrimitives.wireframeCone
+                                    V3d.Zero V3d.IOO 0.3 0.05 10 C4b.Red
+
+                                yield IndexedGeometryPrimitives.wireframeCone
+                                    V3d.Zero V3d.OIO 0.3 0.05 10 C4b.Blue
+                            ]
+                            |> List.map Sg.ofIndexedGeometry
+                            |> Sg.group'
+                            |> Sg.trafo lightTrafo
+                            |> Sg.effect [
+                                    DefaultSurfaces.trafo |> toEffect
+                                    DefaultSurfaces.vertexColor |> toEffect
+                                ]
+                        
+
+                        yield [lightSg; lightCoordSysSg] |> Sg.group'
             ]
             
             Sg.group (sg :: lightSgList) :> ISg

@@ -20,6 +20,7 @@ type LightTransformMode =
 
 type Action =
     | IMPORT_PHOTOMETRY of string
+    | IMPORT_SCENE of string
     | CHANGE_RENDER_MODE of RenderMode
     | CHANGE_COMPARE of RenderMode
     | COMPUTED_ERROR of double
@@ -38,8 +39,7 @@ type RenderState =
         
         compare            : RenderMode        
         error              : double
-
-        geometryFiles      : list<string>
+        
         scenePath          : string
 
         photometryName     : Option<string>

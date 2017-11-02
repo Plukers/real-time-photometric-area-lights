@@ -91,10 +91,10 @@
     <Compile Include="ConfigGenerator.fsx" />
     <Compile Include="Config.fs" />
     <Compile Include="Light.fs" />
-    <Compile Include="PhotometricLight.fs" />
     <Compile Include="Utils.fs" />
-    <Compile Include="BRDF_GGX.fs" />
     <Compile Include="EffectUtils.fs" />
+    <Compile Include="PhotometricLight.fs" />
+    <Compile Include="BRDF_GGX.fs" />
     <Compile Include="EffectGT.fs" />
     <Compile Include="EffectBaumFF.fs" />
     <Compile Include="EffectCompare.fs" />

@@ -39,7 +39,7 @@
         win.Height <- viewportSize.Y
         win.Width <- viewportSize.X
 
-        let view = CameraView.lookAt (V3d(-1.0, 0.0, 0.0)) (V3d(1.0, 0.0, -1.0)) V3d.OOI
+        let view = CameraView.lookAt (V3d(1.0, 0.0, 0.0)) (V3d(-1.0, 0.0, -1.0)) V3d.OOI
         let renderData = initialRenderData app (DefaultCameraController.control win.Mouse win.Keyboard win.Time view) viewportSize m 
         
         let gtData = initGTData        
@@ -56,7 +56,8 @@
 
     let update (s : RenderState) (a : Action) =
 
-        match a with            
+        match a with     
+            | IMPORT_SCENE p -> {s with scenePath = p}
             | IMPORT_PHOTOMETRY p ->
                 if System.String.IsNullOrEmpty p = false then 
                     let lmd = 
@@ -96,7 +97,7 @@
             ) 
 
         form.Invoke action |> ignore
-        IMPORT_PHOTOMETRY final
+        final
         
     let view (app : OpenGlApplication) (form : System.Windows.Forms.Form) =
         
@@ -134,8 +135,13 @@
                                             )] [text "Open Window"]
 
                                         button [ clazz "ui button" ; onClick (fun _ -> 
-                                                openFileDialog form
-                                            )] [text "Load Photometric Data"]                                        
+                                                IMPORT_PHOTOMETRY (openFileDialog form)
+                                            )] [text "Load Object"] 
+
+                                        button [ clazz "ui button" ; onClick (fun _ -> 
+                                                IMPORT_PHOTOMETRY (openFileDialog form)
+                                            )] [text "Load Photometric Data"]        
+                                                
                                     ]
                             ]
 
@@ -144,7 +150,10 @@
                                     div [ clazz "column" ] [ 
                                         div [ clazz "ui segment" ] [
                                             Incremental.div (AttributeMap.ofList []) (
-                                                alist {      
+                                                alist {     
+                                                    let! sceneName = m.scenePath
+                                                    yield p[] [ text ("Loaded Object: " + System.IO.Path.GetFileName(sceneName)) ]
+
                                                     let! photometryName = m.photometryName
                                                     match photometryName with
                                                     | Some name -> yield p[] [ text ("Loaded Photometry: " + name)]
@@ -291,19 +300,21 @@
     let initialState =     
 
         // Load geometry
-        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
+        // let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
+        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.dae"]
 
         // Setup Lights
         let lc = emptyLightCollection
-        let light1 = addSquareLight lc 1.0 true
+        let light1 = addSquareLight lc 1.0 false
         
         match light1 with
         | Some lightId ->             
-            let t = Trafo3d.Translation(8.0, 0.0, -5.0)
+            // let t = Trafo3d.Translation(-8.0, 0.0, -5.0)        
+            let t = Trafo3d.Translation(0.0, 0.0, 1.0)
             transformLight lc lightId t |> ignore
         | None -> ()
-
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"D31267AA_NE2.ldt"]
+        
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"42181512_(STD)-0-90.ldt"]
         let photometryData = Some(IntensityProfileSampler(LightMeasurementData.FromFile(photometryPath)))    
                 
         // initial state
@@ -312,7 +323,6 @@
             renderMode = RenderMode.GroundTruth
             compare = RenderMode.BaumFormFactor 
             error = 0.0
-            geometryFiles = []
             scenePath = geometryFile
             photometryName = Some(System.IO.Path.GetFileName photometryPath)
             photometryData = photometryData

@@ -5,6 +5,7 @@ open Aardvark.Base.Incremental
 open FShade
 
 module PhotometricLight =
+    open EffectUtils
     
     let ProfileAddressing           = Symbol.Create "ProfileAddressing"
     let TextureOffsetScale          = Symbol.Create "TextureOffsetScale"
@@ -50,18 +51,25 @@ module PhotometricLight =
             borderColor C4f.Black
         }
 
+    // i, forward and up in world space
     [<ReflectedDefinition>] 
-    let public getPhotometricIntensity (v : V3d) =    
+    let public getPhotometricIntensity (i : V3d) (forward : V3d) (up : V3d) =    
 
-        let v = v.Normalized
-        let v = new V3d(-v.X, -v.Y, v.Z)
+        let basis =            
+            M33dFromCols (V3d.Cross(up, forward)) forward up
+            |> Mat.inverse
+            
+            
+
+        let i = basis * i |> Vec.normalize
+        let i = new V3d(-i.X, -i.Y, i.Z)
 
         // Vertical Texture coords
-        let phi = 1.0 - acos(clamp -1.0 1.0 v.Z) * Constant.PiInv // map to 0..1
+        let phi = 1.0 - acos(clamp -1.0 1.0 i.Z) * Constant.PiInv // map to 0..1
         let phi = clamp 0.0 1.0 ((phi + uniform.ProfileAddressing.X) * uniform.ProfileAddressing.Y)
 
         // Horizontal Texture coords
-        let theta = (atan2 v.Y v.X) * 0.5 * Constant.PiInv + 0.5 // map to 0..1
+        let theta = (atan2 i.Y i.X) * 0.5 * Constant.PiInv + 0.5 // map to 0..1
         let theta = 1.0 - abs (1.0 - abs (((theta + uniform.ProfileAddressing.Z) * uniform.ProfileAddressing.W) % 2.0))
 
         let offset = uniform.TextureOffsetScale.XZ  //var Offset = new Float2(0.5, 0.5) / (intensityTexture.Size);
