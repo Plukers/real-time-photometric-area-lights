@@ -55,12 +55,11 @@ module PhotometricLight =
     [<ReflectedDefinition>] 
     let public getPhotometricIntensity (i : V3d) (forward : V3d) (up : V3d) =    
 
-        let basis =            
-            M33dFromCols (V3d.Cross(up, forward)) forward up
+        let basis =     
+            M33dFromCols  up (V3d.Cross(up, forward) |> Vec.normalize) -forward
             |> Mat.inverse
             
             
-
         let i = basis * i |> Vec.normalize
         let i = new V3d(-i.X, -i.Y, i.Z)
 
