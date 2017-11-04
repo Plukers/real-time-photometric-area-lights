@@ -374,27 +374,7 @@ module Rendering =
                 Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) data.scenePath
                 |> Sg.dynamic
                 |> Sg.scale 18.0
-
-            let baseSg = 
-                [
-                    yield IndexedGeometryPrimitives.wireframeCone
-                        V3d.Zero V3d.OOI 0.3 0.05 10 C4b.Green 
-
-                    yield IndexedGeometryPrimitives.wireframeCone
-                        V3d.Zero V3d.IOO 0.3 0.05 10 C4b.Red
-
-                    yield IndexedGeometryPrimitives.wireframeCone
-                        V3d.Zero V3d.OIO 0.3 0.05 10 C4b.Blue
-                ]
-                |> List.map Sg.ofIndexedGeometry
-                |> Sg.group'
-                |> Sg.effect [
-                        DefaultSurfaces.trafo |> toEffect
-                        DefaultSurfaces.vertexColor |> toEffect
-                    ]
-
-            let sceneSg = Sg.group' [sceneSg; baseSg]
-
+                
             let diffFrameBuffer = diffFb data gtData sceneSg
 
             let signature = signature data.runtime

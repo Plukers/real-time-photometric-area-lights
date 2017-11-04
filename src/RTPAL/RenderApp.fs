@@ -300,8 +300,8 @@
     let initialState =     
 
         // Load geometry
-        // let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
-        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.dae"]
+        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
+        //let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.dae"]
 
         // Setup Lights
         let lc = emptyLightCollection
@@ -309,12 +309,12 @@
         
         match light1 with
         | Some lightId ->             
-            // let t = Trafo3d.Translation(-8.0, 0.0, -5.0)        
-            let t = Trafo3d.Translation(0.0, 0.0, 1.0)
+            let t = Trafo3d.Translation(-8.0, 0.0, -5.0)        
+            // let t = Trafo3d.Translation(0.0, 0.0, 1.0)
             transformLight lc lightId t |> ignore
         | None -> ()
         
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"42181512_(STD)-0-90.ldt"]
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"D31267AA_NE2.ldt"]
         let photometryData = Some(IntensityProfileSampler(LightMeasurementData.FromFile(photometryPath)))    
                 
         // initial state

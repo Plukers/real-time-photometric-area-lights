@@ -29,16 +29,9 @@ module EffectGT =
         fragment {
 
             let P = v.wp.XYZ
-            // let worldV = ( uniform.CameraLocation - P) |> Vec.normalize // not required because of diffuse lighting transport
-
-            // let w2t = v.n |> Vec.normalize |> basisFrisvad |> Mat.transpose original
-            // let t2w = w2t |> Mat.inverse
 
             let t2w = v.n |> Vec.normalize |> basisFrisvad 
             let w2t = t2w |> Mat.inverse
-            
-            // Transform view vector into tangent space
-            // let o = w2t * worldV // not required because of diffuse lighting transport
             
             // Compute a jitter
             let jitter = (fast32Hash v.fc.XYZ).XY              
@@ -88,13 +81,12 @@ module EffectGT =
 
                                 let invi = t2w * -i
                             
-                                if uniform.LTwoSided.[vAddr] || (Vec.dot invi uniform.LForwards.[vAddr]) > 1e-8 then
+                                //if uniform.LTwoSided.[vAddr] || (Vec.dot invi uniform.LForwards.[vAddr]) > 1e-8 then
                                 
-                                    // let irr = 10.0 // uniform.LIntensities.[addr]
-                                    let irr =  (getPhotometricIntensity invi uniform.LForwards.[addr] uniform.LUps.[addr]) / uniform.LAreas.[addr]
-                                        //let p = (getPhotometricIntensity -i) / uniform.LAreas.[addr]
-                                        // p / ((*abs(Vec.dot -i uniform.LForwards.[vAddr]) *) 0.045) // TODO divide by area, currently 0.045 because of scaled rectangular light
-                                    
+                                let irr =  (getPhotometricIntensity invi uniform.LForwards.[addr] uniform.LUps.[addr]) / uniform.LAreas.[addr]
+
+                                if irr > 0.0 then 
+
                                     illumination <-
                                         let brdf = v.c / PI 
                                         illumination + irr * (brdf / pdf) * i.Z                            
