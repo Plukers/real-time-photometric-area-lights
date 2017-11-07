@@ -161,8 +161,11 @@ module Rendering =
             |> renderToColorWithoutClear data.viewportSize
      
         let groundTruthSg (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
-            groundTruthFb data gtData sceneSg
-            |> fbToSg data.viewportSize
+            Sg.fullscreenQuad data.viewportSize
+            |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
+            |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
+            |> Sg.texture (Sym.ofString "InputTex") (groundTruthFb data gtData sceneSg)
+
         
         let groundTruthRenderTask (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) =
             data.runtime.CompileRender((signature data.runtime), (groundTruthSg data gtData sceneSg))
@@ -204,9 +207,7 @@ module Rendering =
                     else
                         if gtData.clear.Value then 
                             gtData.clear.Value <- false       
-                            
-                    //printfn "Clear %A" gtData.clear.Value
-                    
+                                                
                     gtData.haltonSequence.Value <-
                         if gtData.clear.Value then
                             HaltonSequence.init
