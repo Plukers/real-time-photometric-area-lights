@@ -7,6 +7,7 @@ open Aardvark.Base
 open Aardvark.Application.WinForms
 open Aardvark.UI
 open Aardvark.SceneGraph.IO
+open Aardvark.Rendering.Vulkan
 
 [<EntryPoint; STAThread>]
 let main argv = 
@@ -18,7 +19,8 @@ let main argv =
 
     Ag.initialize()
     Aardvark.Init()
-    use app = new OpenGlApplication()
+    use app = new OpenGlApplication(true)
+    
     let runtime = app.Runtime
     
     use form = new Form(Width = 408, Height = 630)

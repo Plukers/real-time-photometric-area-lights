@@ -197,8 +197,8 @@ module EffectUtils =
 
     [<ReflectedDefinition>] 
     let private integrateSegment(a: V3d, b: V3d) =              
-        let theta = acos ( clamp -0.9999 0.9999 (V3d.Dot(a, b)))
-        V3d.Cross(a, b).Z * theta/sin(theta)
+        let theta = acos ( clamp -1.0 1.0 (V3d.Dot(a, b)))
+        V3d.Cross(a, b).Z * if theta < 1e-5 then 1.0 else theta/sin(theta)
 
     [<ReflectedDefinition>] 
     let baumFormFactor(va : Arr<N<4>, V3d>, vc : int) =

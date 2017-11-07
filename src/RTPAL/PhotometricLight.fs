@@ -56,10 +56,11 @@ module PhotometricLight =
     let public getPhotometricIntensity (i : V3d) (forward : V3d) (up : V3d) =    
 
         let basis = // TODO compute once and pass as uniform
-            M33dFromCols  up (V3d.Cross(up, forward) |> Vec.normalize) -forward
-            |> Mat.inverse
+            M33dFromCols (V3d.Cross(up, -forward)) up -forward
+            |> Mat.transpose
             
         let i = basis * i |> Vec.normalize
+        
         let i = new V3d(-i.X, -i.Y, i.Z)
 
         // Vertical Texture coords

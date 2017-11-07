@@ -23,14 +23,17 @@ module EffectToneMapping =
         [<TexCoord>] tc : V2d
     } 
 
-    
+    [<GLSLIntrinsic("textureQueryLevels({0})", "GL_ARB_texture_query_levels")>]
+    let mipLevels (s : Sampler2d) =
+        0
+
     let toneMap (v : ToneMapVertex) = 
         fragment {   
             let tc = V2i(V2d(InputTex.Size) * v.tc)
 
             let L  = InputTex.Item (V2i(V2d(InputTex.Size) * v.tc))
-            let Lavg = InputTex.Item ( V2i(0, 0), InputTex.MipMapLevels) 
             
+            let Lavg = InputTex.Read(V2i(0, 0), mipLevels InputTex - 1)
             
             let Lscaled = uniform.ToneMapScale * L / Lavg
             

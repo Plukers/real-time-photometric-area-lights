@@ -82,8 +82,10 @@ module EffectGT =
                                 let invi = t2w * -i
                             
                                 //if uniform.LTwoSided.[vAddr] || (Vec.dot invi uniform.LForwards.[vAddr]) > 1e-8 then
+
+                                let dotOut = max 1e-5 (abs (Vec.dot invi uniform.LForwards.[vAddr]))
                                 
-                                let irr =  (getPhotometricIntensity invi uniform.LForwards.[addr] uniform.LUps.[addr]) / uniform.LAreas.[addr]
+                                let irr =  (getPhotometricIntensity invi uniform.LForwards.[addr] uniform.LUps.[addr]) / (uniform.LAreas.[addr] * dotOut)
 
                                 if irr > 0.0 then 
 
