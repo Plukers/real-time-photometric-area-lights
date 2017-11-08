@@ -208,10 +208,14 @@ module Rendering =
             |> renderToColorWithoutClear data.viewportSize
      
         let groundTruthSg (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
+            groundTruthFb data gtData sceneSg
+            |> fbToSg data.viewportSize
+            (*
             Sg.fullscreenQuad data.viewportSize
             |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
             |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
             |> Sg.texture (Sym.ofString "InputTex") (groundTruthFb data gtData sceneSg |> setupMipMaps data.runtime)
+            *)
 
         
         let groundTruthRenderTask (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) =
@@ -281,6 +285,31 @@ module Rendering =
                 clear = ModRef(false) 
                 frameCount = ModRef(0)
             }
+
+    module CenterPointApprox =
+
+        let centerPointApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
+            sceneSg
+                |> setupFbEffects [ EffectApPoint.centerPointApprox |> toEffect ]
+                |> setupLights data.lights
+                |> setupPhotometricData data.photometricData
+                |> setupCamera data.view data.frustum data.viewportSize
+                |> Sg.compile data.runtime (signature data.runtime)
+
+        let centerPointApproxFb (data : RenderData) (sceneSg : ISg) = 
+            centerPointApproxRenderTask data sceneSg
+            |> RenderTask.renderToColor data.viewportSize
+
+        let centerPointApproxSg (data : RenderData) (sceneSg : ISg) = 
+            centerPointApproxFb data sceneSg 
+            |> fbToSg data.viewportSize
+            (*
+            Sg.fullscreenQuad data.viewportSize
+            |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
+            |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
+            |> Sg.texture (Sym.ofString "InputTex") (centerPointApproxFb data sceneSg |> setupMipMaps data.runtime)
+            *)
+
                          
     module BaumFormFactor = 
            
@@ -305,7 +334,8 @@ module Rendering =
         
         open GroundTruth
         open BaumFormFactor
-        
+        open CenterPointApprox
+
         let private renderToFbo (fbo : IOutputMod<IFramebuffer>) (task : IRenderTask) =
             let sem = (Set.singleton DefaultSemantic.Colors)
             let res = 
@@ -327,6 +357,7 @@ module Rendering =
 
             let groundTruthFb = groundTruthFb data gtData sceneSg
             let baumFormFactorFb = baumFormFactorFb data sceneSg
+            let centerPointApproxFb = centerPointApproxFb data sceneSg
 
             Sg.fullscreenQuad data.viewportSize
                 |> Sg.effect [ 
@@ -339,6 +370,7 @@ module Rendering =
                             match rm with
                                 | RenderMode.GroundTruth -> groundTruthFb
                                 | RenderMode.BaumFormFactor -> baumFormFactorFb
+                                | RenderMode.CenterPointApprox -> centerPointApproxFb
                                 | _ -> groundTruthFb
                             )
                     )
@@ -380,6 +412,7 @@ module Rendering =
 
         open GroundTruth
         open BaumFormFactor
+        open CenterPointApprox
         open Compare
 
         let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (viewportSize : V2i) (m : MRenderState) =
@@ -432,6 +465,7 @@ module Rendering =
                 Map.empty
                 |> Map.add RenderMode.GroundTruth (groundTruthSg data gtData sceneSg |> Sg.compile data.runtime signature)
                 |> Map.add RenderMode.BaumFormFactor (baumFormFactorSg data sceneSg |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.CenterPointApprox (centerPointApproxSg data sceneSg |> Sg.compile data.runtime signature)
                 |> Map.add RenderMode.Compare (compareSg data gtData sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
                 
             tasks |> Map.iter (fun _ t -> t.Update(AdaptiveToken.Top, RenderToken.Empty)) // iterate over tasks initially one time to create them

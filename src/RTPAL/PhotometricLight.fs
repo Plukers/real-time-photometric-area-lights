@@ -51,10 +51,11 @@ module PhotometricLight =
             borderColor C4f.Black
         }
 
-    // i, forward and up in world space
+    // i in world space
+    // light space { up X -forward, up, -forward }
     [<ReflectedDefinition>] 
     let public getPhotometricIntensity (i : V3d) (forward : V3d) (up : V3d) =    
-
+        
         let basis = // TODO compute once and pass as uniform
             M33dFromCols (V3d.Cross(up, -forward)) up -forward
             |> Mat.transpose

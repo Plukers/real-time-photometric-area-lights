@@ -39,7 +39,7 @@ module EffectCompare =
 
     let compare (v : CompareVertex) = 
         fragment {       
-            let upp = 0.02
+            let upp = 0.5
 
             let ta = texA.Sample(v.tc) 
             let tb = texB.Sample(v.tc) 

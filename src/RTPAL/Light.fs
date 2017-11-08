@@ -15,9 +15,7 @@ module Light =
         NumIndices   : ModRef<        int[]> // Size: Config.NUM_LIGHTS
         Forwards     : ModRef<        V3d[]> // Size: Config.NUM_LIGHTS.     Direction the light is facing, corresponding to normal. Only one normal is needed because a light is a plane.  Modified as defined by the corresponding trafo.
         Ups          : ModRef<        V3d[]> // Size: Config.NUM_LIGHTS.     The up direction of the light, has to be orthonormal to Forward. Modified as defined by the corresponding trafo.
-        Intensities  : ModRef<     double[]> // Size: Config.NUM_LIGHTS.
-        Areas         : ModRef<    double[]> // Size: Config.NUM_LIGHTS.
-        TwoSided     : ModRef<       bool[]> // Size: Config.NUM_LIGHTS.
+        Areas        : ModRef<     double[]> // Size: Config.NUM_LIGHTS.
         Trafos       : ModRef<    Trafo3d[]> // Size: Config.NUM_LIGHTS.
         NextFreeAddr : ModRef<  Option<int>> //                              Indicates the next free address in Lights array, -1 indicates no free space.
         IDCounter    : ModRef<        int  > //                              Counts the IDs of the lights, holds the next free ID.
@@ -31,12 +29,10 @@ module Light =
         Indices      =                0 |> Array.create Config.MAX_IDX_BUFFER_SIZE_ALL_LIGHT |> Mod.init
         NumIndices   =                0 |> Array.create Config.NUM_LIGHTS                    |> Mod.init
         Forwards     =         V3d.Zero |> Array.create Config.NUM_LIGHTS                    |> Mod.init
-        Ups          =         V3d.Zero |> Array.create Config.NUM_LIGHTS                    |> Mod.init                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
-        Intensities  =              0.0 |> Array.create Config.NUM_LIGHTS                    |> Mod.init
-        Areas         =              0.0 |> Array.create Config.NUM_LIGHTS                    |> Mod.init
-        TwoSided     =            false |> Array.create Config.NUM_LIGHTS                    |> Mod.init
+        Ups          =         V3d.Zero |> Array.create Config.NUM_LIGHTS                    |> Mod.init  
+        Areas        =              0.0 |> Array.create Config.NUM_LIGHTS                    |> Mod.init
         Trafos       = Trafo3d.Identity |> Array.create Config.NUM_LIGHTS                    |> Mod.init 
-        NextFreeAddr =    Option.Some 0 |>                                                      Mod.init  
+        NextFreeAddr =    Option.Some 0 |>                                                      Mod.init
         IDCounter    =                0 |>                                                      Mod.init  
         IDToAddr     = new cmap<int, int>()
     }
@@ -102,10 +98,47 @@ module Light =
 
         area
 
+    // Adds a new triangle light to the given light collection
+    // Returns the updated light collection and the id of the added light
+    // If the light could not be added because there is no space left, no id is returned
+    let addTriangleLight (lc : LightCollection) = 
+        match lc.NextFreeAddr.Value  with
+        | Some nfa ->
+            let mutable returnID = Option.None;
+
+            transact (fun _ ->
+
+                match registerLight lc with
+                | Some (addr, lightID) ->
+                    returnID <- Option.Some lightID
+
+                    addVertices lc addr [|
+                            V3d(0.0, -0.5, -0.5)
+                            V3d(0.0,  0.5, -0.5)
+                            V3d(0.0,  0.0,  1.0)
+                        |] 
+                
+                    addIndices lc addr [| 0; 1; 2 |]
+
+                    let vAddr = addr * Config.VERT_PER_LIGHT
+                    let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+
+                    lc.Forwards.Value.[addr]    <- V3d(1, 0, 0)
+                    lc.Ups.Value.[addr]         <- V3d(0, 0, 1)
+                    lc.Areas.Value.[addr]       <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
+
+                    lc.Trafos.Value.[addr]      <- Trafo3d.Identity
+                | None -> ()       
+            )
+                        
+            returnID
+
+        | None -> Option.None
+               
     // Adds a new square light to the given light collection
     // Returns the updated light collection and the id of the added light
     // If the light could not be added because there is no space left, no id is returned
-    let addSquareLight (lc : LightCollection) (intensity : float) (twoSided : bool) =
+    let addSquareLight (lc : LightCollection) =
         match lc.NextFreeAddr.Value with
         | Some nfa -> 
             let mutable returnID = Option.None;
@@ -130,9 +163,8 @@ module Light =
 
                     lc.Forwards.Value.[addr]    <- V3d(1, 0, 0)
                     lc.Ups.Value.[addr]         <- V3d(0, 0, 1)
-                    lc.Intensities.Value.[addr] <- intensity
-                    lc.Areas.Value.[addr]        <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
-                    lc.TwoSided.Value.[addr]    <- twoSided
+                    lc.Areas.Value.[addr]       <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr]
+
                     lc.Trafos.Value.[addr]      <- Trafo3d.Identity
                 | None -> ()       
             )
@@ -176,7 +208,6 @@ module Light =
             lc.Areas.Value <- update lc.Areas.Value (fun _ -> computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.VERT_PER_LIGHT - 1)] lc.Indices.Value.[iAddr .. (iAddr + Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumIndices.Value.[addr])
             
             lc.Trafos.Value <- update lc.Trafos.Value (fun t -> trafo * t)
-
            )
         
         
@@ -193,9 +224,8 @@ module Light =
             member uniform.LNumIndices  : Arr<N<Config.NUM_LIGHTS>,                    int> = uniform?LNumIndices
             member uniform.LForwards    : Arr<N<Config.NUM_LIGHTS>,                    V3d> = uniform?LForwards
             member uniform.LUps         : Arr<N<Config.NUM_LIGHTS>,                    V3d> = uniform?LUps
-            member uniform.LIntensities : Arr<N<Config.NUM_LIGHTS>,                 double> = uniform?LIntensities
             member uniform.LAreas       : Arr<N<Config.NUM_LIGHTS>,                 double> = uniform?LAreas
-            member uniform.LTwoSided    : Arr<N<Config.NUM_LIGHTS>,                   bool> = uniform?LTwoSided
+            member uniform.LBases       : Arr<N<Config.NUM_LIGHTS>,                   M33d> = uniform?LBases
 
     module Sg = 
         open System
@@ -281,13 +311,11 @@ module Light =
         let setLightCollectionUniforms ( lc : LightCollection ) sg =
 
             sg
-                |> Sg.uniform "Lights"          lc.Lights
-                |> Sg.uniform "LVertices"       lc.Vertices
-                |> Sg.uniform "LNumVertices"    lc.NumVertices
-                |> Sg.uniform "LIndices"        lc.Indices
-                |> Sg.uniform "LNumIndices"     lc.NumIndices
-                |> Sg.uniform "LForwards"       lc.Forwards
-                |> Sg.uniform "LUps"            lc.Ups
-                |> Sg.uniform "LIntensities"    lc.Intensities
-                |> Sg.uniform "LAreas"          lc.Areas
-                |> Sg.uniform "LTwoSided"       lc.TwoSided
+                |> Sg.uniform "Lights"       lc.Lights
+                |> Sg.uniform "LVertices"    lc.Vertices
+                |> Sg.uniform "LNumVertices" lc.NumVertices
+                |> Sg.uniform "LIndices"     lc.Indices
+                |> Sg.uniform "LNumIndices"  lc.NumIndices
+                |> Sg.uniform "LForwards"    lc.Forwards
+                |> Sg.uniform "LUps"         lc.Ups
+                |> Sg.uniform "LAreas"       lc.Areas

@@ -12,7 +12,8 @@ open Aardvark.Data.Photometry
 type RenderMode =
     | GroundTruth = 0
     | BaumFormFactor = 1
-    | Compare = 2
+    | CenterPointApprox = 2
+    | Compare = 3
 
 type LightTransformMode =
     | Translate

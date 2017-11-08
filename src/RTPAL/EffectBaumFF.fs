@@ -19,8 +19,7 @@ module EffectBaumFF =
 
     let formFactorLighting (v : FFVertex) = 
         fragment {
-
-
+            
             let P = v.wp.XYZ
 
             let w2t = v.n |> Vec.normalize |> basisFrisvad |> Mat.transpose
@@ -45,6 +44,8 @@ module EffectBaumFF =
                             let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
                             let v2 = w2t * (uniform.LVertices.[v2Addr] - P) 
                             
+                            ////////////////////////////////////////////////////////
+
                             let (clippedVa, clippedVc) = clipTriangle(V3d.Zero, V3d.OOI, Arr<N<3>, V3d>([| v0; v1; v2|]))
 
                             if clippedVc <> 0 then                            
@@ -53,20 +54,18 @@ module EffectBaumFF =
                                     clippedVa.[l] <- Vec.normalize clippedVa.[l]
                                     ()
 
-                                let irr = uniform.LIntensities.[addr]
+                                let irr = 10.0
                                 
                                 illumination <-                                        
 
                                     let I = baumFormFactor(clippedVa, clippedVc)
                                     
-                                    let I = match uniform.LTwoSided.[addr] with
-                                            | true  -> abs I
-                                            | false -> I |> clamp 0.0 1.0   
+                                    let I = abs I  
                                             
                                     illumination + irr * I
                                     
                                 ()
-
+                            ////////////////////////////////////////////////////////
                         ()
 
             illumination <- v.c * illumination / (2.0 * PI)

@@ -237,6 +237,69 @@
                                         ]
                                     ]  
                                     div [ clazz "column" ] [ 
+
+                                        div [ clazz "ui segment" ] [
+                                            Incremental.div (AttributeMap.ofList []) (
+                                                alist {
+                                                    yield dropDown m.renderMode (fun mode -> CHANGE_RENDER_MODE mode)
+                                                }
+                                            )
+
+                                            div [ clazz "ui divider"] []
+
+                                            Incremental.div (AttributeMap.ofList []) (
+                                                alist {
+                                                    let! mode = m.renderMode
+
+                                                    if mode = RenderMode.GroundTruth  || mode = RenderMode.Compare then
+                                                        let! fps = renderFeedback.fps
+                                                        let! fc = renderFeedback.frameCount   
+                                                        yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
+                                                        yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
+
+                                                }
+                                            )
+
+                                            Incremental.div (AttributeMap.ofList []) (
+                                                alist {
+                                                    let! mode = m.renderMode
+
+                                                    if mode = RenderMode.Compare then
+                                                        yield div [ clazz "ui divider"] []
+                                        
+                                                        let! c = m.compare
+
+                                                        if c = RenderMode.Compare then
+                                                            yield p [ clazz "ui label red" ] [ text ("Render mode Compare cannot be compared.") ]
+                                                            yield div [ clazz "ui divider"] []
+                         
+                                                        yield p [] [ text ("Compare Ground Truth with")]
+                                                        yield p [] [ dropDown m.compare (fun mode -> CHANGE_COMPARE mode) ]
+
+                                                        let computeError = (fun _ -> 
+            
+                                                            let comp = renderFeedback.compareTexture.GetValue()
+                            
+                                                            let compPixData = app.Runtime.Download(comp |> unbox<_>)
+                                                            let downlaoded = compPixData.ToPixImage<float32>()
+                                                            let data = downlaoded.GetMatrix<C4f>()
+                                                            let ec = data.Elements |> Seq.fold ( fun cs c-> (C4f.White - c) + cs ) C4f.Black
+                                        
+                                                            COMPUTED_ERROR (double (sqrt (ec.R * ec.R + ec.G * ec.G + ec.B  * ec.B)))
+                                                    
+                                                        )
+                                        
+                                                        yield div [ clazz "ui divider"] []
+
+                                                        let! error = m.error
+
+                                                        yield p [] [ text ("Error: " + error.ToString())]
+                                                        yield p [] [ button [clazz "ui button" ; onClick (fun _ -> computeError())] [text "Compute Error"] ]
+                                                }
+                                            )
+
+                                        ]
+                                        (*
                                         Incremental.div (AttributeMap.ofList [clazz "ui segment" ]) (
                                             alist {           
                                                 
@@ -253,6 +316,11 @@
                                                     yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
                                                     yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
                                                 | RenderMode.Compare ->
+
+                                                    
+                                                   
+
+                                                    yield div [ clazz "ui divider"] []
                                         
                                                     let! c = m.compare
 
@@ -279,6 +347,7 @@
                                                     yield div [ clazz "ui divider"] []
 
                                                     let! error = m.error
+
                                                     yield p [] [ text ("Error: " + error.ToString())]
                                                     yield p [] [ button [clazz "ui button" ; onClick (fun _ -> computeError())] [text "Compute Error"] ]
 
@@ -286,6 +355,7 @@
                                                 | _ -> ()
                                             }     
                                         )
+                                        *)
                                     ]                                  
                                 ]
                             ]
@@ -305,7 +375,7 @@
 
         // Setup Lights
         let lc = emptyLightCollection
-        let light1 = addSquareLight lc 1.0 false
+        let light1 = addTriangleLight lc
         
         match light1 with
         | Some lightId ->             
@@ -314,7 +384,7 @@
             transformLight lc lightId t |> ignore
         | None -> ()
         
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"D31267AA_NE2.ldt"]
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"42181512_(STD)-0-90.ldt"]
         let photometryData = Some(IntensityProfileSampler(LightMeasurementData.FromFile(photometryPath)))    
                 
         // initial state

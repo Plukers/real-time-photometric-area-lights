@@ -90,13 +90,14 @@
   <ItemGroup>
     <Compile Include="ConfigGenerator.fsx" />
     <Compile Include="Config.fs" />
-    <Compile Include="Light.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="EffectUtils.fs" />
+    <Compile Include="Light.fs" />
     <Compile Include="PhotometricLight.fs" />
     <Compile Include="BRDF_GGX.fs" />
     <Compile Include="EffectGT.fs" />
     <Compile Include="EffectBaumFF.fs" />
+    <Compile Include="EffectApPoint.fs" />
     <Compile Include="EffectCompare.fs" />
     <Compile Include="EffectOutline.fs" />
     <Compile Include="EffectToneMapping.fs" />

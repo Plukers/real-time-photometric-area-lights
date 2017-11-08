@@ -24,14 +24,14 @@ module EffectGT =
         [<Color>]           c       : V4d
         [<FragCoord>]       fc      : V4d
     }        
-        
+    
     let groundTruthLighting (v : GTVertex) = 
         fragment {
 
             let P = v.wp.XYZ
 
             let t2w = v.n |> Vec.normalize |> basisFrisvad 
-            let w2t = t2w |> Mat.inverse
+            let w2t = t2w |> Mat.transpose
             
             // Compute a jitter
             let jitter = (fast32Hash v.fc.XYZ).XY              
@@ -75,17 +75,17 @@ module EffectGT =
                             let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
                             let v2 = w2t * (uniform.LVertices.[v2Addr] - P)                       
 
+                            ////////////////////////////////////////////////////////
+
                             let t = rayTriangleIntersaction V3d.Zero i v0 v1 v2
 
                             if t > 1e-8 then
-
-                                let invi = t2w * -i
-                            
-                                //if uniform.LTwoSided.[vAddr] || (Vec.dot invi uniform.LForwards.[vAddr]) > 1e-8 then
-
-                                let dotOut = max 1e-5 (abs (Vec.dot invi uniform.LForwards.[vAddr]))
                                 
-                                let irr =  (getPhotometricIntensity invi uniform.LForwards.[addr] uniform.LUps.[addr]) / (uniform.LAreas.[addr] * dotOut)
+                                let worldI = t2w * -i
+
+                                let dotOut = max 1e-5 (abs (Vec.dot worldI uniform.LForwards.[vAddr]))
+                                
+                                let irr = (getPhotometricIntensity worldI uniform.LForwards.[vAddr]  uniform.LUps.[vAddr]) / (uniform.LAreas.[addr] * dotOut)
 
                                 if irr > 0.0 then 
 
@@ -93,7 +93,8 @@ module EffectGT =
                                         let brdf = v.c / PI 
                                         illumination + irr * (brdf / pdf) * i.Z                            
                                     ()                            
-                            ()  
+                             
+                            ////////////////////////////////////////////////////////
                         ()       
                 ()
 
