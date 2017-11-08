@@ -8,6 +8,7 @@ module Rendering =
     open Aardvark.Base.Rendering
     open Aardvark.Base.RenderTask
     open Aardvark.Base.Incremental
+    open Aardvark.Rendering.GL
 
     open Aardvark.Data.Photometry
     
@@ -81,6 +82,53 @@ module Rendering =
             | None -> sg
         )
         |> Sg.dynamic
+
+    let private setupMipMaps (runtime : IRuntime) (fb : IOutputMod<ITexture>) =
+
+        let mutable mipmapped : Option<IBackendTexture> = None
+        
+        let result = 
+            { new AbstractOutputMod<ITexture>() with
+                member x.Create() =
+                    fb.Acquire()
+                            
+                member x.Destroy() =
+                    fb.Release()
+                    match mipmapped with
+                        | Some t -> 
+                            runtime.DeleteTexture t
+                            mipmapped <- None
+                        | None -> ()
+
+                member x.Compute(t, rt) =
+                    let t = fb.GetValue(t, rt)
+                    let t = unbox<IBackendTexture> t
+
+                    let levels = 1.0 + floor (Fun.Log2 (max (float t.Size.X) (float t.Size.Y))) |> int
+                    let target = 
+                        match mipmapped with
+                            | Some mm ->
+                                if mm.Size.XY = t.Size.XY then 
+                                    mm
+                                else
+                                    runtime.DeleteTexture mm
+                                    let n = runtime.CreateTexture(t.Size.XY, t.Format, levels, 1)
+                                    mipmapped <- Some n
+                                    n
+                            | _ ->
+                                let n = runtime.CreateTexture(t.Size.XY, t.Format, levels, 1)
+                                mipmapped <- Some n
+                                n
+                    
+                    let runtime = unbox<Aardvark.Rendering.GL.Runtime> runtime
+                    runtime.Context.Copy(unbox<Texture> t, 0, 0, V2i.Zero, unbox<Texture> target, 0, 0, V2i.Zero, t.Size.XY)
+                    
+                    runtime.GenerateMipMaps(target)
+                    target :> ITexture
+            }
+                
+        result :> IOutputMod<_>
+
         
     let private fbToSg (viewportSize : IMod<V2i>) fb = 
         Sg.fullscreenQuad viewportSize
@@ -94,7 +142,6 @@ module Rendering =
         ]
      
     module GroundTruth = 
-        open Aardvark.Rendering.GL
 
         type GroundTruthData = {
             haltonSequence : ModRef<V2d[]>
@@ -109,68 +156,9 @@ module Rendering =
             
                 let fbo = runtime.CreateFramebuffer(signature, sem, size)
                 
-
-                //let mutable color : Option<IBackendTexture> = None
-                //let colorTex = Mod.custom(fun self -> 
-                //        match color with 
-                //        | None -> ()
-                //        | Some tex -> runtime.DeleteTexture tex
-
-                //        let sz = size.GetValue self
-                //        let lv = (int (Fun.Log2 sz.NormMax)) + 1
-                         
-                //        color <- Some(runtime.CreateTexture(sz, TextureFormat.Rgba32f, lv, 1))
-                //        color.Value
-                //    )
-                
-                // let color = runtime.Cr
-
                 let res = new SequentialRenderTask([|task|]) |> renderTo fbo
-                let tex = sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
+                sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
 
-                let mutable mipmapped : Option<IBackendTexture> = None
-
-                let runitme = task.Runtime.Value
-                let result = 
-                    { new AbstractOutputMod<ITexture>() with
-                        member x.Create() =
-                            tex.Acquire()
-                            
-                        member x.Destroy() =
-                            tex.Release()
-                            match mipmapped with
-                                | Some t -> 
-                                    runtime.DeleteTexture t
-                                    mipmapped <- None
-                                | None -> ()
-
-                        member x.Compute(t, rt) =
-                            let t = tex.GetValue(t, rt)
-                            let t = unbox<IBackendTexture> t
-
-                            let levels = 1.0 + floor (Fun.Log2 (max (float t.Size.X) (float t.Size.Y))) |> int
-                            let target = 
-                                match mipmapped with
-                                    | Some mm ->
-                                        if mm.Size.XY = t.Size.XY then 
-                                            mm
-                                        else
-                                            runtime.DeleteTexture mm
-                                            let n = runtime.CreateTexture(t.Size.XY, t.Format, levels, 1)
-                                            mipmapped <- Some n
-                                            n
-                                    | _ ->
-                                        let n = runtime.CreateTexture(t.Size.XY, t.Format, levels, 1)
-                                        mipmapped <- Some n
-                                        n
-                            let runtime = unbox<Aardvark.Rendering.GL.Runtime> runtime
-                            runtime.Context.Copy(unbox<Texture> t, 0, 0, V2i.Zero, unbox<Texture> target, 0, 0, V2i.Zero, t.Size.XY)
-                            //runtime.ResolveMultisamples({ texture = t; slice = 0; level = 0 }, target, ImageTrafo.Rot0)
-                            task.Runtime.Value.GenerateMipMaps(target)
-                            target :> ITexture
-                    }
-                
-                result :> IOutputMod<_>
 
         let private basicRenderTask (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
             
@@ -223,7 +211,7 @@ module Rendering =
             Sg.fullscreenQuad data.viewportSize
             |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
             |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-            |> Sg.texture (Sym.ofString "InputTex") (groundTruthFb data gtData sceneSg)
+            |> Sg.texture (Sym.ofString "InputTex") (groundTruthFb data gtData sceneSg |> setupMipMaps data.runtime)
 
         
         let groundTruthRenderTask (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) =
@@ -308,8 +296,10 @@ module Rendering =
             |> RenderTask.renderToColor data.viewportSize
      
         let baumFormFactorSg (data : RenderData) (sceneSg : ISg) = 
-            baumFormFactorFb data sceneSg
-            |> fbToSg data.viewportSize
+            Sg.fullscreenQuad data.viewportSize
+            |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
+            |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
+            |> Sg.texture (Sym.ofString "InputTex") (baumFormFactorFb data sceneSg |> setupMipMaps data.runtime)
 
     module Compare = 
         
