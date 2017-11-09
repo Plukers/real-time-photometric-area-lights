@@ -24,9 +24,9 @@ module EffectOutline =
             addressV WrapMode.Border
         }
 
-    let private tex =
+    let private texError =
         sampler2d {
-            texture uniform?Tex
+            texture uniform?TexError
             filter Filter.MinMagMipLinear
             addressU WrapMode.Wrap
             addressV WrapMode.Wrap
@@ -73,7 +73,7 @@ module EffectOutline =
             if oultine then
                 return V4d(V3d(0.0), 1.0)
             else
-                return tex.Sample(v.tc) 
+                return texError.Sample(v.tc) 
         }
 
     ()

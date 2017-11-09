@@ -57,6 +57,12 @@ module EffectGT =
                 
                 // Check if i hits a light
                 // If it does, compute the illumination
+                (*
+                areaLightMap P w2t (fun addr v0 v1 v2 ->
+
+
+                    )
+*)
                 for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
                     match uniform.Lights.[addr] with
                     | -1 -> ()
@@ -83,9 +89,9 @@ module EffectGT =
                                 
                                 let worldI = t2w * -i
 
-                                let dotOut = max 1e-5 (abs (Vec.dot worldI uniform.LForwards.[vAddr]))
+                                let dotOut = max 1e-5 (abs (Vec.dot worldI uniform.LForwards.[addr]))
                                 
-                                let irr = (getPhotometricIntensity worldI uniform.LForwards.[vAddr]  uniform.LUps.[vAddr]) / (uniform.LAreas.[addr] * dotOut)
+                                let irr = (getPhotometricIntensity worldI uniform.LForwards.[addr]  uniform.LUps.[addr]) / (uniform.LAreas.[addr] * dotOut)
 
                                 if irr > 0.0 then 
 

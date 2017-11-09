@@ -8,6 +8,9 @@ module EffectUtils =
     open Aardvark.Base
     open FShade.Imperative
 
+    open Light.Effect
+    open PhotometricLight
+
     type UniformScope with
         member uniform.FrameCount : int = uniform?FrameCount
 
@@ -211,7 +214,84 @@ module EffectUtils =
         sum <- sum + integrateSegment(va.[vc - 1], va.[0])
 
         sum
+
+    (*
+        Computes the solid angle for a planar triangle as seen from the origin.
+
+        Van Oosterom, A., & Strackee, J. (1983). 
+        The solid angle of a plane triangle. 
+        IEEE transactions on Biomedical Engineering, (2), 125-126.
+      
+        https://en.wikipedia.org/wiki/Solid_angle#Tetrahedron
+    *)
+    [<ReflectedDefinition>]
+    let computeSolidAngle (va : V3d) (vb : V3d) (vc : V3d) =
+
+        let ma = Vec.length va
+        let mb = Vec.length vb
+        let mc = Vec.length vc
         
+        let denom = ma * mb * mc + (Vec.dot va vb) * mc + (Vec.dot va vc) * mb + (Vec.dot vb vc) * ma
+        
+        let numerator = abs (Vec.dot va (Vec.cross vb vc))
+
+        let halfSA = atan(numerator / denom)
+
+        2.0 * if halfSA >= 0.0 then halfSA else halfSA + PI
+
+    (*
+        i in world space
+        light space { up X -forward, up, -forward }
+    *)
+    [<ReflectedDefinition>] 
+    let public getPhotometricIntensity (i : V3d) (forward : V3d) (up : V3d) =    
+        
+        let basis = // TODO compute once and pass as uniform
+            M33dFromCols (V3d.Cross(up, -forward)) up -forward
+            |> Mat.transpose
+            
+        let i = basis * i |> Vec.normalize
+        
+        let i = new V3d(-i.X, -i.Y, i.Z)
+
+        // Vertical Texture coords
+        let phi = 1.0 - acos(clamp -1.0 1.0 i.Z) * Constant.PiInv // map to 0..1
+        let phi = clamp 0.0 1.0 ((phi + uniform.ProfileAddressing.X) * uniform.ProfileAddressing.Y)
+
+        // Horizontal Texture coords
+        let theta = (atan2 i.Y i.X) * 0.5 * Constant.PiInv + 0.5 // map to 0..1
+        let theta = 1.0 - abs (1.0 - abs (((theta + uniform.ProfileAddressing.Z) * uniform.ProfileAddressing.W) % 2.0))
+
+        let offset = uniform.TextureOffsetScale.XZ  //var Offset = new Float2(0.5, 0.5) / (intensityTexture.Size);
+        let scale = uniform.TextureOffsetScale.YW   //var Scale = (intensityTexture.Size - Float2.II) / intensityTexture.Size;
+        let crd = V2d(phi, theta) * scale + offset
+        intensityProfileSampler.SampleLevel(V2d(crd.X, 1.0 - crd.Y), 0.0).X
+
+    [<ReflectedDefinition>]
+    let areaLightMap (wp : V3d) (w2t : M33d) map =
+
+        for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
+            match uniform.Lights.[addr] with
+                | -1 -> ()
+                |  _ ->    
+                    let vAddr = addr * Config.VERT_PER_LIGHT
+                    let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+
+                    for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumIndices.[addr] - 1) do
+                            
+                        let v0Addr = uniform.LIndices.[iIdx + 0] + vAddr
+                        let v0 = w2t * (uniform.LVertices.[v0Addr] - wp)
+                           
+                        let v1Addr = uniform.LIndices.[iIdx + 1] + vAddr
+                        let v1 = w2t * (uniform.LVertices.[v1Addr] - wp)
+                           
+                        let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
+                        let v2 = w2t * (uniform.LVertices.[v2Addr] - wp) 
+
+                        map addr v0 v1 v2
+
+                    ()
+
     let debugShaderOutput shader = 
    
         let config =

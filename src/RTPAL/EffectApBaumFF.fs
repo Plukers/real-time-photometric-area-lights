@@ -1,37 +1,38 @@
 ﻿namespace Render
 
-(*
-    Baum Form Factor Effect
-*)
-module EffectBaumFF = 
+module EffectApBaumFF =
     open Aardvark.Base
     open Aardvark.Base.Rendering
     open FShade
 
     open Light.Effect
     open EffectUtils
+    open PhotometricLight
 
-    type FFVertex = {
+    type Vertex = {
         [<WorldPosition>]   wp      : V4d
         [<Normal>]          n       : V3d
         [<Color>]           c       : V4d
     }  
-
-    let formFactorLighting (v : FFVertex) = 
+    
+    let baumFFApprox (v : Vertex) = 
         fragment {
-            
+
             ////////////////////////////////////////////////////////
 
             let P = v.wp.XYZ
 
-            let w2t = v.n |> Vec.normalize |> basisFrisvad |> Mat.transpose
+            let t2w = v.n |> Vec.normalize |> basisFrisvad 
+            let w2t = t2w |> Mat.transpose
+
+            let brdf = v.c / PI 
 
             let mutable illumination = V4d.Zero
 
             ////////////////////////////////////////////////////////
-
+            
             for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
-                    match uniform.Lights.[addr] with
+                match uniform.Lights.[addr] with
                     | -1 -> ()
                     |  _ ->    
                         let vAddr = addr * Config.VERT_PER_LIGHT
@@ -47,18 +48,24 @@ module EffectBaumFF =
                            
                             let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
                             let v2 = w2t * (uniform.LVertices.[v2Addr] - P) 
-                            
+
                             ////////////////////////////////////////////////////////
 
                             let (clippedVa, clippedVc) = clipTriangle(V3d.Zero, V3d.OOI, Arr<N<3>, V3d>([| v0; v1; v2|]))
 
-                            if clippedVc <> 0 then                            
-                                // Project polygon light onto sphere
+                            if clippedVc <> 0 then      
+                                
+                                let mutable barycenter = V3d.Zero
                                 for l in 0 .. clippedVc - 1 do
+                                    barycenter <- barycenter + clippedVa.[l]
+
+                                    // Project polygon light onto sphere
                                     clippedVa.[l] <- Vec.normalize clippedVa.[l]
                                     
 
-                                let irr = 10.0
+                                let i = barycenter / (float clippedVc) |> Vec.normalize
+                                                                
+                                let irr = 10.0 //getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]
                                 
                                 illumination <-                                        
 
@@ -66,14 +73,13 @@ module EffectBaumFF =
                                     
                                     let I = abs I  
                                             
-                                    illumination + irr * I
+                                    illumination + (*irr *) brdf * I
                                     
                                 ()
+
+                                                              
                             ////////////////////////////////////////////////////////
                         ()
-
-            illumination <- v.c * illumination / (2.0 * PI)
-
+                        
             return V4d(illumination.XYZ, v.c.W)
         }
-

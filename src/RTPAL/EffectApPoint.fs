@@ -14,24 +14,22 @@ module EffectApPoint =
         [<Normal>]          n       : V3d
         [<Color>]           c       : V4d
     }  
-
-
+    
     let centerPointApprox (v : Vertex) = 
         fragment {
+
+            ////////////////////////////////////////////////////////
 
             let P = v.wp.XYZ
 
             let t2w = v.n |> Vec.normalize |> basisFrisvad 
             let w2t = t2w |> Mat.transpose
 
+            let brdf = v.c / PI 
+
             let mutable illumination = V4d.Zero
 
-
-            // blinn-phong
-            (*
-            let V = (uniform.CameraLocation - v.wp.XYZ) |> Vec.normalize
-            *)
-            // blinn-phong
+            ////////////////////////////////////////////////////////
 
             for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
                 match uniform.Lights.[addr] with
@@ -57,48 +55,24 @@ module EffectApPoint =
 
                             if clippedVc <> 0 then
 
-                                // compute barycenter
                                 let mutable barycenter = V3d.Zero
                                 for l in 0 .. clippedVc - 1 do
                                     barycenter <- barycenter + clippedVa.[l]
-                                    ()
+                                    
                                 let i = barycenter / (float clippedVc)
-
-                                
-
-                                // blinn-phong
-                                (*
-                                let L = (barycenter - P) |> Vec.normalize
-                                let H = (L + V) |> Vec.normalize
-                    
-                                let NdotH = Vec.dot V3d.OOI H |> max 0.0
-                                let NdotL = Vec.dot V3d.OOI L |> max 0.0
-                                
-                                let White = V4d(1.0)
-
-                                illumination <- illumination 
-                                        + v.c * White 
-                                        + (
-                                            White * NdotL 
-                                            + White * NdotH
-                                            )
-                                *)
-                                // blinn-phong
                                 
                                 let d = Vec.length i
                                 let i = i |> Vec.normalize
                                 
-                                let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[vAddr]  uniform.LUps.[vAddr]
+                                let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]
 
                                 if irr > 0.0 then 
                                     
                                     illumination <-
                                         let irr = irr / (d * d)
-
-                                        let brdf = v.c / PI 
-
+                                                                                
                                         illumination + irr * brdf * i.Z                            
-                                    ()  
+                                    
                                     
                                 ()
                                                                 
