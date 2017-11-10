@@ -56,6 +56,17 @@ module EffectApSolidAngle =
                             if clippedVc <> 0 then
                                 
                                 // compute solid angle
+                                
+                                let mutable barycenter = V3d.Zero
+                                for l in 0 .. clippedVc - 1 do
+                                    barycenter <- barycenter + clippedVa.[l]
+                                    
+                                let i = barycenter / (float clippedVc)
+                                let d = Vec.length i
+                                let i = i |> Vec.normalize
+                                                                
+                                let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr] uniform.LUps.[addr] 
+
                                 let solidAngle = 
                                     if clippedVc = 3 then
                                         computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
@@ -64,22 +75,9 @@ module EffectApSolidAngle =
                                         let sa2 = computeSolidAngle clippedVa.[0] clippedVa.[2] clippedVa.[3]
                                         sa1 + sa2
 
-                                let mutable barycenter = V3d.Zero
-                                for l in 0 .. clippedVc - 1 do
-                                    barycenter <- barycenter + clippedVa.[l]
-                                    
-                                let i = barycenter / (float clippedVc)
-                                
-                                let i = i |> Vec.normalize
-
-                                let worldI = t2w * -i
-
-                                let dotOut = max 1e-5 (abs (Vec.dot worldI uniform.LForwards.[addr]))
-                                
-                                let irr = getPhotometricIntensity worldI uniform.LForwards.[addr] uniform.LUps.[addr]
-
                                 if irr > 0.0 then 
-                                    illumination <- illumination + irr * brdf * solidAngle / dotOut              
+                                    let irr = irr // (d * d)
+                                    illumination <- illumination + irr * brdf * i.Z * solidAngle         
                                     
                                 ()
                                                                 

@@ -231,10 +231,10 @@ module EffectUtils =
         let mb = Vec.length vb
         let mc = Vec.length vc
         
-        let denom = ma * mb * mc + (Vec.dot va vb) * mc + (Vec.dot va vc) * mb + (Vec.dot vb vc) * ma
-        
         let numerator = abs (Vec.dot va (Vec.cross vb vc))
 
+        let denom = ma * mb * mc + (Vec.dot va vb) * mc + (Vec.dot va vc) * mb + (Vec.dot vb vc) * ma
+        
         let halfSA = atan(numerator / denom)
 
         2.0 * if halfSA >= 0.0 then halfSA else halfSA + PI

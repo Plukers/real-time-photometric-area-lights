@@ -63,20 +63,25 @@ module EffectApBaumFF =
                                     clippedVa.[l] <- Vec.normalize clippedVa.[l]
                                     
 
-                                let i = barycenter / (float clippedVc) |> Vec.normalize
-                                                                
-                                let irr = 10.0 //getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]
-                                
-                                illumination <-                                        
+                                let i = barycenter / (float clippedVc) 
+                                let d = i |> Vec.length
+                                let i = i |> Vec.normalize
 
-                                    let I = baumFormFactor(clippedVa, clippedVc)
+                                let worldI = t2w * i
+                                                
+                                let irr = getPhotometricIntensity -worldI uniform.LForwards.[addr] uniform.LUps.[addr]
+                                
+                                illumination <-    
+
+                                    let dotOut = max 1e-5 (abs (Vec.dot -worldI uniform.LForwards.[addr]))
                                     
-                                    let I = abs I  
-                                            
-                                    illumination + (*irr *) brdf * I
+                                    let I = abs (baumFormFactor(clippedVa, clippedVc))
+
+                                    let I = I / ( dotOut )
+                                                                                
+                                    illumination + irr * brdf * I 
                                     
                                 ()
-
                                                               
                             ////////////////////////////////////////////////////////
                         ()

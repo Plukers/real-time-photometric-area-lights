@@ -60,18 +60,14 @@ module EffectApPoint =
                                     barycenter <- barycenter + clippedVa.[l]
                                     
                                 let i = barycenter / (float clippedVc)
-                                
                                 let d = Vec.length i
                                 let i = i |> Vec.normalize
                                 
                                 let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]
 
                                 if irr > 0.0 then 
-                                    
-                                    illumination <-
-                                        let irr = irr / (d * d)
-                                                                                
-                                        illumination + irr * brdf * i.Z                            
+                                    let irr = irr / (d * d)
+                                    illumination <- illumination + irr * brdf * i.Z                            
                                     
                                     
                                 ()

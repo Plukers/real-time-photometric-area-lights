@@ -207,20 +207,16 @@ module Rendering =
             basicRenderTask data gtData sceneSg
             |> renderToColorWithoutClear data.viewportSize
      
-        let groundTruthSg (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
-            groundTruthFb data gtData sceneSg
-            |> fbToSg data.viewportSize
+        let groundTruthSgAndFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
+            let fb = groundTruthFb data gtData sceneSg
+
+            (fb |> fbToSg data.viewportSize, fb)
             (*
             Sg.fullscreenQuad data.viewportSize
             |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
             |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
             |> Sg.texture (Sym.ofString "InputTex") (groundTruthFb data gtData sceneSg |> setupMipMaps data.runtime)
             *)
-
-        
-        let groundTruthRenderTask (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) =
-            data.runtime.CompileRender((signature data.runtime), (groundTruthSg data gtData sceneSg))
-
 
         let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
             
@@ -243,27 +239,9 @@ module Rendering =
                         clear
                     )
 
-            let mutable prevMode = RenderMode.GroundTruth
-            let modeChangeDemandsClear =
-                data.mode |> Mod.map (
-                    fun mode ->
-                        if prevMode = mode then
-                            false
-                        else 
-                            match mode with
-                            | RenderMode.GroundTruth -> 
-                                prevMode <- mode
-                                true
-                            | RenderMode.Compare -> 
-                                prevMode <- mode
-                                true
-                            | _ -> false
-                    )
-
 
             let clearRequired = 
                 let required = Mod.map2 (fun l c -> l || c) lightDemandsClear camDemandsClear
-                let required = Mod.map2 (fun r m -> r || m) required modeChangeDemandsClear
 
                 required
 
@@ -307,7 +285,6 @@ module Rendering =
                         if clear then
                             lightDemandsClear.MarkOutdated()
                             camDemandsClear.MarkOutdated()
-                            modeChangeDemandsClear.MarkOutdated()
                 )
 
             update
@@ -333,9 +310,10 @@ module Rendering =
             centerPointApproxRenderTask data sceneSg
             |> RenderTask.renderToColor data.viewportSize
 
-        let centerPointApproxSg (data : RenderData) (sceneSg : ISg) = 
-            centerPointApproxFb data sceneSg 
-            |> fbToSg data.viewportSize
+        let centerPointApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
+            let fb = centerPointApproxFb data sceneSg 
+            
+            (fb |> fbToSg data.viewportSize, fb)
             (*
             Sg.fullscreenQuad data.viewportSize
             |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
@@ -357,9 +335,10 @@ module Rendering =
             baumFFApproxRenderTask data sceneSg
             |> RenderTask.renderToColor data.viewportSize
 
-        let baumFFApproxSg (data : RenderData) (sceneSg : ISg) = 
-            baumFFApproxFb data sceneSg 
-            |> fbToSg data.viewportSize
+        let baumFFApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
+            let fb = baumFFApproxFb data sceneSg 
+            
+            (fb |> fbToSg data.viewportSize, fb)
             (*
             Sg.fullscreenQuad data.viewportSize
             |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
@@ -382,9 +361,11 @@ module Rendering =
             solidAngleApproxRenderTask data sceneSg
             |> RenderTask.renderToColor data.viewportSize
 
-        let solidAngleApproxSg (data : RenderData) (sceneSg : ISg) = 
-            solidAngleApproxFb data sceneSg 
-            |> fbToSg data.viewportSize
+        let solidAngleApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
+            let fb = solidAngleApproxFb data sceneSg 
+            
+            
+            (fb |> fbToSg data.viewportSize, fb)
             (*
             Sg.fullscreenQuad data.viewportSize
             |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
@@ -417,28 +398,19 @@ module Rendering =
                 DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
             ]
                                         
-        let diffFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) =
-
-            let groundTruthFb = groundTruthFb data gtData sceneSg
-
-            let centerPointApproxFb = centerPointApproxFb data sceneSg
-            let baumFFApproxFb = baumFFApproxFb data sceneSg
-            let solidAngleApproxFb = solidAngleApproxFb data sceneSg
-
+        let diffFb (data : RenderData) (effectFbs : Map<RenderMode, IOutputMod<ITexture>>) =
+                        
             Sg.fullscreenQuad data.viewportSize
                 |> Sg.effect [ 
                     EffectCompare.Compute.computeError |> toEffect 
                 ]
-                |> Sg.texture (Sym.ofString "TexA") groundTruthFb
+                |> Sg.texture (Sym.ofString "TexA") (Map.find RenderMode.GroundTruth effectFbs)
                 |> Sg.texture (Sym.ofString "TexB") 
                     (
                         data.compare |> Mod.bind (fun rm ->
                             match rm with
-                                | RenderMode.GroundTruth -> groundTruthFb
-                                | RenderMode.CenterPointApprox -> centerPointApproxFb
-                                | RenderMode.BaumFFApprox -> baumFFApproxFb
-                                | RenderMode.SolidAngleApprox -> solidAngleApproxFb
-                                | _ -> groundTruthFb
+                                | RenderMode.Compare -> Map.find RenderMode.GroundTruth effectFbs
+                                | _ -> Map.find rm effectFbs
                             )
                     )
                 |> Sg.compile data.runtime (diffSignature data.runtime)
@@ -526,16 +498,28 @@ module Rendering =
                 Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) data.scenePath
                 |> Sg.dynamic
                 |> Sg.scale 18.0
+
+            let (groundTruthSg, groundTruthFb)              = groundTruthSgAndFb data gtData sceneSg
+            let (centerPointApproxSg, centerPointApproxFb)  = centerPointApproxSgAndFb data sceneSg
+            let (baumFFApproxSg, baumFFApproxFb)            = baumFFApproxSgAndFb data sceneSg
+            let (solidAngleApproxSg, solidAngleApproxFb)    = solidAngleApproxSgAndFb data sceneSg
+
+            let effectFbs = 
+                Map.empty
+                |> Map.add RenderMode.GroundTruth       groundTruthFb
+                |> Map.add RenderMode.CenterPointApprox centerPointApproxFb
+                |> Map.add RenderMode.BaumFFApprox      baumFFApproxFb
+                |> Map.add RenderMode.SolidAngleApprox  solidAngleApproxFb
                 
-            let diffFrameBuffer = diffFb data gtData sceneSg
+            let diffFrameBuffer = diffFb data effectFbs
 
             let signature = signature data.runtime
             let tasks = 
                 Map.empty
-                |> Map.add RenderMode.GroundTruth (groundTruthSg data gtData sceneSg |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.CenterPointApprox (centerPointApproxSg data sceneSg |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.BaumFFApprox (baumFFApproxSg data sceneSg |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.SolidAngleApprox (solidAngleApproxSg data sceneSg |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.GroundTruth (groundTruthSg |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.CenterPointApprox (centerPointApproxSg |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.BaumFFApprox (baumFFApproxSg |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.SolidAngleApprox (solidAngleApproxSg |> Sg.compile data.runtime signature)
                 |> Map.add RenderMode.Compare (compareSg data gtData sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
                 
             tasks |> Map.iter (fun _ t -> t.Update(AdaptiveToken.Top, RenderToken.Empty)) // iterate over tasks initially one time to create them
