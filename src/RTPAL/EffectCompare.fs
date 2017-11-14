@@ -20,20 +20,20 @@ module EffectCompare =
     module Compute = 
 
         type UniformScope with
-            member uniform.TexA : ShaderTextureHandle = uniform?TexA
-            member uniform.TexB : ShaderTextureHandle = uniform?TexB
+            member uniform.GTTex : ShaderTextureHandle = uniform?GTTex
+            member uniform.CompTex : ShaderTextureHandle = uniform?CompTex
 
-        let private texA =
+        let private gtTex =
             sampler2d {
-                texture uniform.TexA
+                texture uniform.GTTex
                 filter Filter.MinMagMipLinear
                 addressU WrapMode.Wrap
                 addressV WrapMode.Wrap
             }
 
-        let private texB =
+        let private compTex =
             sampler2d {
-                texture uniform.TexB
+                texture uniform.CompTex
                 filter Filter.MinMagMipLinear
                 addressU WrapMode.Wrap
                 addressV WrapMode.Wrap
@@ -43,13 +43,13 @@ module EffectCompare =
             fragment {
                 let luminance = V3d(0.2126, 0.7152, 0.0722)
 
-                let a = dot luminance (V3d(texA.Sample(v.tc))) 
-                let b = dot luminance (V3d(texB.Sample(v.tc))) 
+                let gt = dot luminance (V3d(gtTex.Sample(v.tc))) 
+                let comp = dot luminance (V3d(compTex.Sample(v.tc))) 
             
-                let diff = a - b   
+                let diff = comp - gt   
                 let err = diff * diff
-
-                return V4d(err, 0.0, 0.0, 1.0)
+                
+                return V4d(err, float (sign diff), 0.0, 1.0)
             }
 
 
@@ -67,14 +67,24 @@ module EffectCompare =
             fragment {       
                 let upp = 0.7
 
-                let error = sqrt (texError.Sample(v.tc).X)
+                let s = texError.Sample(v.tc)
+
+                let error = sqrt (s.X)
+                let sign =  s.Y
             
                 let error = clamp 0.0 upp error
                     
-                let cGood = V3d(1.0)
-                let cBad = V3d(1.0, 0.35686, 0.14902)
-            
-                return V4d((Lerp cGood cBad (error / upp)), 1.0)
+                let cTrue = V3d(1.0)
+
+                let cFalse =
+                    if sign > 0.0 then
+                        V3d(1.0, 0.35686, 0.14902) // Too bright
+                    else 
+                        V3d(0.24706, 0.38039, 1.0) // Too dark
+
+                
+                return V4d((Lerp cTrue cFalse (error / upp)), 1.0)
+
             }
 
         ()

@@ -64,22 +64,20 @@ module EffectApBaumFF =
                                     
 
                                 let i = barycenter / (float clippedVc) 
-                                let d = i |> Vec.length
+
                                 let i = i |> Vec.normalize
 
                                 let worldI = t2w * i
+
+                                let dotOut = max 1e-5 (abs (Vec.dot (-worldI) uniform.LForwards.[addr]))
                                                 
-                                let irr = getPhotometricIntensity -worldI uniform.LForwards.[addr] uniform.LUps.[addr]
+                                let L = getPhotometricIntensity (-worldI) uniform.LForwards.[addr] uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
                                 
                                 illumination <-    
-
-                                    let dotOut = max 1e-5 (abs (Vec.dot -worldI uniform.LForwards.[addr]))
                                     
-                                    let I = abs (baumFormFactor(clippedVa, clippedVc))
+                                    let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
 
-                                    let I = I / ( dotOut )
-                                                                                
-                                    illumination + irr * brdf * I 
+                                    illumination + L * brdf * I //* i.Z
                                     
                                 ()
                                                               

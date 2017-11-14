@@ -209,14 +209,14 @@ module Rendering =
      
         let groundTruthSgAndFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
             let fb = groundTruthFb data gtData sceneSg
-
-            (fb |> fbToSg data.viewportSize, fb)
-            (*
-            Sg.fullscreenQuad data.viewportSize
-            |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-            |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-            |> Sg.texture (Sym.ofString "InputTex") (groundTruthFb data gtData sceneSg |> setupMipMaps data.runtime)
-            *)
+           
+            let sg = Sg.fullscreenQuad data.viewportSize
+                    |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
+                    |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
+                    |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
+            
+            // (fb |> fbToSg data.viewportSize, fb)
+            (sg, fb)
 
         let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
             
@@ -313,13 +313,14 @@ module Rendering =
         let centerPointApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
             let fb = centerPointApproxFb data sceneSg 
             
-            (fb |> fbToSg data.viewportSize, fb)
-            (*
-            Sg.fullscreenQuad data.viewportSize
-            |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-            |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-            |> Sg.texture (Sym.ofString "InputTex") (centerPointApproxFb data sceneSg |> setupMipMaps data.runtime)
-            *)
+            let sg = Sg.fullscreenQuad data.viewportSize
+                        |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
+                        |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
+                        |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
+                        
+            // (fb |> fbToSg data.viewportSize, fb)
+            (sg, fb)
+            
 
     module BaumFFApprox =
 
@@ -338,13 +339,14 @@ module Rendering =
         let baumFFApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
             let fb = baumFFApproxFb data sceneSg 
             
-            (fb |> fbToSg data.viewportSize, fb)
-            (*
-            Sg.fullscreenQuad data.viewportSize
-            |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-            |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-            |> Sg.texture (Sym.ofString "InputTex") (baumFFApproxFb data sceneSg |> setupMipMaps data.runtime)
-            *)
+            let sg = Sg.fullscreenQuad data.viewportSize
+                    |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
+                    |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
+                    |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
+
+            // (fb |> fbToSg data.viewportSize, fb)
+            (sg, fb)
+            
 
 
     module SolidAngleApprox =
@@ -363,15 +365,14 @@ module Rendering =
 
         let solidAngleApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
             let fb = solidAngleApproxFb data sceneSg 
+
+            let sg = Sg.fullscreenQuad data.viewportSize
+                    |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
+                    |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
+                    |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
             
-            
-            (fb |> fbToSg data.viewportSize, fb)
-            (*
-            Sg.fullscreenQuad data.viewportSize
-            |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-            |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-            |> Sg.texture (Sym.ofString "InputTex") (solidAngleApproxFb data sceneSg |> setupMipMaps data.runtime)
-            *)
+            // (fb |> fbToSg data.viewportSize, fb)
+            (sg, fb)
  
 
     module Compare = 
@@ -404,8 +405,8 @@ module Rendering =
                 |> Sg.effect [ 
                     EffectCompare.Compute.computeError |> toEffect 
                 ]
-                |> Sg.texture (Sym.ofString "TexA") (Map.find RenderMode.GroundTruth effectFbs)
-                |> Sg.texture (Sym.ofString "TexB") 
+                |> Sg.texture (Sym.ofString "GTTex") (Map.find RenderMode.GroundTruth effectFbs)
+                |> Sg.texture (Sym.ofString "CompTex") 
                     (
                         data.compare |> Mod.bind (fun rm ->
                             match rm with
