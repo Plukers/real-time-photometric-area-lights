@@ -7,9 +7,11 @@ module EffectUtils =
     open FShade
     open Aardvark.Base
     open FShade.Imperative
+    open Aardvark.Base.Rendering.Effects
 
     open Light.Effect
     open PhotometricLight
+    
 
     type UniformScope with
         member uniform.FrameCount : int = uniform?FrameCount
@@ -47,6 +49,22 @@ module EffectUtils =
         let yyww = V4d(P.Y, P.Y, P.W, P.W)
 
         fractV4d(xzxz * yyww * V4d(1.0 / someLargeFloat))
+
+    [<GLSLIntrinsic("isinf({0})")>]
+    let isinf (s) =
+        onlyInShaderCode<bool> "isinf"
+
+    [<GLSLIntrinsic("isnan({0})")>]
+    let isnan (s) =
+        onlyInShaderCode<bool> "isnan"
+    
+    [<ReflectedDefinition>]
+    let isnanVec (vec : V4d) = 
+        let mutable b = false
+        b <- b || isnan vec.X
+        b <- b || isnan vec.Y
+        b <- b || isnan vec.Z
+        b
         
     (*
         Uniformly samples a direction from the hemisphere for two given random numbers
@@ -291,6 +309,16 @@ module EffectUtils =
                         map addr v0 v1 v2
 
                     ()
+
+    let effectClearNaN (v : Vertex)= 
+        fragment {
+
+            if isnanVec v.c then
+                return V4d(0.0, 0.0, 0.0, 1.0)
+            else 
+                return v.c
+
+            }
 
     let debugShaderOutput shader = 
    

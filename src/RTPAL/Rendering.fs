@@ -74,7 +74,7 @@ module Rendering =
         photometricData |> Mod.map( fun (pd : Option<IntensityProfileSampler>) ->
             printfn "LOADED NEW DATA"
             match pd with 
-            | Some data -> 
+            | Some data ->
                 sg
                     |> Sg.uniform "ProfileAddressing" (data.AddressingParameters |> Mod.init)
                     |> Sg.uniform "TextureOffsetScale" (data.ImageOffsetScale |> Mod.init)
@@ -188,7 +188,10 @@ module Rendering =
                 
             let iterationRender =
                 sceneSg
-                    |> setupFbEffects [ EffectGT.groundTruthLighting |> toEffect ]
+                    |> setupFbEffects [ 
+                            EffectGT.groundTruthLighting |> toEffect 
+                            EffectUtils.effectClearNaN |> toEffect
+                        ]
                     |> setupLights data.lights
                     |> setupPhotometricData data.photometricData
                     |> setupCamera data.view data.frustum data.viewportSize 
@@ -215,8 +218,8 @@ module Rendering =
                     |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                     |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
             
-            // (fb |> fbToSg data.viewportSize, fb)
             (sg, fb)
+            
 
         let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
             
@@ -300,7 +303,10 @@ module Rendering =
 
         let centerPointApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
             sceneSg
-                |> setupFbEffects [ EffectApPoint.centerPointApprox |> toEffect ]
+                |> setupFbEffects [ 
+                        EffectApPoint.centerPointApprox |> toEffect 
+                        EffectUtils.effectClearNaN |> toEffect
+                    ]
                 |> setupLights data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.frustum data.viewportSize
@@ -318,7 +324,6 @@ module Rendering =
                         |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            // (fb |> fbToSg data.viewportSize, fb)
             (sg, fb)
             
 
@@ -326,7 +331,10 @@ module Rendering =
 
         let baumFFApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
             sceneSg
-                |> setupFbEffects [ EffectApBaumFF.baumFFApprox |> toEffect ]
+                |> setupFbEffects [ 
+                        EffectApBaumFF.baumFFApprox |> toEffect 
+                        EffectUtils.effectClearNaN |> toEffect
+                    ]
                 |> setupLights data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.frustum data.viewportSize
@@ -343,8 +351,7 @@ module Rendering =
                     |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
                     |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                     |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
-
-            // (fb |> fbToSg data.viewportSize, fb)
+            
             (sg, fb)
             
 

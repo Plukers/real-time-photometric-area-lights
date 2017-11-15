@@ -83,6 +83,6 @@ module EffectApBaumFF =
                                                               
                             ////////////////////////////////////////////////////////
                         ()
-                        
+
             return V4d(illumination.XYZ, v.c.W)
         }

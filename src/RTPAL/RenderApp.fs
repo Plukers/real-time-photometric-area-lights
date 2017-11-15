@@ -329,7 +329,9 @@
         | None -> ()
         
         let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"42181512_(STD)-0-90.ldt"]
-        let photometryData = Some(IntensityProfileSampler(LightMeasurementData.FromFile(photometryPath)))    
+        let lightData = LightMeasurementData.FromFile(photometryPath)
+        
+        let photometryData = Some(IntensityProfileSampler(lightData))    
                 
         // initial state
         {            
