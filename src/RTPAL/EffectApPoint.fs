@@ -78,6 +78,49 @@ module EffectApPoint =
             return V4d(illumination.XYZ, v.c.W)
         }
 
+    [<ReflectedDefinition>]       
+    let clampMRPToTriangle (a : V3d) (b : V3d) (c : V3d) (mrp : V3d) (t2l : M33d) = 
+        let a2d = 
+            let v = t2l * (a - a)
+            V2d(v.X, v.Y)
+
+        let b2d = 
+            let v = t2l * (b - a)
+            V2d(v.X, v.Y)
+
+        let c2d = 
+            let v = t2l * (c - a)
+            V2d(v.X, v.Y)
+
+        let m2d = 
+            let v = t2l * (mrp - a)
+            V2d(v.X, v.Y)
+
+        // let (u, v, w) = barycentricCoordinates m2d a2d b2d c2d
+
+        (*  
+        if   u <= 0.0 && v <= 0.0 && w >  0.0 then c
+        elif u >  0.0 && v <  0.0 && w >  0.0 then projectPointOnLine c a mrp
+        elif u >  0.0 && v <= 0.0 && w <= 0.0 then a
+        elif u >  0.0 && v >  0.0 && w <  0.0 then projectPointOnLine a b mrp
+        elif u <= 0.0 && v >  0.0 && w <= 0.0 then b
+        elif u <  0.0 && v >  0.0 && w >  0.0 then projectPointOnLine b c mrp
+        else mrp
+        *)
+          
+        match barycentricCoordinates m2d a2d b2d c2d with
+        | (u, v, w) when u <= 0.0 && v <= 0.0 && w >  0.0 -> c // I
+        | (u, v, w) when u >  0.0 && v <  0.0 && w >  0.0 ->   // II
+            projectPointOnLine c a mrp
+        | (u, v, w) when u >  0.0 && v <= 0.0 && w <= 0.0 -> a // III
+        | (u, v, w) when u >  0.0 && v >  0.0 && w <  0.0 ->   // IV
+            projectPointOnLine a b mrp
+        | (u, v, w) when u <= 0.0 && v >  0.0 && w <= 0.0 -> b // V
+        | (u, v, w) when u <  0.0 && v >  0.0 && w >  0.0 ->   // VI
+            projectPointOnLine b c mrp
+        | _ -> mrp // all coordinates are positive
+        
+
     
     let mostRepresentativePointApprox (v : Vertex) = 
         fragment {
@@ -150,53 +193,26 @@ module EffectApPoint =
 
                                 let projectedMRP = linePlaneIntersection V3d.Zero mrp (clippedVa.[0]) lightPlaneN |> Vec.normalize
                               
-
                                 let mrp = 
-                                    let clampMRPToTriangle (a : V3d) (b : V3d) (c : V3d) = 
-                                        let a2d = 
-                                            let v = t2l * (a - a)
-                                            V2d(v.X, v.Y)
-
-                                        let b2d = 
-                                            let v = t2l * (b - a)
-                                            V2d(v.X, v.Y)
-
-                                        let c2d = 
-                                            let v = t2l * (c - a)
-                                            V2d(v.X, v.Y)
-
-                                        let m2d = 
-                                            let v = t2l * (projectedMRP - a)
-                                            V2d(v.X, v.Y)
-                                            
-                                        match barycentricCoordinates m2d a2d b2d c2d with
-                                        | (u, v, w) when u <= 0.0 && v <= 0.0 && w >  0.0 -> c // I
-                                        | (u, v, w) when u >  0.0 && v <  0.0 && w >  0.0 ->   // II
-                                            projectPointOnLine c a projectedMRP
-                                        | (u, v, w) when u >  0.0 && v <= 0.0 && w <= 0.0 -> a // III
-                                        | (u, v, w) when u >  0.0 && v >  0.0 && w <  0.0 ->   // IV
-                                            projectPointOnLine a b projectedMRP
-                                        | (u, v, w) when u <= 0.0 && v >  0.0 && w <= 0.0 -> b // V
-                                        | (u, v, w) when u <  0.0 && v >  0.0 && w >  0.0 ->   // VI
-                                            projectPointOnLine b c projectedMRP
-                                        | _ -> projectedMRP // all coordinates are positive
 
                                     if clippedVc = 3 then
-                                        clampMRPToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2]                                        
+                                        clampMRPToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2] projectedMRP t2l                                  
                                     else
 
                                         let mutable barycenterA = V3d.Zero
-                                        for l in [0; 1; 2] do
-                                            barycenterA <- barycenterA + clippedVa.[l] / 3.0
+                                        barycenterA <- barycenterA + clippedVa.[0] / 3.0
+                                        barycenterA <- barycenterA + clippedVa.[1] / 3.0
+                                        barycenterA <- barycenterA + clippedVa.[2] / 3.0
 
                                         let mutable barycenterB = V3d.Zero
-                                        for l in [0; 2; 3] do
-                                            barycenterB <- barycenterB + clippedVa.[l] / 3.0
+                                        barycenterB <- barycenterB + clippedVa.[0] / 3.0
+                                        barycenterB <- barycenterB + clippedVa.[2] / 3.0
+                                        barycenterB <- barycenterB + clippedVa.[3] / 3.0       
 
                                         if ((projectedMRP - barycenterA) |> Vec.length) > ((projectedMRP - barycenterB) |> Vec.length) then
-                                            clampMRPToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2]   
+                                            clampMRPToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2] projectedMRP t2l
                                         else
-                                            clampMRPToTriangle clippedVa.[0] clippedVa.[2] clippedVa.[3]   
+                                            clampMRPToTriangle clippedVa.[0] clippedVa.[2] clippedVa.[3] projectedMRP t2l
 
                                 let i =  mrp
                                 let d = Vec.length i
