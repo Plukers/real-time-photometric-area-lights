@@ -131,6 +131,54 @@ module EffectUtils =
 
         M33dFromCols c1 c2 n
 
+
+    (*
+        Compute barycentric coordinates (u, v, w) for point p with respect to triangle (a, b, c)
+
+        https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
+
+        Ericson, C. (2004). 
+        Real-time collision detection. 
+        CRC Press.
+    *)
+    [<ReflectedDefinition>]
+    let barycentricCoordinates (p : V2d) (a : V2d) (b : V2d) (c : V2d) = 
+
+        let v0 = b - a
+        let v1 = c - a
+        let v2 = p - a
+
+        let d00 = Vec.dot v0 v0
+        let d01 = Vec.dot v0 v1
+        let d11 = Vec.dot v1 v1
+        let d20 = Vec.dot v2 v0
+        let d21 = Vec.dot v2 v1
+
+        let denom = d00 * d11 - d01 * d01
+
+        let v = (d11 * d20 - d01 * d21) / denom
+        let w = (d00 * d21 - d01 * d20) / denom
+        let u = 1.0 - v - w
+
+        (u, v, w)
+
+    (*
+        https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+    *)
+    [<ReflectedDefinition>]
+    let projectPointOnLine (a : V3d) (b : V3d) (p : V3d) = 
+
+        let ab = b - a
+        let ap = p - a
+                                    
+        a + (Vec.dot ab ap) / (Vec.dot ab ab) * ab
+        
+
+    [<ReflectedDefinition>]
+    let linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d) = 
+        let t = (Vec.dot (planeP - lineO) planeN) / (Vec.dot lineDir planeN)
+        lineO + t * lineDir
+
     (*
         Computes the intersaction point of a ray and triangle. 
 

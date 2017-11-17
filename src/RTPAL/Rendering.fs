@@ -304,7 +304,8 @@ module Rendering =
         let centerPointApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
             sceneSg
                 |> setupFbEffects [ 
-                        EffectApPoint.centerPointApprox |> toEffect 
+                        EffectApPoint.mostRepresentativePointApprox |> toEffect
+                        // EffectApPoint.centerPointApprox |> toEffect // TODO activate
                         EffectUtils.effectClearNaN |> toEffect
                     ]
                 |> setupLights data.lights

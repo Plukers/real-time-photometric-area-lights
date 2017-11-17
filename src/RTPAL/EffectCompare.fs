@@ -64,26 +64,39 @@ module EffectCompare =
             }
             
         let visualize (v : CompareVertex) = 
-            fragment {       
-                let upp = 0.7
+            fragment {  
+                let upp1 = 0.75
+                let b1 = V3d(1.0, 0.5089, 0.34902)      // [255, 130,  89] 
+                let d1 = V3d(0.21177, 0.29412, 0.69804) // [ 54,  75, 178] 
+
+                let upp2 = 1.5
+                let b2 = V3d(1.0, 0.35686, 0.14902)     // [255,  91,  38] 
+                let d2 = V3d(0.07059, 0.18039, 0.69804) // [ 18,  46, 178]
 
                 let s = texError.Sample(v.tc)
 
                 let error = sqrt (s.X)
                 let sign =  s.Y
-            
-                let error = clamp 0.0 upp error
-                    
-                let cTrue = V3d(1.0)
+                                                     
 
-                let cFalse =
+                let (cTrue, cFalse, low, upp) =
                     if sign > 0.0 then
-                        V3d(1.0, 0.35686, 0.14902) // Too bright
+                        if error <= upp1 then // Too bright
+                            (V3d(1.0), b1, 0.0, upp1) 
+                        else 
+                            (b1, b2, upp1, upp2) 
                     else 
-                        V3d(0.24706, 0.38039, 1.0) // Too dark
+                        if error <= upp1 then // Too dark
+                            (V3d(1.0), d1, 0.0, upp1) 
+                        else 
+                           (d1, d2, upp1, upp2) 
+
+               
+                
+                let error = (clamp low upp error) - low
 
                 
-                return V4d((Lerp cTrue cFalse (error / upp)), 1.0)
+                return V4d((Lerp cTrue cFalse (error / (upp - low))), 1.0)
 
             }
 
