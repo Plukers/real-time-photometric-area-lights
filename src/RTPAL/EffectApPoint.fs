@@ -95,30 +95,18 @@ module EffectApPoint =
         let m2d = 
             let v = t2l * (mrp - a)
             V2d(v.X, v.Y)
-
-        // let (u, v, w) = barycentricCoordinates m2d a2d b2d c2d
-
-        (*  
-        if   u <= 0.0 && v <= 0.0 && w >  0.0 then c
-        elif u >  0.0 && v <  0.0 && w >  0.0 then projectPointOnLine c a mrp
-        elif u >  0.0 && v <= 0.0 && w <= 0.0 then a
-        elif u >  0.0 && v >  0.0 && w <  0.0 then projectPointOnLine a b mrp
-        elif u <= 0.0 && v >  0.0 && w <= 0.0 then b
-        elif u <  0.0 && v >  0.0 && w >  0.0 then projectPointOnLine b c mrp
-        else mrp
-        *)
           
-        match barycentricCoordinates m2d a2d b2d c2d with
-        | (u, v, w) when u <= 0.0 && v <= 0.0 && w >  0.0 -> c // I
-        | (u, v, w) when u >  0.0 && v <  0.0 && w >  0.0 ->   // II
-            projectPointOnLine c a mrp
-        | (u, v, w) when u >  0.0 && v <= 0.0 && w <= 0.0 -> a // III
-        | (u, v, w) when u >  0.0 && v >  0.0 && w <  0.0 ->   // IV
-            projectPointOnLine a b mrp
-        | (u, v, w) when u <= 0.0 && v >  0.0 && w <= 0.0 -> b // V
-        | (u, v, w) when u <  0.0 && v >  0.0 && w >  0.0 ->   // VI
-            projectPointOnLine b c mrp
-        | _ -> mrp // all coordinates are positive
+        let clampedMrp = 
+            match barycentricCoordinates m2d a2d b2d c2d with
+            | (u, v, w) when u <= 0.0 && v <= 0.0 && w >  0.0 -> c                          //   I
+            | (u, v, w) when u >  0.0 && v <  0.0 && w >  0.0 -> projectPointOnLine c a mrp //  II
+            | (u, v, w) when u >  0.0 && v <= 0.0 && w <= 0.0 -> a                          // III
+            | (u, v, w) when u >  0.0 && v >  0.0 && w <  0.0 -> projectPointOnLine a b mrp //  IV
+            | (u, v, w) when u <= 0.0 && v >  0.0 && w <= 0.0 -> b                          //   V
+            | (u, v, w) when u <  0.0 && v >  0.0 && w >  0.0 -> projectPointOnLine b c mrp //  VI
+            | _ -> mrp // all coordinates are positive
+
+        clampedMrp
         
 
     
@@ -148,11 +136,11 @@ module EffectApPoint =
 
                         ////////////////////////////////////////////////////////
 
-                        let l2w = uniform.LForwards.[addr] |> Vec.normalize |> basisFrisvad 
-                        let w2l = t2w |> Mat.transpose
+                        let l2w = M33dFromCols uniform.LForwards.[addr] (V3d.Cross(uniform.LForwards.[addr], uniform.LUps.[addr])) uniform.LUps.[addr] 
+                            
+                        let w2l = l2w |> Mat.transpose
 
                         let t2l = w2l * t2w
-                        let l2t = w2t * l2w
 
                         ////////////////////////////////////////////////////////
 
@@ -172,59 +160,108 @@ module EffectApPoint =
                             let (clippedVa, clippedVc) = clipTriangle(V3d.Zero, V3d.OOI, Arr<N<3>, V3d>([| v0; v1; v2|]))
 
                             if clippedVc <> 0 then
-                                                                                                        
+
+                                let eps = 1e-9
+                                let epb = 0.5
+                                                    
+                                let lightPlaneN = w2t * uniform.LForwards.[addr] |> Vec.normalize                                
+
                                 // find closest point limited to upper hemisphere
-                                let lightPlaneN = w2t * uniform.LForwards.[addr] |> Vec.normalize
-                                
                                 let t = - (clippedVa.[0]) |> Vec.dot lightPlaneN
-                                let mutable closestPoint = -t * lightPlaneN
+                                let mutable closestPoint = t * (-lightPlaneN)
+                                                        
+                                let abovePlane = 
+                                    if (Vec.dot closestPoint V3d.OOI) < 0.0 then
+                                        let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
+                                        closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
+                                        true
+                                    else 
+                                        false
 
-                                if (Vec.dot closestPoint V3d.OOI) < 0.0 then
-                                    let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
-                                    closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
+                                let insideLightPlane = (Vec.length closestPoint) < eps
 
-                                let closestPoint = closestPoint |> Vec.normalize
+                                if not insideLightPlane then
+                                    
+                                    let closestPointDir = closestPoint |> Vec.normalize
 
-                                // intersect normal with plane
-                                let normPlanePoint = linePlaneIntersection V3d.Zero V3d.OOI (clippedVa.[0]) lightPlaneN |> Vec.normalize
-
-                                // find most representative point
-                                let mrp = closestPoint + normPlanePoint |> Vec.normalize
-
-                                let projectedMRP = linePlaneIntersection V3d.Zero mrp (clippedVa.[0]) lightPlaneN |> Vec.normalize
-                              
-                                let mrp = 
-
-                                    if clippedVc = 3 then
-                                        clampMRPToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2] projectedMRP t2l                                  
-                                    else
-
-                                        let mutable barycenterA = V3d.Zero
-                                        barycenterA <- barycenterA + clippedVa.[0] / 3.0
-                                        barycenterA <- barycenterA + clippedVa.[1] / 3.0
-                                        barycenterA <- barycenterA + clippedVa.[2] / 3.0
-
-                                        let mutable barycenterB = V3d.Zero
-                                        barycenterB <- barycenterB + clippedVa.[0] / 3.0
-                                        barycenterB <- barycenterB + clippedVa.[2] / 3.0
-                                        barycenterB <- barycenterB + clippedVa.[3] / 3.0       
-
-                                        if ((projectedMRP - barycenterA) |> Vec.length) > ((projectedMRP - barycenterB) |> Vec.length) then
-                                            clampMRPToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2] projectedMRP t2l
-                                        else
-                                            clampMRPToTriangle clippedVa.[0] clippedVa.[2] clippedVa.[3] projectedMRP t2l
-
-                                let i =  mrp
-                                let d = Vec.length i
-                                let i = i |> Vec.normalize
+                                    // intersect normal with plane
+                                    let mutable up = V3d.OOI
                                 
-                                let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]
+                                    if abs(Vec.dot up lightPlaneN) < eps then
+                                        up <- up + (epb * closestPointDir) |> Vec.normalize     
+                                    else
+                                        if abovePlane then
+                                            let lpn = 
+                                                if (Vec.dot up lightPlaneN) > 0.0 then
+                                                    lightPlaneN
+                                                else
+                                                    -lightPlaneN
 
-                                if irr > 0.0 then 
-                                    let irr = irr / (d * d)
-                                    illumination <- illumination + irr * brdf * i.Z                            
+                                            up <- up + (abs(Vec.dot up lpn) + epb) * (-lpn) |> Vec.normalize
+                                            
+
+                                    let normPlanePointDir = up // linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN |> Vec.normalize
+
+                                    // find most representative point
+                                    let mrpDir = closestPointDir + normPlanePointDir |> Vec.normalize
+
+                                    let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN // tangent space
+                              
+                                    let (mrp, sa) = 
+
+                                        if clippedVc = 3 then
+                                            let sa = computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
+
+                                            let mrp = clampMRPToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2] mrp t2l   
+                                        
+                                            (mrp, sa)
+
+                                        else
+
+                                            let sa1 = computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
+                                            let sa2 = computeSolidAngle clippedVa.[0] clippedVa.[2] clippedVa.[3]
+                                            let sa = sa1 + sa2
+
+                                            let mutable barycenterA = V3d.Zero
+                                            barycenterA <- barycenterA + clippedVa.[0] / 3.0
+                                            barycenterA <- barycenterA + clippedVa.[1] / 3.0
+                                            barycenterA <- barycenterA + clippedVa.[2] / 3.0
+
+                                            let mutable barycenterB = V3d.Zero
+                                            barycenterB <- barycenterB + clippedVa.[0] / 3.0
+                                            barycenterB <- barycenterB + clippedVa.[2] / 3.0
+                                            barycenterB <- barycenterB + clippedVa.[3] / 3.0       
+
+                                            let mrp = 
+                                                if ((mrp - barycenterA) |> Vec.length) > ((mrp - barycenterB) |> Vec.length) then
+                                                    clampMRPToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2] mrp t2l
+                                                else
+                                                    clampMRPToTriangle clippedVa.[0] clippedVa.[2] clippedVa.[3] mrp t2l
+
+                                            (mrp, sa)
+
+
+                                    let i =  mrp
+                                    let d = Vec.length i
+                                    let i = i |> Vec.normalize
+                                
+                                    let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]
+
+                                    if irr > 0.0 then 
+                                        let irr = irr / (d * d)
+                                        illumination <- illumination + irr * brdf * i.Z                            
+                                  (*  
+                                else
+                                    let V = (uniform.CameraLocation - P) |> Vec.normalize
                                     
-                                    
+                                    let dotOut = max 1e-5 (abs (Vec.dot V uniform.LForwards.[addr]))
+
+                                    let irr = getPhotometricIntensity V uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+
+                                    if irr > 0.0 then 
+                                        let irr = irr
+                                        illumination <- illumination + irr * brdf
+                                    *)
                                 ()
                                                                 
                             ////////////////////////////////////////////////////////

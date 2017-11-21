@@ -185,9 +185,9 @@ module Light =
             array |> Array.mapi (fun i v -> if i = addr then (updateFunc v) else v)
 
         transact (fun _ -> 
-
+            
             let vertexTrafo = lc.Trafos.Value.[addr].Forward * trafo.Forward * lc.Trafos.Value.[addr].Backward
-
+            
             lc.Vertices.Value <-
                 lc.Vertices.Value |> Array.mapi (
                     fun i v -> 
@@ -198,9 +198,15 @@ module Light =
                     )
             
             printfn "Vertices %A" lc.Vertices.Value
-                       
-            lc.Forwards.Value <- update lc.Forwards.Value (fun forward -> Mat.transformDir trafo.Forward forward |> Vec.normalize)
-            lc.Ups.Value <- update lc.Ups.Value (fun up -> Mat.transformDir trafo.Forward up |> Vec.normalize)
+
+            let transformDir dir =
+                dir
+                |> Mat.transformDir lc.Trafos.Value.[addr].Backward
+                |> Mat.transformDir trafo.Forward 
+                |> Mat.transformDir lc.Trafos.Value.[addr].Forward
+
+            lc.Forwards.Value <- update lc.Forwards.Value (fun forward -> transformDir forward |> Vec.normalize)
+            lc.Ups.Value <- update lc.Ups.Value (fun up -> transformDir up |> Vec.normalize)
                   
             printfn "Forward  %A" lc.Forwards.Value.[addr]
             printfn "Up       %A" lc.Ups.Value.[addr]

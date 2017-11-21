@@ -171,7 +171,7 @@ module EffectUtils =
         let ab = b - a
         let ap = p - a
                                     
-        a + (Vec.dot ab ap) / (Vec.dot ab ab) * ab
+        a + ((Vec.dot ab ap) / (Vec.dot ab ab)) * ab
         
 
     [<ReflectedDefinition>]
