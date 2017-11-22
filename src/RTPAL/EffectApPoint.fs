@@ -136,7 +136,7 @@ module EffectApPoint =
 
                         ////////////////////////////////////////////////////////
 
-                        let l2w = M33dFromCols uniform.LForwards.[addr] (V3d.Cross(uniform.LForwards.[addr], uniform.LUps.[addr])) uniform.LUps.[addr] 
+                        let l2w = M33dFromCols  (V3d.Cross((uniform.LUps.[addr]), (uniform.LForwards.[addr]))) uniform.LUps.[addr] uniform.LForwards.[addr]
                             
                         let w2l = l2w |> Mat.transpose
 
@@ -162,29 +162,30 @@ module EffectApPoint =
                             if clippedVc <> 0 then
 
                                 let eps = 1e-9
-                                let epb = 0.5
+                                let epb = 1e-3
                                                     
                                 let lightPlaneN = w2t * uniform.LForwards.[addr] |> Vec.normalize                                
 
                                 // find closest point limited to upper hemisphere
-                                let t = - (clippedVa.[0]) |> Vec.dot lightPlaneN
+                                let t = (- clippedVa.[0]) |> Vec.dot lightPlaneN
                                 let mutable closestPoint = t * (-lightPlaneN)
-                                                        
-                                let abovePlane = 
-                                    if (Vec.dot closestPoint V3d.OOI) < 0.0 then
-                                        let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
-                                        closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
-                                        true
-                                    else 
-                                        false
+                                                    
+                                if (Vec.dot closestPoint V3d.OOI) < 0.0 then
+                                    let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
+                                    closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
+
+                                let abovePlane = if (Vec.dot closestPoint lightPlaneN) > 0.0 then false else true
 
                                 let insideLightPlane = (Vec.length closestPoint) < eps
+
 
                                 if not insideLightPlane then
                                     
                                     let closestPointDir = closestPoint |> Vec.normalize
 
                                     // intersect normal with plane
+
+                                    (*
                                     let mutable up = V3d.OOI
                                 
                                     if abs(Vec.dot up lightPlaneN) < eps then
@@ -198,12 +199,29 @@ module EffectApPoint =
                                                     -lightPlaneN
 
                                             up <- up + (abs(Vec.dot up lpn) + epb) * (-lpn) |> Vec.normalize
+                                    *)
+                                    
+                                    let mutable up = clippedVa.[0]
+                                    let mutable avgc = 1.0
+                                    for l in 1 .. clippedVc - 1 do
+                                        let zdiff = up.Z - clippedVa.[l].Z
+
+                                        if abs(zdiff) < eps then
+                                            up <- (up * avgc) + clippedVa.[l]
+                                            avgc <- avgc + 1.0
+                                            up <- up / avgc
                                             
+                                        else
+                                            if zdiff < 0.0 then
+                                                up <- clippedVa.[l]
+                                    
 
                                     let normPlanePointDir = up // linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN |> Vec.normalize
 
                                     // find most representative point
+
                                     let mrpDir = closestPointDir + normPlanePointDir |> Vec.normalize
+                                    // let mrpDir = closestPointDir //TODO remove
 
                                     let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN // tangent space
                               
@@ -239,17 +257,20 @@ module EffectApPoint =
                                                     clampMRPToTriangle clippedVa.[0] clippedVa.[2] clippedVa.[3] mrp t2l
 
                                             (mrp, sa)
+                                            
 
-
+                                            
                                     let i =  mrp
                                     let d = Vec.length i
                                     let i = i |> Vec.normalize
                                 
-                                    let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]
+                                    let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
+                                    let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
 
                                     if irr > 0.0 then 
-                                        let irr = irr / (d * d)
-                                        illumination <- illumination + irr * brdf * i.Z                            
+                                        let irr = irr * sa
+                                        illumination <- illumination + irr * brdf * i.Z  
+                                        
                                   (*  
                                 else
                                     let V = (uniform.CameraLocation - P) |> Vec.normalize
