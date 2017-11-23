@@ -325,11 +325,14 @@ module Rendering =
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
             (sg, fb)
-
+            
 
     module MRPApprox =
 
         let mrpApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
+
+            let sceneSg = MRPApproxDebug.sceneSg data.lights
+
             sceneSg
                 |> setupFbEffects [ 
                         EffectApPoint.mostRepresentativePointApprox |> toEffect
@@ -352,8 +355,9 @@ module Rendering =
                         |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            (sg, fb)
-            
+            //(sg, fb)
+            ((fb |> fbToSg data.viewportSize), fb)
+                      
 
     module BaumFFApprox =
 
@@ -382,40 +386,9 @@ module Rendering =
             
             (sg, fb)
             
-
-
-    module SolidAngleApprox =
-
-        let solidAngleApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
-            sceneSg
-                |> setupFbEffects [ EffectApSolidAngle.solidAngleApprox |> toEffect ]
-                |> setupLights data.lights
-                |> setupPhotometricData data.photometricData
-                |> setupCamera data.view data.frustum data.viewportSize
-                |> Sg.compile data.runtime (signature data.runtime)
-
-        let solidAngleApproxFb (data : RenderData) (sceneSg : ISg) = 
-            solidAngleApproxRenderTask data sceneSg
-            |> RenderTask.renderToColor data.viewportSize
-
-        let solidAngleApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
-            let fb = solidAngleApproxFb data sceneSg 
-
-            let sg = Sg.fullscreenQuad data.viewportSize
-                    |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-                    |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-                    |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
-            
-            // (fb |> fbToSg data.viewportSize, fb)
-            (sg, fb)
- 
-
     module Compare = 
         
         open GroundTruth
-        open CenterPointApprox
-        open BaumFFApprox
-        open SolidAngleApprox
 
         let private renderToFbo (fbo : IOutputMod<IFramebuffer>) (task : IRenderTask) =
             let sem = (Set.singleton DefaultSemantic.Colors)
@@ -484,13 +457,13 @@ module Rendering =
             |> fbToSg data.viewportSize
  
     module Effects = 
+
         open Aardvark.Application.WinForms
 
         open GroundTruth
         open CenterPointApprox
         open MRPApprox
         open BaumFFApprox
-        open SolidAngleApprox
         open Compare
 
         let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (viewportSize : V2i) (m : MRenderState) =
@@ -500,7 +473,7 @@ module Rendering =
                 view = view
                 frustum = Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y) |> Mod.init 
                 viewportSize = viewportSize |> Mod.init
-                lights = m.lights |> Mod.force // mod  force necessary ? 
+                lights = m.lights |> Mod.force // mod force necessary ? 
                 photometricData = m.photometryData
                 mode = m.renderMode
                 compare = m.compare
@@ -540,7 +513,6 @@ module Rendering =
             let (centerPointApproxSg, centerPointApproxFb)  = centerPointApproxSgAndFb data sceneSg
             let (mrpApproxSg, mrpApproxFb)                  = mrpApproxSgAndFb data sceneSg
             let (baumFFApproxSg, baumFFApproxFb)            = baumFFApproxSgAndFb data sceneSg
-            let (solidAngleApproxSg, solidAngleApproxFb)    = solidAngleApproxSgAndFb data sceneSg
 
             let effectFbs = 
                 Map.empty
@@ -548,7 +520,6 @@ module Rendering =
                 |> Map.add RenderMode.CenterPointApprox centerPointApproxFb
                 |> Map.add RenderMode.MRPApprox         mrpApproxFb
                 |> Map.add RenderMode.BaumFFApprox      baumFFApproxFb
-                |> Map.add RenderMode.SolidAngleApprox  solidAngleApproxFb
                 
             let diffFrameBuffer = diffFb data effectFbs
 
@@ -559,7 +530,6 @@ module Rendering =
                 |> Map.add RenderMode.CenterPointApprox (centerPointApproxSg |> Sg.compile data.runtime signature)
                 |> Map.add RenderMode.MRPApprox         (mrpApproxSg |> Sg.compile data.runtime signature)
                 |> Map.add RenderMode.BaumFFApprox      (baumFFApproxSg |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.SolidAngleApprox  (solidAngleApproxSg |> Sg.compile data.runtime signature)
                 |> Map.add RenderMode.Compare           (compareSg data gtData sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
                 
             tasks |> Map.iter (fun _ t -> t.Update(AdaptiveToken.Top, RenderToken.Empty)) // iterate over tasks initially one time to create them

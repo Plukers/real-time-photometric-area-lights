@@ -103,6 +103,7 @@
     <Compile Include="EffectCompare.fs" />
     <Compile Include="EffectOutline.fs" />
     <Compile Include="EffectToneMapping.fs" />
+    <Compile Include="MRPApproxDebug.fs" />
     <Compile Include="RenderState.fs" />
     <Compile Include="Rendering.fs" />
     <Compile Include="RenderApp.fs" />
