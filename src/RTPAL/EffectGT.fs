@@ -16,6 +16,7 @@ module EffectGT =
     open Light.Effect
     open EffectUtils
     open PhotometricLight
+    open Light
     
     type GTVertex = {
         [<Position>]        pos     : V4d
@@ -68,24 +69,45 @@ module EffectGT =
                     | -1 -> ()
                     |  _ ->                        
                         let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+                        let iAddr = addr * Config.MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT
 
-                        for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumIndices.[addr] - 1) do
-                            
-                            let v0Addr = uniform.LIndices.[iIdx + 0] + vAddr
+                        let patchSize = 
+                            match uniform.LBaseComponents.[addr] with
+                            | LightBaseComponent.Square   -> 4
+                            | _ -> 3 // Triangle
+
+                        for iIdx in iAddr .. patchSize .. (iAddr + uniform.LNumEvalIndices.[addr] - 1) do
+
+                            let vt = Arr<N<4>, V3d>([| V3d.Zero; V3d.Zero; V3d.Zero; V3d.Zero|])
+
+                            for vtc in 0 .. patchSize - 1 do
+                                let vtcAddr = uniform.LEvalIndices.[iIdx + vtc] + vAddr
+                                vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+                            (*
+                            let v0Addr = uniform.LEvalIndices.[iIdx + 0] + vAddr
                             let v0 = w2t * (uniform.LVertices.[v0Addr] - P)
                            
-                            let v1Addr = uniform.LIndices.[iIdx + 1] + vAddr
+                            let v1Addr = uniform.LEvalIndices.[iIdx + 1] + vAddr
                             let v1 = w2t * (uniform.LVertices.[v1Addr] - P)
                            
-                            let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
+                            let v2Addr = uniform.LEvalIndices.[iIdx + 2] + vAddr
                             let v2 = w2t * (uniform.LVertices.[v2Addr] - P)                       
-
+                            *)
                             ////////////////////////////////////////////////////////
+                            
+                            let t = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
 
-                            let t = rayTriangleIntersaction V3d.Zero i v0 v1 v2
-
-                            if t > 1e-8 then
+                            let hitLight = 
+                                match uniform.LBaseComponents.[addr] with
+                                | LightBaseComponent.Square -> 
+                                    let t1 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
+                                    let t2 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[2] vt.[3]
+                                    t1 > 1e-8 || t2 > 1e-8
+                                | _ -> // Triangle 
+                                    let t = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
+                                    t > 1e-8
+                                    
+                            if hitLight then
                                 
                                 let worldI = t2w * -i
 

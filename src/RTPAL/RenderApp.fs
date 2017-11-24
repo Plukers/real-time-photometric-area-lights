@@ -314,12 +314,13 @@
     let initialState =     
 
         // Load geometry
-        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
-        //let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.dae"]
+        // let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
+        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.obj"]
 
         // Setup Lights
         let lc = emptyLightCollection
-        let light1 = addTriangleLight lc
+        //let light1 = addTriangleLight lc
+        let light1 = addSquareLight lc
         
         match light1 with
         | Some lightId ->             

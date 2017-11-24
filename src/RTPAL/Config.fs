@@ -19,10 +19,16 @@ module Config =
     let VERT_ALL_LIGHT = 4
 
     [<Literal>]
-    let MAX_IDX_BUFFER_SIZE_PER_LIGHT = 12
+    let MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT = 12
 
     [<Literal>]
-    let MAX_IDX_BUFFER_SIZE_ALL_LIGHT = 12
+    let MAX_RENDER_IDX_BUFFER_SIZE_ALL_LIGHT = 12
+
+    [<Literal>]
+    let MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT = 16
+
+    [<Literal>]
+    let MAX_EVAL_IDX_BUFFER_SIZE_ALL_LIGHT = 16
 
     [<Literal>]
     let NUM_SAMPLES = 8

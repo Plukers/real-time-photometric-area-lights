@@ -35,17 +35,17 @@ module EffectBaumFF =
                     | -1 -> ()
                     |  _ ->    
                         let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+                        let iAddr = addr * Config.MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT
 
-                        for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumIndices.[addr] - 1) do
+                        for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumEvalIndices.[addr] - 1) do
                             
-                            let v0Addr = uniform.LIndices.[iIdx + 0] + vAddr
+                            let v0Addr = uniform.LEvalIndices.[iIdx + 0] + vAddr
                             let v0 = w2t * (uniform.LVertices.[v0Addr] - P)
                            
-                            let v1Addr = uniform.LIndices.[iIdx + 1] + vAddr
+                            let v1Addr = uniform.LEvalIndices.[iIdx + 1] + vAddr
                             let v1 = w2t * (uniform.LVertices.[v1Addr] - P)
                            
-                            let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
+                            let v2Addr = uniform.LEvalIndices.[iIdx + 2] + vAddr
                             let v2 = w2t * (uniform.LVertices.[v2Addr] - P) 
                             
                             ////////////////////////////////////////////////////////

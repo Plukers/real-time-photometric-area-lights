@@ -214,6 +214,20 @@ module EffectUtils =
                 else 
                     ((Vec.dot e2 qVec) * invDet)
 
+    [<ReflectedDefinition>]   
+    let private projetToLineSegment a b p = 
+        let projection = projectPointOnLine a b p
+        
+        let pa = a - projection     
+        let pb = b - projection           
+
+        if (Vec.dot pa pb) < 0.0 then
+            projection
+        elif (Vec.length pa) < Vec.length(pb) then
+            a
+        else
+            b
+
     [<ReflectedDefinition>]       
     let clampPointToTriangle (a : V3d) (b : V3d) (c : V3d) (p : V3d) (tts : M33d) = // tls = transformation to triangle space matrix
         let a2d = 
@@ -232,14 +246,16 @@ module EffectUtils =
             let v = tts * (p - a)
             V2d(v.X, v.Y)
           
+        let eps = 1e-9
+
         let clampedP = 
             match barycentricCoordinates p2d a2d b2d c2d with
-            | (u, v, w) when u <= 0.0 && v <= 0.0 && w >  0.0 -> c                        //   I
-            | (u, v, w) when u >  0.0 && v <  0.0 && w >  0.0 -> projectPointOnLine c a p //  II
-            | (u, v, w) when u >  0.0 && v <= 0.0 && w <= 0.0 -> a                        // III
-            | (u, v, w) when u >  0.0 && v >  0.0 && w <  0.0 -> projectPointOnLine a b p //  IV
-            | (u, v, w) when u <= 0.0 && v >  0.0 && w <= 0.0 -> b                        //   V
-            | (u, v, w) when u <  0.0 && v >  0.0 && w >  0.0 -> projectPointOnLine b c p //  VI
+            | (u, v, w) when u <= eps && v <= eps && w >  eps -> c                         //   I
+            | (u, v, w) when u >  eps && v <  eps && w >  eps -> projetToLineSegment c a p //  II
+            | (u, v, w) when u >  eps && v <= eps && w <= eps -> a                         // III
+            | (u, v, w) when u >  eps && v >  eps && w <  eps -> projetToLineSegment a b p //  IV
+            | (u, v, w) when u <= eps && v >  eps && w <= eps -> b                         //   V
+            | (u, v, w) when u <  eps && v >  eps && w >  eps -> projetToLineSegment b c p //  VI
             | _ -> p // all coordinates are positive
 
         clampedP
@@ -277,15 +293,17 @@ module EffectUtils =
         let v = linePointDistance c2d d2d p2d
         let w = linePointDistance d2d a2d p2d
         
+        let eps = 1e-9
+
         match (t, u, v, w) with
-        | (t, u, v, w) when t >  0.0 && u <= 0.0 && v <= 0.0 && w <= 0.0 -> projectPointOnLine a b p //    I
-        | (t, u, v, w) when t >  0.0 && u >  0.0 && v <= 0.0 && w <= 0.0 -> b                        //   II
-        | (t, u, v, w) when t <= 0.0 && u >  0.0 && v <= 0.0 && w <= 0.0 -> projectPointOnLine b c p //  III
-        | (t, u, v, w) when t <= 0.0 && u >  0.0 && v >  0.0 && w <= 0.0 -> c                        //   IV
-        | (t, u, v, w) when t <= 0.0 && u <= 0.0 && v >  0.0 && w <= 0.0 -> projectPointOnLine c d p //    V
-        | (t, u, v, w) when t <= 0.0 && u <= 0.0 && v >  0.0 && w >  0.0 -> d                        //   VI
-        | (t, u, v, w) when t <= 0.0 && u <= 0.0 && v <= 0.0 && w >  0.0 -> projectPointOnLine d a p //  VII
-        | (t, u, v, w) when t >  0.0 && u <= 0.0 && v <= 0.0 && w >  0.0 -> a                        // VIII
+        | (t, u, v, w) when t >  eps && u <= eps && v <= eps && w <= eps -> projetToLineSegment a b p //    I
+        | (t, u, v, w) when t >  eps && u >  eps && v <= eps && w <= eps -> b                         //   II
+        | (t, u, v, w) when t <= eps && u >  eps && v <= eps && w <= eps -> projetToLineSegment b c p //  III
+        | (t, u, v, w) when t <= eps && u >  eps && v >  eps && w <= eps -> c                         //   IV
+        | (t, u, v, w) when t <= eps && u <= eps && v >  eps && w <= eps -> projetToLineSegment c d p //    V
+        | (t, u, v, w) when t <= eps && u <= eps && v >  eps && w >  eps -> d                         //   VI
+        | (t, u, v, w) when t <= eps && u <= eps && v <= eps && w >  eps -> projetToLineSegment d a p //  VII
+        | (t, u, v, w) when t >  eps && u <= eps && v <= eps && w >  eps -> a                         // VIII
         | _ -> p // all coordinates are positive
 
     [<ReflectedDefinition>] 
@@ -409,31 +427,6 @@ module EffectUtils =
         let scale = uniform.TextureOffsetScale.YW   //var Scale = (intensityTexture.Size - Float2.II) / intensityTexture.Size;
         let crd = V2d(phi, theta) * scale + offset
         intensityProfileSampler.SampleLevel(V2d(crd.X, 1.0 - crd.Y), 0.0).X
-
-    [<ReflectedDefinition>]
-    let areaLightMap (wp : V3d) (w2t : M33d) map =
-
-        for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
-            match uniform.Lights.[addr] with
-                | -1 -> ()
-                |  _ ->    
-                    let vAddr = addr * Config.VERT_PER_LIGHT
-                    let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
-
-                    for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumIndices.[addr] - 1) do
-                            
-                        let v0Addr = uniform.LIndices.[iIdx + 0] + vAddr
-                        let v0 = w2t * (uniform.LVertices.[v0Addr] - wp)
-                           
-                        let v1Addr = uniform.LIndices.[iIdx + 1] + vAddr
-                        let v1 = w2t * (uniform.LVertices.[v1Addr] - wp)
-                           
-                        let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
-                        let v2 = w2t * (uniform.LVertices.[v2Addr] - wp) 
-
-                        map addr v0 v1 v2
-
-                    ()
 
     let effectClearNaN (v : Vertex)= 
         fragment {

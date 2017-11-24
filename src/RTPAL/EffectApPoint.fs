@@ -36,17 +36,17 @@ module EffectApPoint =
                     | -1 -> ()
                     |  _ ->    
                         let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+                        let iAddr = addr * Config.MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT
 
-                        for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumIndices.[addr] - 1) do
+                        for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumEvalIndices.[addr] - 1) do
                             
-                            let v0Addr = uniform.LIndices.[iIdx + 0] + vAddr
+                            let v0Addr = uniform.LEvalIndices.[iIdx + 0] + vAddr
                             let v0 = w2t * (uniform.LVertices.[v0Addr] - P)
                            
-                            let v1Addr = uniform.LIndices.[iIdx + 1] + vAddr
+                            let v1Addr = uniform.LEvalIndices.[iIdx + 1] + vAddr
                             let v1 = w2t * (uniform.LVertices.[v1Addr] - P)
                            
-                            let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
+                            let v2Addr = uniform.LEvalIndices.[iIdx + 2] + vAddr
                             let v2 = w2t * (uniform.LVertices.[v2Addr] - P) 
 
                             ////////////////////////////////////////////////////////
@@ -101,7 +101,7 @@ module EffectApPoint =
                     |  _ ->    
                         
                         let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+                        let iAddr = addr * Config.MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT
 
                         ////////////////////////////////////////////////////////
 
@@ -113,15 +113,15 @@ module EffectApPoint =
 
                         ////////////////////////////////////////////////////////
 
-                        for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumIndices.[addr] - 1) do
+                        for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumEvalIndices.[addr] - 1) do
                             
-                            let v0Addr = uniform.LIndices.[iIdx + 0] + vAddr
+                            let v0Addr = uniform.LEvalIndices.[iIdx + 0] + vAddr
                             let v0 = w2t * (uniform.LVertices.[v0Addr] - P)
                            
-                            let v1Addr = uniform.LIndices.[iIdx + 1] + vAddr
+                            let v1Addr = uniform.LEvalIndices.[iIdx + 1] + vAddr
                             let v1 = w2t * (uniform.LVertices.[v1Addr] - P)
                            
-                            let v2Addr = uniform.LIndices.[iIdx + 2] + vAddr
+                            let v2Addr = uniform.LEvalIndices.[iIdx + 2] + vAddr
                             let v2 = w2t * (uniform.LVertices.[v2Addr] - P) 
 
                             ////////////////////////////////////////////////////////
@@ -155,16 +155,10 @@ module EffectApPoint =
                                     if abs(Vec.dot up lightPlaneN) < eps then
                                         up <- up + (epb * closestPointDir) |> Vec.normalize     
                                     else
-                                        
                                         let abovePlane = if (Vec.dot V3d.OOI closestPoint) < 0.0 && (Vec.dot closestPoint lightPlaneN) < 0.0 then false else true
                                         if abovePlane then
-                                            let lpn = 
-                                                if (Vec.dot up lightPlaneN) > 0.0 then
-                                                    lightPlaneN
-                                                else
-                                                    -lightPlaneN
-
-                                            up <- up + (abs(Vec.dot up lpn) + epb) * (-lpn) |> Vec.normalize
+                                            if (Vec.dot up lightPlaneN) > 0.0 then
+                                                up <- up + (abs(Vec.dot up lightPlaneN) + epb) * (-lightPlaneN) |> Vec.normalize
                                     
                                     (*
                                     let mutable up = clippedVa.[0]
@@ -216,29 +210,42 @@ module EffectApPoint =
                                             
 
                                             
-                                    let i =  mrpDir
-                                    let d = Vec.length i
-                                    let i = i |> Vec.normalize
-                                
+                                    let i =  mrpDir                                
                                     let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
-                                    let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+                                    let L = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
 
-                                    if irr > 0.0 then 
-                                        let irr = irr * sa
-                                        illumination <- illumination + irr * brdf * i.Z  
-                                        
-                                  (*  
+                                    if L > 0.0 then 
+
+                                        for l in 0 .. clippedVc - 1 do
+                                            // Project polygon light onto sphere
+                                            clippedVa.[l] <- Vec.normalize clippedVa.[l]
+
+                                        let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
+                                        // let I = sa
+                                        illumination <- illumination + L * brdf * I // * i.Z  
+                                (*
                                 else
-                                    let V = (uniform.CameraLocation - P) |> Vec.normalize
+
+                                    let closestPoint = clampPointToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2] closestPoint t2l 
+
+                                    if Vec.length closestPoint < eps then // inside light
+
+                                    else
+                                        let i = closestPoint |> Vec.normalize
+                                
+                                        let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
+                                        let L = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+
+                                        if L > 0.0 then 
+
+                                            for l in 0 .. clippedVc - 1 dos
+                                                clippedVa.[l] <- Vec.normalize clippedVa.[l]
+
+                                            let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
+                                            // let I = sa
+                                            illumination <- illumination + L * brdf * I // * i.Z  
+                                *)
                                     
-                                    let dotOut = max 1e-5 (abs (Vec.dot V uniform.LForwards.[addr]))
-
-                                    let irr = getPhotometricIntensity V uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
-
-                                    if irr > 0.0 then 
-                                        let irr = irr
-                                        illumination <- illumination + irr * brdf
-                                    *)
                                 ()
                                                                 
                             ////////////////////////////////////////////////////////

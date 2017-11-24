@@ -20,9 +20,18 @@ let VERT_ALL_LIGHT = NUM_LIGHTS * VERT_PER_LIGHT
     => Max number of faces is 2V - 4
     => Max size of index buffer is 3 * max number of faces
 *)
-let MAX_IDX_BUFFER_SIZE_PER_LIGHT = 3 * (2 * VERT_PER_LIGHT - 4)
+let MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT = 3 * (2 * VERT_PER_LIGHT - 4)
 
-let MAX_IDX_BUFFER_SIZE_ALL_LIGHT = NUM_LIGHTS * MAX_IDX_BUFFER_SIZE_PER_LIGHT
+let MAX_RENDER_IDX_BUFFER_SIZE_ALL_LIGHT = NUM_LIGHTS * MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT
+
+
+(*
+    Same as MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT but with 4 instead of 3, since there can be squares also
+*)
+let MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT = 4 * (2 * VERT_PER_LIGHT - 4)
+
+let MAX_EVAL_IDX_BUFFER_SIZE_ALL_LIGHT = NUM_LIGHTS * MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT
+
 
 
 let NUM_SAMPLES = 8
@@ -51,20 +60,28 @@ module Config =
     let VERT_ALL_LIGHT = {3}
 
     [<Literal>]
-    let MAX_IDX_BUFFER_SIZE_PER_LIGHT = {4}
+    let MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT = {4}
 
     [<Literal>]
-    let MAX_IDX_BUFFER_SIZE_ALL_LIGHT = {5}
+    let MAX_RENDER_IDX_BUFFER_SIZE_ALL_LIGHT = {5}
 
     [<Literal>]
-    let NUM_SAMPLES = {6}
+    let MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT = {6}
+
+    [<Literal>]
+    let MAX_EVAL_IDX_BUFFER_SIZE_ALL_LIGHT = {7}
+
+    [<Literal>]
+    let NUM_SAMPLES = {8}
                            """, 
                            NUM_LIGHTS, 
                            VERT_PER_LIGHT, 
                            VERT_PER_LIGHT_PLUS_ONE,
                            VERT_ALL_LIGHT,
-                           MAX_IDX_BUFFER_SIZE_PER_LIGHT,
-                           MAX_IDX_BUFFER_SIZE_ALL_LIGHT,
+                           MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT,
+                           MAX_RENDER_IDX_BUFFER_SIZE_ALL_LIGHT,
+                           MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT,
+                           MAX_EVAL_IDX_BUFFER_SIZE_ALL_LIGHT,
                            NUM_SAMPLES)
 
                            

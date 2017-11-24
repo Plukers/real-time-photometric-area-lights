@@ -355,7 +355,7 @@ module Rendering =
                         |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            //(sg, fb)
+            (sg, fb)
             ((fb |> fbToSg data.viewportSize), fb)
                       
 

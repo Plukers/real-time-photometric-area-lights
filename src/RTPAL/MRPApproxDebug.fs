@@ -81,7 +81,7 @@ module MRPApproxDebug =
                 let addr = 0
 
                 let vAddr = addr * Config.VERT_PER_LIGHT
-                let iAddr = addr * Config.MAX_IDX_BUFFER_SIZE_PER_LIGHT
+                let iAddr = addr * Config.MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT
 
                 ////////////////////////////////////////////////////////
 
@@ -96,18 +96,18 @@ module MRPApproxDebug =
                         
                 ////////////////////////////////////////////////////////
                 
-                let! lIndices = lc.Indices
+                let! lEvalIndices = lc.EvalIndices
                 let! lVertices = lc.Vertices
                 
                 let computeLightData iIdx = 
                             
-                    let v0Addr = lIndices.[iIdx + 0] + vAddr
+                    let v0Addr = lEvalIndices.[iIdx + 0] + vAddr
                     let v0 = w2t * (lVertices.[v0Addr] - P)
                            
-                    let v1Addr = lIndices.[iIdx + 1] + vAddr
+                    let v1Addr = lEvalIndices.[iIdx + 1] + vAddr
                     let v1 = w2t * (lVertices.[v1Addr] - P)
                            
-                    let v2Addr = lIndices.[iIdx + 2] + vAddr
+                    let v2Addr = lEvalIndices.[iIdx + 2] + vAddr
                     let v2 = w2t * (lVertices.[v2Addr] - P) 
 
                     ////////////////////////////////////////////////////////
