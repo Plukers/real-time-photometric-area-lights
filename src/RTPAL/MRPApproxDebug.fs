@@ -99,20 +99,20 @@ module MRPApproxDebug =
                 let! lPatchIndices = lc.PatchIndices
                 let! lVertices = lc.Vertices
                 
+                let! lBaseComponents = lc.BaseComponents
+               
+                
                 let computeLightData iIdx = 
                             
-                    let v0Addr = lPatchIndices.[iIdx + 0] + vAddr
-                    let v0 = w2t * (lVertices.[v0Addr] - P)
-                           
-                    let v1Addr = lPatchIndices.[iIdx + 1] + vAddr
-                    let v1 = w2t * (lVertices.[v1Addr] - P)
-                           
-                    let v2Addr = lPatchIndices.[iIdx + 2] + vAddr
-                    let v2 = w2t * (lVertices.[v2Addr] - P) 
+                    let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                            
+                    for vtc in 0 .. lBaseComponents.[addr] - 1 do
+                        let vtcAddr = lPatchIndices.[iIdx + vtc] + vAddr
+                        vt.[vtc] <- w2t * (lVertices.[vtcAddr] - P)
 
                     ////////////////////////////////////////////////////////
 
-                    let (clippedVa, clippedVc) = clipTriangle(V3d.Zero, V3d.OOI, Arr<N<3>, V3d>([| v0; v1; v2|]))
+                    let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, lBaseComponents.[addr])
 
                     if clippedVc <> 0 then
 
@@ -148,26 +148,12 @@ module MRPApproxDebug =
 
                             let normPlanePoint = linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN // tangent space
 
-                            let (closestPointDir, normPlanePointDir, sa) = 
+                            let (closestPointDir, normPlanePointDir) = 
 
-                                if clippedVc = 3 then
-                                    let sa = computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
-
-                                    let closestPoint = clampPointToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2] closestPoint t2l   
-                                    let normPlaneP =   clampPointToTriangle clippedVa.[0] clippedVa.[1] clippedVa.[2] normPlanePoint t2l 
-
-                                    (closestPoint |> Vec.normalize, normPlaneP |> Vec.normalize, sa)
-
-                                else
-
-                                    let sa1 = computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
-                                    let sa2 = computeSolidAngle clippedVa.[0] clippedVa.[2] clippedVa.[3]
-                                    let sa = sa1 + sa2
-
-                                    let closestPoint = clampPointToSquare clippedVa.[0] clippedVa.[1] clippedVa.[2] clippedVa.[3] closestPoint t2l   
-                                    let normPlaneP =   clampPointToSquare clippedVa.[0] clippedVa.[1] clippedVa.[2] clippedVa.[3] normPlanePoint t2l  
+                                let closestPoint = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                let normPlaneP =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
      
-                                    (closestPoint |> Vec.normalize, normPlaneP |> Vec.normalize, sa)
+                                (closestPoint |> Vec.normalize, normPlaneP |> Vec.normalize)
 
                             let mrpDir  = closestPointDir + normPlanePointDir |> Vec.normalize
 
