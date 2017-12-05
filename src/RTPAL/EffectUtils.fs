@@ -267,7 +267,7 @@ module EffectUtils =
             pnt - l1 |> Vec.dot n
 
     [<ReflectedDefinition>] 
-    let clampPointToPolygon (a : V3d) (b : V3d) (c : V3d) (d : V3d) (p : V3d) (tps : M33d) = // tls = transformation to polygon space matrix
+    let clampPointToSquare (a : V3d) (b : V3d) (c : V3d) (d : V3d) (p : V3d) (tps : M33d) = // tls = transformation to polygon space matrix
         let a2d = 
             let v = tps * (a - a)
             V2d(v.X, v.Y)
@@ -305,6 +305,66 @@ module EffectUtils =
         | (t, u, v, w) when t <= eps && u <= eps && v <= eps && w >  eps -> projetToLineSegment d a p //  VII
         | (t, u, v, w) when t >  eps && u <= eps && v <= eps && w >  eps -> a                         // VIII
         | _ -> p // all coordinates are positive
+
+    [<ReflectedDefinition>] 
+    let clampPointToPolygon (v : Arr<N<Config.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (vc : int) (p : V3d) (tps : M33d) = // tls = transformation to polygon space matrix
+
+        if v.Length = 0 then
+            p
+        else
+
+            let mutable v2d = Arr<N<Config.MAX_PATCH_SIZE_PLUS_ONE>, V2d>()
+
+            for i in 0 .. vc - 1 do
+                let tmp = tps * (v.[i] - v.[0])
+                v2d.[i] <- V2d(tmp.X, tmp.Y)
+
+            let p2d = 
+                let v = tps * (p - v.[0])
+                V2d(v.X, v.Y)
+                
+              
+            let mutable linesPositiveDistanceCount = 0
+            let mutable linesPositiveDistanceIndex = 0
+            let mutable lines                      = Arr<N<Config.MAX_PATCH_SIZE_TIMES_TWO>, V3d>()
+                        
+            let eps = 1e-9
+
+            for i in 0 .. vc - 1 do
+
+                let d = linePointDistance v2d.[i] v2d.[(i + 1) % vc] p2d
+
+                if d > eps then
+                    lines.[linesPositiveDistanceIndex]     <- v.[i]
+                    lines.[linesPositiveDistanceIndex + 1] <- v.[(i + 1) % vc]
+                    
+                    linesPositiveDistanceIndex                  <- linesPositiveDistanceIndex + 2
+                    linesPositiveDistanceCount                  <- linesPositiveDistanceCount + 1
+                    
+            if linesPositiveDistanceCount = 0 then
+                p
+            else
+
+                let mutable closestInit = false
+                let mutable closestPoint = V3d.Zero
+                let mutable closestPointDist = 0.0
+
+                for i in 0 .. 2 .. (linesPositiveDistanceCount * 2) - 1 do
+
+                    if not closestInit then
+                        closestPoint <- projetToLineSegment lines.[i] lines.[i + 1] p
+                        closestPointDist <- Vec.length (p - closestPoint)
+                        closestInit <- true
+                    else
+                        let projectedPoint = projetToLineSegment lines.[i] lines.[i + 1] p
+                        let dist = Vec.length (p - projectedPoint)
+
+                        if dist < closestPointDist then
+                            closestPoint <- projectedPoint
+                            closestPointDist <- dist
+                            
+                closestPoint
+                
 
     [<ReflectedDefinition>] 
     let Lerp (a : V3d) (b : V3d) (s : float) : V3d = (1.0 - s) * a + s * b
@@ -356,13 +416,61 @@ module EffectUtils =
 
         (va,vc)
 
+
+    [<ReflectedDefinition>] 
+    let clipPatch(p : V3d, n : V3d, vertices : Arr<N<Config.MAX_PATCH_SIZE>, V3d>, vertexCount : int) =
+        let plane = V4d(n, -V3d.Dot(p, n))
+        let eps = 1e-9
+
+        let mutable vc = 0
+        let va = Arr<N<Config.MAX_PATCH_SIZE_PLUS_ONE>, V3d>()
+
+        let vb = V4d(vertices.[0], 1.0)
+        let hb = V4d.Dot(plane, vb) 
+        let hbv = hb > eps
+        let hbn = hb < -eps
+        
+        if (hb >= -eps) then 
+            va.[vc] <- vb.XYZ
+            vc <- vc + 1
+
+        let mutable v0 = vb
+        let mutable h0 = hb
+        let mutable h0v = hbv
+        let mutable h0n = hbn
+        
+        for vi in 1..vertexCount-1 do
+            let v1 = V4d(vertices.[vi], 1.0)
+            let h1 = V4d.Dot(plane, v1)
+            let h1v = h1 > eps
+            let h1n = h1 < -eps
+            if (h0v && h1n || h0n && h1v) then
+                va.[vc] <- Lerp v0.XYZ v1.XYZ (h0 / (h0 - h1))
+                vc <- vc + 1
+
+            if (h1 >= -eps) then 
+                va.[vc] <- v1.XYZ
+                vc <- vc + 1
+
+            v0 <- v1
+            h0 <- h1
+            h0v <- h1v
+            h0n <- h1n
+        
+        // last edge to vertices[0]
+        if (h0v && hbn || h0n && hbv) then
+            va.[vc] <- Lerp v0.XYZ vb.XYZ (h0 / (h0 - hb))
+            vc <- vc + 1
+
+        (va,vc)
+
     [<ReflectedDefinition>] 
     let private integrateSegment(a: V3d, b: V3d) =              
         let theta = acos ( clamp -1.0 1.0 (V3d.Dot(a, b)))
         V3d.Cross(a, b).Z * if theta < 1e-5 then 1.0 else theta/sin(theta)
 
     [<ReflectedDefinition>] 
-    let baumFormFactor(va : Arr<N<4>, V3d>, vc : int) =
+    let baumFormFactor(va : Arr<N<Config.MAX_PATCH_SIZE_PLUS_ONE>, V3d>, vc : int) =
 
         let mutable sum = 0.0
 

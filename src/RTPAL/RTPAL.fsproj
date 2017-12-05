@@ -96,10 +96,8 @@
     <Compile Include="EffectUtils.fs" />
     <Compile Include="BRDF_GGX.fs" />
     <Compile Include="EffectGT.fs" />
-    <Compile Include="EffectBaumFF.fs" />
     <Compile Include="EffectApPoint.fs" />
     <Compile Include="EffectApBaumFF.fs" />
-    <Compile Include="EffectApSolidAngle.fs" />
     <Compile Include="EffectCompare.fs" />
     <Compile Include="EffectOutline.fs" />
     <Compile Include="EffectToneMapping.fs" />

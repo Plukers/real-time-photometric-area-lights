@@ -81,7 +81,7 @@ module MRPApproxDebug =
                 let addr = 0
 
                 let vAddr = addr * Config.VERT_PER_LIGHT
-                let iAddr = addr * Config.MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT
+                let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
 
                 ////////////////////////////////////////////////////////
 
@@ -96,18 +96,18 @@ module MRPApproxDebug =
                         
                 ////////////////////////////////////////////////////////
                 
-                let! lEvalIndices = lc.EvalIndices
+                let! lPatchIndices = lc.PatchIndices
                 let! lVertices = lc.Vertices
                 
                 let computeLightData iIdx = 
                             
-                    let v0Addr = lEvalIndices.[iIdx + 0] + vAddr
+                    let v0Addr = lPatchIndices.[iIdx + 0] + vAddr
                     let v0 = w2t * (lVertices.[v0Addr] - P)
                            
-                    let v1Addr = lEvalIndices.[iIdx + 1] + vAddr
+                    let v1Addr = lPatchIndices.[iIdx + 1] + vAddr
                     let v1 = w2t * (lVertices.[v1Addr] - P)
                            
-                    let v2Addr = lEvalIndices.[iIdx + 2] + vAddr
+                    let v2Addr = lPatchIndices.[iIdx + 2] + vAddr
                     let v2 = w2t * (lVertices.[v2Addr] - P) 
 
                     ////////////////////////////////////////////////////////
@@ -164,8 +164,8 @@ module MRPApproxDebug =
                                     let sa2 = computeSolidAngle clippedVa.[0] clippedVa.[2] clippedVa.[3]
                                     let sa = sa1 + sa2
 
-                                    let closestPoint = clampPointToPolygon clippedVa.[0] clippedVa.[1] clippedVa.[2] clippedVa.[3] closestPoint t2l   
-                                    let normPlaneP =   clampPointToPolygon clippedVa.[0] clippedVa.[1] clippedVa.[2] clippedVa.[3] normPlanePoint t2l  
+                                    let closestPoint = clampPointToSquare clippedVa.[0] clippedVa.[1] clippedVa.[2] clippedVa.[3] closestPoint t2l   
+                                    let normPlaneP =   clampPointToSquare clippedVa.[0] clippedVa.[1] clippedVa.[2] clippedVa.[3] normPlanePoint t2l  
      
                                     (closestPoint |> Vec.normalize, normPlaneP |> Vec.normalize, sa)
 

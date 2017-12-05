@@ -36,22 +36,19 @@ module EffectApBaumFF =
                     | -1 -> ()
                     |  _ ->    
                         let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_EVAL_IDX_BUFFER_SIZE_PER_LIGHT
+                        let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
 
-                        for iIdx in iAddr .. 3 .. (iAddr + uniform.LNumEvalIndices.[addr] - 1) do
+                        for iIdx in iAddr .. Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
                             
-                            let v0Addr = uniform.LEvalIndices.[iIdx + 0] + vAddr
-                            let v0 = w2t * (uniform.LVertices.[v0Addr] - P)
-                           
-                            let v1Addr = uniform.LEvalIndices.[iIdx + 1] + vAddr
-                            let v1 = w2t * (uniform.LVertices.[v1Addr] - P)
-                           
-                            let v2Addr = uniform.LEvalIndices.[iIdx + 2] + vAddr
-                            let v2 = w2t * (uniform.LVertices.[v2Addr] - P) 
+                            let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                            
+                            for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
+                                let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
+                                vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
 
                             ////////////////////////////////////////////////////////
 
-                            let (clippedVa, clippedVc) = clipTriangle(V3d.Zero, V3d.OOI, Arr<N<3>, V3d>([| v0; v1; v2|]))
+                            let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
 
                             if clippedVc <> 0 then      
                                 

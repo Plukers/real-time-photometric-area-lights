@@ -185,6 +185,8 @@ module Rendering =
                             AlphaOperation = BlendOperation.Add
                         )
                     )
+
+            let gteffect = EffectGT.groundTruthLighting |> toEffect
                 
             let iterationRender =
                 sceneSg

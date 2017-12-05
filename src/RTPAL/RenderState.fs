@@ -14,8 +14,7 @@ type RenderMode =
     | CenterPointApprox = 1
     | MRPApprox = 2
     | BaumFFApprox = 3
-    | SolidAngleApprox = 4
-    | Compare = 5
+    | Compare = 4
 
 type LightTransformMode =
     | Translate
