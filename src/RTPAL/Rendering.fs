@@ -333,7 +333,7 @@ module Rendering =
 
         let mrpApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
 
-            let sceneSg = MRPApproxDebug.sceneSg data.lights
+            //let sceneSg = MRPApproxDebug.sceneSg data.lights
 
             sceneSg
                 |> setupFbEffects [ 
@@ -357,7 +357,7 @@ module Rendering =
                         |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            (sg, fb)
+            //(sg, fb)
             ((fb |> fbToSg data.viewportSize), fb)
                       
 

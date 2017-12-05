@@ -188,8 +188,6 @@ module EffectApPoint =
 
                                     let mrpDir  = closestPointDir + normPlanePDir |> Vec.normalize
                                             
-
-                                            
                                     let i =  mrpDir                                
                                     let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
                                     let L = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
