@@ -25,7 +25,8 @@ type Action =
     | IMPORT_SCENE of string
     | CHANGE_RENDER_MODE of RenderMode
     | CHANGE_COMPARE of RenderMode
-    | COMPUTED_ERROR of double
+    | COMPUTED_ERROR of double * double * double // error, bright error, dark error
+    | UPDATE_GROUND_TRUTH of bool
     | OPENED_WINDOW 
     | CHANGE_LIGHT_TRANSFORM_MODE of LightTransformMode
     | TRANSLATE_LIGHT of int * V3d // lightID, direction
@@ -38,9 +39,12 @@ type RenderState =
         lights             : LightCollection
 
         renderMode         : RenderMode
+        updateGroundTruth  : bool
         
         compare            : RenderMode        
         error              : double
+        brightError        : double
+        darkError          : double
         
         scenePath          : string
 

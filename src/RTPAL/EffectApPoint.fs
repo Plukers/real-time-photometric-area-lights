@@ -154,30 +154,8 @@ module EffectApPoint =
                                             if (Vec.dot up lightPlaneN) > 0.0 then
                                                 up <- up + (abs(Vec.dot up lightPlaneN) + epb) * (-lightPlaneN) |> Vec.normalize
                                     
-                                    (*
-                                    let mutable up = clippedVa.[0]
-                                    let mutable avgc = 1.0
-                                    for l in 1 .. clippedVc - 1 do
-                                        let zdiff = up.Z - clippedVa.[l].Z
-
-                                        if abs(zdiff) < eps then
-                                            up <- (up * avgc) + clippedVa.[l]
-                                            avgc <- avgc + 1.0
-                                            up <- up / avgc
-                                            
-                                        else
-                                            if zdiff < 0.0 then
-                                                up <- clippedVa.[l]
-                                    *)
                                     
                                     let normPlaneP = linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN // tangent space
-
-                                    // find most representative point
-
-                                    // let mrpDir = closestPointDir + normPlanePointDir |> Vec.normalize
-                                    // let mrpDir = closestPointDir //TODO remove
-
-                                    // let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN // tangent space
                                     
                                     let (closestPointDir, normPlanePDir) = 
                                         
@@ -185,8 +163,14 @@ module EffectApPoint =
                                         let normPlaneP =   clampPointToPolygon clippedVa clippedVc normPlaneP t2l 
      
                                         (closestPoint |> Vec.normalize, normPlaneP |> Vec.normalize)
-
-                                    let mrpDir  = closestPointDir + normPlanePDir |> Vec.normalize
+                                    
+                                    let mutable barycenter = V3d.Zero
+                                    for l in 0 .. clippedVc - 1 do
+                                        barycenter <- barycenter + clippedVa.[l]
+                                    
+                                    let barycenter = barycenter / (float clippedVc)
+                                    
+                                    let mrpDir  = closestPointDir + normPlanePDir + barycenter |> Vec.normalize
                                             
                                     let i =  mrpDir                                
                                     let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
@@ -199,7 +183,7 @@ module EffectApPoint =
                                             clippedVa.[l] <- Vec.normalize clippedVa.[l]
 
                                         let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
-                                        // let I = sa
+                                        
                                         illumination <- illumination + L * brdf * I // * i.Z  
                                 (*
                                 else

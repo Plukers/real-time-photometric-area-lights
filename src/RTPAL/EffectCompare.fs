@@ -65,11 +65,11 @@ module EffectCompare =
             
         let visualize (v : CompareVertex) = 
             fragment {  
-                let upp1 = 0.75
+                let upp1 = 10.0
                 let b1 = V3d(1.0, 0.5089, 0.34902)      // [255, 130,  89] 
                 let d1 = V3d(0.21177, 0.29412, 0.69804) // [ 54,  75, 178] 
 
-                let upp2 = 1.5
+                let upp2 = 20.0
                 let b2 = V3d(1.0, 0.35686, 0.14902)     // [255,  91,  38] 
                 let d2 = V3d(0.07059, 0.18039, 0.69804) // [ 18,  46, 178]
 

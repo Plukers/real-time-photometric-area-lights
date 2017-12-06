@@ -155,7 +155,13 @@ module MRPApproxDebug =
      
                                 (closestPoint |> Vec.normalize, normPlaneP |> Vec.normalize)
 
-                            let mrpDir  = closestPointDir + normPlanePointDir |> Vec.normalize
+                            let mutable barycenter = V3d.Zero
+                            for l in 0 .. clippedVc - 1 do
+                                barycenter <- barycenter + clippedVa.[l]
+                                    
+                            let barycenter = barycenter / (float clippedVc)
+
+                            let mrpDir  = closestPointDir + normPlanePointDir + barycenter |> Vec.normalize
 
 
 

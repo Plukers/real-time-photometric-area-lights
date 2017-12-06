@@ -38,7 +38,8 @@
         win.Height <- viewportSize.Y
         win.Width <- viewportSize.X
 
-        let view = CameraView.lookAt (V3d(1.0, 0.0, 0.0)) (V3d(-1.0, 0.0, -1.0)) V3d.OOI
+        // let view = CameraView.lookAt (V3d(1.0, 0.0, 0.0)) (V3d(-1.0, 0.0, -1.0)) V3d.OOI
+        let view = CameraView.lookAt (V3d(2.0, 0.0, 3.0)) (V3d(-4.0, 0.0, -1.0)) V3d.OOI
         let renderData = initialRenderData app (DefaultCameraController.control win.Mouse win.Keyboard win.Time view) viewportSize m 
         
         let gtData = initGTData        
@@ -75,8 +76,9 @@
                     s
             | CHANGE_RENDER_MODE mode -> { s with renderMode = mode }                
             | CHANGE_COMPARE mode -> { s with compare = mode }
-            | COMPUTED_ERROR error -> { s with error = error }
+            | COMPUTED_ERROR (error, brightError, darkError) -> { s with error = error; brightError = brightError; darkError = darkError }
             | OPENED_WINDOW -> s
+            | UPDATE_GROUND_TRUTH update -> { s with updateGroundTruth = update }
             | CHANGE_LIGHT_TRANSFORM_MODE mode -> { s with lightTransformMode = mode }
             | TRANSLATE_LIGHT (lightID, dir) ->             
                 transformLight s.lights lightID (Trafo3d.Translation(dir))
@@ -116,11 +118,35 @@
                 let compPixData = app.Runtime.Download(comp |> unbox<_>)
                 let downlaoded = compPixData.ToPixImage<float32>()
                 let data = downlaoded.GetMatrix<C4f>()
-                let ec = data.Elements |> Seq.fold ( fun (cs : double) c -> (double c.R) + cs) 0.0
+                //let ec = data.Elements |> Seq.fold ( fun (cs : double) c -> (double c.R) + cs) 0.0
+
+                let mutable ec : double = 0.0
+
+                let mutable brightEcCount = 0
+                let mutable brightEc : double = 0.0
+
+                let mutable darkEcCount = 0
+                let mutable darkEc : double = 0.0
                 
+                data.Elements |> Seq.iter ( fun c ->
+                    ec <- ec + (double c.R)
+                    
+                    if c.G > 0.0f then
+                        brightEc <- brightEc + (double c.R)
+                        brightEcCount <- brightEcCount + 1
+                    else
+                        darkEc <- darkEc + (double c.R)
+                        darkEcCount <- darkEcCount + 1
+
+                    )
+
                 let ec = Fun.Sqrt(ec / (double data.Count))
 
-                COMPUTED_ERROR ec
+                let brightEc = Fun.Sqrt(brightEc / (double brightEcCount))
+                let darkEc = Fun.Sqrt(darkEc / (double darkEcCount))
+                 
+
+                COMPUTED_ERROR (ec, brightEc, darkEc)
                                                     
             )
 
@@ -266,10 +292,28 @@
                                                     let! mode = m.renderMode
 
                                                     if mode = RenderMode.GroundTruth  || mode = RenderMode.Compare then
-                                                        let! fps = renderFeedback.fps
+
+                                                        let! updateGT = m.updateGroundTruth
+
+                                                        yield p[][
+                                                            if updateGT then
+                                                                yield button [ clazz "ui button" ; onClick (fun _ -> 
+                                                                                UPDATE_GROUND_TRUTH false
+                                                                            )] [text "Pause Update"]
+                                                            else 
+                                                                yield button [ clazz "ui button" ; onClick (fun _ -> 
+                                                                                UPDATE_GROUND_TRUTH true
+                                                                            )] [text "Continue Update"]
+                                                        ]
+                                                        
                                                         let! fc = renderFeedback.frameCount   
                                                         yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
-                                                        yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
+
+                                                        if updateGT then
+                                                            let! fps = renderFeedback.fps
+                                                            yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
+
+
 
                                                 }
                                             )
@@ -293,8 +337,18 @@
                                                         yield div [ clazz "ui divider"] []
 
                                                         let! error = m.error
+                                                        let! brightError = m.brightError
+                                                        let! darkError = m.darkError
                                                         
-                                                        yield p [] [ text ("Error: " + (sprintf "%.5f" error))]
+                                                        yield p [style "font-weight: bold;"] [ 
+                                                            text ("Error: " + (sprintf "%.5f" error))
+                                                            ]
+
+                                                        yield p [] [ 
+                                                            text ("Bright: " + (sprintf "%.5f" brightError)) 
+                                                            br []
+                                                            text ("Dark: " + (sprintf "%.5f" darkError)) 
+                                                            ]
                                                         yield p [] [ button [clazz "ui button" ; onClick (fun _ -> computeError())] [text "Compute Error"] ]
                                                 }
                                             )
@@ -320,16 +374,16 @@
         // Setup Lights
         let lc = emptyLightCollection
         //let light1 = addTriangleLight lc
-        let light1 = addSquareLight lc
+        let light1 = addTriangleLight lc
         
         match light1 with
         | Some lightId ->             
-            let t = Trafo3d.Translation(-8.0, 0.0, -5.0)        
-            // let t = Trafo3d.Translation(0.0, 0.0, 1.0)
+            // let t = Trafo3d.Translation(-8.0, 0.0, -5.0)        
+            let t = Trafo3d.Translation(-4.0, 0.0, 1.0)
             transformLight lc lightId t |> ignore
         | None -> ()
         
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"42181512_(STD)-0-90.ldt"]
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"60712332_(STD).ldt"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         
         let photometryData = Some(IntensityProfileSampler(lightData))    
@@ -338,8 +392,11 @@
         {            
             lights = lc
             renderMode = RenderMode.GroundTruth
+            updateGroundTruth = true
             compare = RenderMode.BaumFFApprox 
             error = 0.0
+            brightError = 0.0
+            darkError = 0.0
             scenePath = geometryFile
             photometryName = Some(System.IO.Path.GetFileName photometryPath)
             photometryData = photometryData

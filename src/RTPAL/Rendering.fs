@@ -30,6 +30,8 @@ module Rendering =
         compare         : IMod<RenderMode>
         lights          : LightCollection
         photometricData : IMod<Option<IntensityProfileSampler>>
+
+        updateGroundTruth : IMod<bool>
         }
 
     type RenderFeedback = {
@@ -221,6 +223,7 @@ module Rendering =
                     |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
             
             (sg, fb)
+            ((fb |> fbToSg data.viewportSize), fb)
             
 
         let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
@@ -252,13 +255,16 @@ module Rendering =
 
             // only update if the render mode is GroundTruth or Compare
             let executeUpdate =
-                data.mode |> Mod.map (
-                    fun mode ->
-                        match mode with
-                        | RenderMode.GroundTruth -> true
-                        | RenderMode.Compare     -> true
-                        | _ -> false
-                    )
+                 Mod.map2  (
+                    fun update mode ->
+                        if not update then
+                            false
+                        else
+                            match mode with
+                            | RenderMode.GroundTruth -> true
+                            | RenderMode.Compare     -> true
+                            | _ -> false
+                    ) data.updateGroundTruth data.mode
             
             let update (args : OpenTK.FrameEventArgs) =
                 transact (fun _ -> 
@@ -327,13 +333,14 @@ module Rendering =
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
             (sg, fb)
+            ((fb |> fbToSg data.viewportSize), fb)
             
 
     module MRPApprox =
 
         let mrpApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
 
-            //let sceneSg = MRPApproxDebug.sceneSg data.lights
+            let sceneSg = MRPApproxDebug.sceneSg data.lights
 
             sceneSg
                 |> setupFbEffects [ 
@@ -357,7 +364,7 @@ module Rendering =
                         |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            //(sg, fb)
+            (sg, fb)
             ((fb |> fbToSg data.viewportSize), fb)
                       
 
@@ -387,6 +394,7 @@ module Rendering =
                     |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
             
             (sg, fb)
+            ((fb |> fbToSg data.viewportSize), fb)
             
     module Compare = 
         
@@ -479,6 +487,7 @@ module Rendering =
                 photometricData = m.photometryData
                 mode = m.renderMode
                 compare = m.compare
+                updateGroundTruth = m.updateGroundTruth
             }
 
         let fpsUpdate (feedback : RenderFeedback) =
@@ -509,7 +518,8 @@ module Rendering =
             let sceneSg = 
                 Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) data.scenePath
                 |> Sg.dynamic
-                |> Sg.scale 18.0
+                // |> Sg.scale 18.0
+                |> Sg.scale 200.0
 
             let (groundTruthSg, groundTruthFb)              = groundTruthSgAndFb data gtData sceneSg
             let (centerPointApproxSg, centerPointApproxFb)  = centerPointApproxSgAndFb data sceneSg
