@@ -24,11 +24,14 @@
 
     open Utils
     open Light
+
     open Rendering
     open Rendering.GroundTruth
+    open Rendering.MRPApprox
     open Rendering.Compare
     open Rendering.Effects
     open Aardvark.Rendering.GL
+    open Aardvark.UI.Chromium
     
     let createGameWindow (app : OpenGlApplication) (viewportSize : V2i) (m : MRenderState) =
         
@@ -42,9 +45,10 @@
         let view = CameraView.lookAt (V3d(2.0, 0.0, 3.0)) (V3d(-4.0, 0.0, -1.0)) V3d.OOI
         let renderData = initialRenderData app (DefaultCameraController.control win.Mouse win.Keyboard win.Time view) viewportSize m 
         
-        let gtData = initGTData        
+        let gtData = initGTData m 
+        let mrpData = initMRPData m
 
-        let (renderTask, renderFeedback) = Effects.CreateAndLinkRenderTask renderData gtData
+        let (renderTask, renderFeedback) = Effects.CreateAndLinkRenderTask renderData gtData mrpData
 
         win.RenderTask <- renderTask
         
@@ -86,6 +90,54 @@
             | ROTATE_LIGHT (lightID, euler) ->
                 transformLight s.lights lightID (Trafo3d.Rotation(euler))
                 s
+            | SET_MRP_CLOSEST_WEIGHT w ->
+                try
+                    let w = float w 
+                    let w = clamp 0.0 1.0 w
+
+                    let leftSum = 1.0 - w
+                    let otherSum = s.mrpWeights.Y + s.mrpWeights.Z
+                
+                    let normal     = leftSum * (s.mrpWeights.Y / otherSum)
+                    let barycenter = leftSum * (s.mrpWeights.Z / otherSum)
+
+                    let sum = w + normal + barycenter
+
+                    { s with mrpWeights = V3d(w / sum, normal / sum, barycenter / sum) }
+                with
+                | :? System.FormatException -> s
+            | SET_MRP_NORMAL_WEIGHT w ->
+                try
+                    let w = float w 
+                    let w = clamp 0.0 1.0 w
+
+                    let leftSum = 1.0 - w
+                    let otherSum = s.mrpWeights.X + s.mrpWeights.Z
+                
+                    let closest    = leftSum * (s.mrpWeights.X / otherSum)
+                    let barycenter = leftSum * (s.mrpWeights.Z / otherSum)
+
+                    let sum = closest + w + barycenter
+
+                    { s with mrpWeights = V3d(closest / sum, w / sum, barycenter / sum) }
+                with
+                | :? System.FormatException -> s
+            | SET_MRP_BARYCENTER_WEIGHT w ->
+                try
+                    let w = float w 
+                    let w = clamp 0.0 1.0 w
+
+                    let leftSum = 1.0 - w
+                    let otherSum = s.mrpWeights.X + s.mrpWeights.Y
+                
+                    let closest = leftSum * (s.mrpWeights.X / otherSum)
+                    let normal  = leftSum * (s.mrpWeights.Y / otherSum)
+
+                    let sum = closest + normal + w
+
+                    { s with mrpWeights = V3d(closest / sum, normal / sum, w / sum) }
+                with
+                | :? System.FormatException -> s
 
     let openFileDialog (form : System.Windows.Forms.Form) =
         let mutable final = ""
@@ -158,7 +210,7 @@
                 ]   
 
             let activeTrafoLightId = 0                   // TODO make changeable
-            let translationStepSize = 0.5                // TODO make changeable
+            let translationStepSize = 0.1                // TODO make changeable
             let rotationStepSize = System.Math.PI / 18.0 // TODO make changelable
 
             body [attribute "style" "display: flex; flex-direction: row; width: 100%; height: 100%; border: 0; margin: 0; padding: 1rem;"] [
@@ -291,7 +343,7 @@
                                                 alist {
                                                     let! mode = m.renderMode
 
-                                                    if mode = RenderMode.GroundTruth  || mode = RenderMode.Compare then
+                                                    if mode = RenderMode.GroundTruth || mode = RenderMode.Compare then
 
                                                         let! updateGT = m.updateGroundTruth
 
@@ -312,8 +364,6 @@
                                                         if updateGT then
                                                             let! fps = renderFeedback.fps
                                                             yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
-
-
 
                                                 }
                                             )
@@ -401,6 +451,7 @@
             photometryName = Some(System.IO.Path.GetFileName photometryPath)
             photometryData = photometryData
             lightTransformMode = Translate
+            mrpWeights    = V3d(1.0/3.0, 1.0/3.0, 1.0/3.0)
         }
        
 

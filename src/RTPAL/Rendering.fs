@@ -30,8 +30,6 @@ module Rendering =
         compare         : IMod<RenderMode>
         lights          : LightCollection
         photometricData : IMod<Option<IntensityProfileSampler>>
-
-        updateGroundTruth : IMod<bool>
         }
 
     type RenderFeedback = {
@@ -149,6 +147,15 @@ module Rendering =
             haltonSequence : ModRef<V2d[]>
             clear : ModRef<bool>
             frameCount : ModRef<int>
+            updateGroundTruth : IMod<bool>
+            }
+
+        let initGTData (m : MRenderState) =
+            {
+                haltonSequence = ModRef(HaltonSequence.init)
+                clear = ModRef(false) 
+                frameCount = ModRef(0)
+                updateGroundTruth = m.updateGroundTruth
             }
         
         let private renderToColorWithoutClear (size : IMod<V2i>) (task : IRenderTask) =
@@ -264,7 +271,7 @@ module Rendering =
                             | RenderMode.GroundTruth -> true
                             | RenderMode.Compare     -> true
                             | _ -> false
-                    ) data.updateGroundTruth data.mode
+                    ) gtData.updateGroundTruth data.mode
             
             let update (args : OpenTK.FrameEventArgs) =
                 transact (fun _ -> 
@@ -300,12 +307,6 @@ module Rendering =
 
             update
         
-        let initGTData =
-            {
-                haltonSequence = ModRef(HaltonSequence.init)
-                clear = ModRef(false) 
-                frameCount = ModRef(0)
-            }
 
     module CenterPointApprox =
 
@@ -338,26 +339,36 @@ module Rendering =
 
     module MRPApprox =
 
-        let mrpApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
+        type MRPData = {
+            mrpWeights : IMod<V3d>
+        }
 
-            let sceneSg = MRPApproxDebug.sceneSg data.lights
+        let initMRPData (m : MRenderState) = 
+            {
+                mrpWeights = m.mrpWeights
+            }
+
+        let mrpApproxRenderTask (data : RenderData) (mrpData : MRPData) (sceneSg : ISg) = 
+
+            //let sceneSg = MRPApproxDebug.sceneSg data.lights
 
             sceneSg
                 |> setupFbEffects [ 
-                        EffectApPoint.mostRepresentativePointApprox |> toEffect
+                        EffectApMRP.mostRepresentativePointApprox |> toEffect
                         EffectUtils.effectClearNaN |> toEffect
                     ]
                 |> setupLights data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.frustum data.viewportSize
+                |> Sg.uniform "mrpWeights" mrpData.mrpWeights
                 |> Sg.compile data.runtime (signature data.runtime)
 
-        let mrpApproxFb (data : RenderData) (sceneSg : ISg) = 
-            mrpApproxRenderTask data sceneSg
+        let mrpApproxFb (data : RenderData) (mrpData : MRPData) (sceneSg : ISg) = 
+            mrpApproxRenderTask data mrpData sceneSg
             |> RenderTask.renderToColor data.viewportSize
 
-        let mrpApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
-            let fb = mrpApproxFb data sceneSg 
+        let mrpApproxSgAndFb (data : RenderData) (mrpData : MRPData) (sceneSg : ISg) = 
+            let fb = mrpApproxFb data mrpData sceneSg 
             
             let sg = Sg.fullscreenQuad data.viewportSize
                         |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
@@ -487,7 +498,6 @@ module Rendering =
                 photometricData = m.photometryData
                 mode = m.renderMode
                 compare = m.compare
-                updateGroundTruth = m.updateGroundTruth
             }
 
         let fpsUpdate (feedback : RenderFeedback) =
@@ -513,7 +523,7 @@ module Rendering =
 
             update
 
-        let CreateAndLinkRenderTask (data : RenderData) (gtData : GroundTruthData) =
+        let CreateAndLinkRenderTask (data : RenderData) (gtData : GroundTruthData) (mrpData : MRPData) =
 
             let sceneSg = 
                 Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) data.scenePath
@@ -523,7 +533,7 @@ module Rendering =
 
             let (groundTruthSg, groundTruthFb)              = groundTruthSgAndFb data gtData sceneSg
             let (centerPointApproxSg, centerPointApproxFb)  = centerPointApproxSgAndFb data sceneSg
-            let (mrpApproxSg, mrpApproxFb)                  = mrpApproxSgAndFb data sceneSg
+            let (mrpApproxSg, mrpApproxFb)                  = mrpApproxSgAndFb data mrpData sceneSg 
             let (baumFFApproxSg, baumFFApproxFb)            = baumFFApproxSgAndFb data sceneSg
 
             let effectFbs = 

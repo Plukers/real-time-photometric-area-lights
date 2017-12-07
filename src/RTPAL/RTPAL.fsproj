@@ -97,6 +97,7 @@
     <Compile Include="BRDF_GGX.fs" />
     <Compile Include="EffectGT.fs" />
     <Compile Include="EffectApPoint.fs" />
+    <Compile Include="EffectApMRP.fs" />
     <Compile Include="EffectApBaumFF.fs" />
     <Compile Include="EffectCompare.fs" />
     <Compile Include="EffectOutline.fs" />

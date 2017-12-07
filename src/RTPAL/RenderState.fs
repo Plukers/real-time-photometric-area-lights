@@ -31,7 +31,9 @@ type Action =
     | CHANGE_LIGHT_TRANSFORM_MODE of LightTransformMode
     | TRANSLATE_LIGHT of int * V3d // lightID, direction
     | ROTATE_LIGHT of int * V3d // lightID, euler angles
-
+    | SET_MRP_CLOSEST_WEIGHT of string
+    | SET_MRP_NORMAL_WEIGHT of string
+    | SET_MRP_BARYCENTER_WEIGHT of string
 
 [<DomainType>]
 type RenderState =
@@ -40,6 +42,8 @@ type RenderState =
 
         renderMode         : RenderMode
         updateGroundTruth  : bool
+
+        mrpWeights         : V3d // closest, normal, barycenter
         
         compare            : RenderMode        
         error              : double
