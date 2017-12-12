@@ -8,12 +8,32 @@ module EffectApStructuredSampling =
     open Light.Effect
     open EffectUtils
     open PhotometricLight
+
+    type UniformScope with
+        member uniform.sampleCorners   : bool = uniform?sampleCorners     
+        member uniform.sampleBarycenter: bool = uniform?sampleBarycenter  
+        member uniform.sampleClosest   : bool = uniform?sampleClosest     
+        member uniform.sampleNorm      : bool = uniform?sampleNorm           
     
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
         [<Normal>]          n       : V3d
         [<Color>]           c       : V4d
     }  
+
+    [<ReflectedDefinition>]
+    let private sample L weightSum t2w addr (p : V3d) = 
+
+        let i = p |> Vec.normalize  
+
+        let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
+
+        let weight = dotOut / (Vec.lengthSquared p)
+
+        let weightSum = weightSum + weight
+        let L = L +  weight * getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+
+        (L, weightSum)
     
     let structuredSampling (v : Vertex) = 
         fragment {
@@ -94,26 +114,53 @@ module EffectApStructuredSampling =
                                                 up <- up + (abs(Vec.dot up lightPlaneN) + epb) * (-lightPlaneN) |> Vec.normalize
                                     
                                     
-                                    let normPlaneP = linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN // tangent space
+                                    let normPlanePoint = linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN // tangent space
                                     
-                                    let (closestPointDir, normPlanePDir) = 
+                                    let (closestPoint, normPlanePoint) = 
                                         
                                         let closestPoint = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-                                        let normPlaneP =   clampPointToPolygon clippedVa clippedVc normPlaneP t2l 
+                                        let normPlanePoint =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
      
-                                        (closestPoint |> Vec.normalize, normPlaneP |> Vec.normalize)
+                                        (closestPoint, normPlanePoint)
                                     
                                     let mutable barycenter = V3d.Zero
                                     for l in 0 .. clippedVc - 1 do
                                         barycenter <- barycenter + clippedVa.[l]
                                     
                                     let barycenter = barycenter / (float clippedVc)
+
+
+                                    let mutable sampleSums = (0.0, 0.0) // L, weightSum
                                     
-                                    let mrpDir = closestPointDir + normPlanePDir |> Vec.normalize
-                                            
-                                    let i =  mrpDir                                
-                                    let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
-                                    let L = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+                                    if uniform.sampleCorners then
+                                        for l in 0 .. clippedVc - 1 do
+                                            let (L, weightSum) = sampleSums
+                                            let (L, weightSum) = sample L weightSum t2w addr clippedVa.[l]
+                                            sampleSums <- (L, weightSum)
+
+                                    if uniform.sampleBarycenter then 
+                                        let (L, weightSum) = sampleSums
+                                        let (L, weightSum) = sample L weightSum t2w addr barycenter
+                                        sampleSums <- (L, weightSum)
+
+                                    if uniform.sampleNorm then 
+                                        let (L, weightSum) = sampleSums
+                                        let (L, weightSum) = sample L weightSum t2w addr normPlanePoint
+                                        sampleSums <- (L, weightSum)
+
+                                    if uniform.sampleClosest then 
+                                        let (L, weightSum) = sampleSums
+                                        let (L, weightSum) = sample L weightSum t2w addr closestPoint 
+                                        sampleSums <- (L, weightSum)
+
+
+                                    let (L, weightSum) = sampleSums
+
+                                    let L =
+                                        if weightSum <> 0.0 then
+                                            L / weightSum
+                                        else 
+                                            0.0
 
                                     if L > 0.0 then 
 

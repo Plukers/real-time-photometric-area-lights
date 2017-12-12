@@ -28,8 +28,11 @@
     open Rendering
     open Rendering.GroundTruth
     open Rendering.MRPApprox
+    open Rendering.StructuredSamplingApprox
     open Rendering.Compare
     open Rendering.Effects
+
+
     open Aardvark.Rendering.GL
     open Aardvark.UI.Chromium
     
@@ -47,8 +50,9 @@
         
         let gtData = initGTData m 
         let mrpData = initMRPData m
+        let ssData = initSSData m
 
-        let (renderTask, renderFeedback) = Effects.CreateAndLinkRenderTask renderData gtData mrpData
+        let (renderTask, renderFeedback) = Effects.CreateAndLinkRenderTask renderData gtData mrpData ssData
 
         win.RenderTask <- renderTask
         
@@ -138,6 +142,10 @@
                     { s with mrpWeights = V3d(closest / sum, normal / sum, w / sum) }
                 with
                 | :? System.FormatException -> s
+            | TOGGLE_SAMPLE_CORNERS -> { s with sampleCorners = (not s.sampleCorners) }
+            | TOGGLE_SAMPLE_BARYCENTER -> { s with sampleBarycenter = (not s.sampleBarycenter) }
+            | TOGGLE_SAMPLE_CLOSEST -> { s with sampleClosest = (not s.sampleClosest) }
+            | TOGGLE_SAMPLE_NORM -> { s with sampleNorm = (not s.sampleNorm) }
 
     let openFileDialog (form : System.Windows.Forms.Form) =
         let mutable final = ""
@@ -365,6 +373,7 @@
                                                             let! fps = renderFeedback.fps
                                                             yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
 
+                                                                                                               
                                                 }
                                             )
 
@@ -383,6 +392,45 @@
                          
                                                         yield p [] [ text ("Compare Ground Truth with")]
                                                         yield p [] [ dropDown m.compare (fun mode -> CHANGE_COMPARE mode) ]
+                                                        
+                                                        yield br[]
+                                        
+                                                }
+                                            )
+
+                                            Incremental.div (AttributeMap.ofList []) (
+                                                alist {
+                                                    let! mode = m.renderMode
+                                                    let! c = m.compare
+
+                                                    if mode = RenderMode.StructuredSampling || (mode = RenderMode.Compare && c = RenderMode.StructuredSampling) then    
+                                                        
+                                                        yield p [] [     
+                                                            yield Html.SemUi.toggleBox m.sampleCorners TOGGLE_SAMPLE_CORNERS 
+                                                            yield text "Sample Corners"                                                                                               
+                                                            yield br[]
+
+                                                            yield Html.SemUi.toggleBox m.sampleBarycenter TOGGLE_SAMPLE_BARYCENTER  
+                                                            yield text "Sample Barycenter"                                                      
+                                                            yield br[]
+
+                                                            yield Html.SemUi.toggleBox m.sampleClosest TOGGLE_SAMPLE_CLOSEST  
+                                                            yield text "Sample Closest"                     
+                                                            yield br[]
+                                                            
+                                                            yield Html.SemUi.toggleBox m.sampleNorm TOGGLE_SAMPLE_NORM        
+                                                            yield text "Sample Norm"                                                    
+                                                            yield br[]                                                         
+                                                        ]
+                                                        
+                                                }
+                                            )
+
+                                            Incremental.div (AttributeMap.ofList []) (
+                                                alist {
+                                                    let! mode = m.renderMode
+
+                                                    if mode = RenderMode.Compare then
                                         
                                                         yield div [ clazz "ui divider"] []
 
@@ -424,7 +472,7 @@
         // Setup Lights
         let lc = emptyLightCollection
         //let light1 = addTriangleLight lc
-        let light1 = addTriangleLight lc
+        let light1 = addSquareLight lc
         
         match light1 with
         | Some lightId ->             
@@ -452,6 +500,10 @@
             photometryData = photometryData
             lightTransformMode = Translate
             mrpWeights    = V3d(1.0/3.0, 1.0/3.0, 1.0/3.0)
+            sampleCorners    = false
+            sampleBarycenter = true
+            sampleClosest    = true
+            sampleNorm       = true
         }
        
 

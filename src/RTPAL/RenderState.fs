@@ -14,7 +14,8 @@ type RenderMode =
     | CenterPointApprox = 1
     | MRPApprox = 2
     | BaumFFApprox = 3
-    | Compare = 4
+    | StructuredSampling = 4
+    | Compare = 5
 
 type LightTransformMode =
     | Translate
@@ -31,9 +32,15 @@ type Action =
     | CHANGE_LIGHT_TRANSFORM_MODE of LightTransformMode
     | TRANSLATE_LIGHT of int * V3d // lightID, direction
     | ROTATE_LIGHT of int * V3d // lightID, euler angles
+
     | SET_MRP_CLOSEST_WEIGHT of string
     | SET_MRP_NORMAL_WEIGHT of string
     | SET_MRP_BARYCENTER_WEIGHT of string
+
+    | TOGGLE_SAMPLE_CORNERS 
+    | TOGGLE_SAMPLE_BARYCENTER 
+    | TOGGLE_SAMPLE_CLOSEST
+    | TOGGLE_SAMPLE_NORM
 
 [<DomainType>]
 type RenderState =
@@ -44,6 +51,11 @@ type RenderState =
         updateGroundTruth  : bool
 
         mrpWeights         : V3d // closest, normal, barycenter
+
+        sampleCorners      : bool
+        sampleBarycenter   : bool
+        sampleClosest      : bool
+        sampleNorm         : bool
         
         compare            : RenderMode        
         error              : double
