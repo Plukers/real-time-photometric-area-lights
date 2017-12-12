@@ -99,6 +99,7 @@
     <Compile Include="EffectApPoint.fs" />
     <Compile Include="EffectApMRP.fs" />
     <Compile Include="EffectApBaumFF.fs" />
+    <Compile Include="EffectApStructuredSampling.fs" />
     <Compile Include="EffectCompare.fs" />
     <Compile Include="EffectOutline.fs" />
     <Compile Include="EffectToneMapping.fs" />
