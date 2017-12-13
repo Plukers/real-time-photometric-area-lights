@@ -41,6 +41,7 @@ type Action =
     | TOGGLE_SAMPLE_BARYCENTER 
     | TOGGLE_SAMPLE_CLOSEST
     | TOGGLE_SAMPLE_NORM
+    | TOGGLE_SAMPLE_MRP
 
 [<DomainType>]
 type RenderState =
@@ -56,6 +57,7 @@ type RenderState =
         sampleBarycenter   : bool
         sampleClosest      : bool
         sampleNorm         : bool
+        sampleMRP          : bool
         
         compare            : RenderMode        
         error              : double

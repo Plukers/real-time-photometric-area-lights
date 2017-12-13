@@ -414,6 +414,7 @@ module Rendering =
             sampleBarycenter   : IMod<bool>
             sampleClosest      : IMod<bool>
             sampleNorm         : IMod<bool>
+            sampleMRP          : IMod<bool>
         }
 
         let initSSData (m : MRenderState) = 
@@ -422,6 +423,7 @@ module Rendering =
                 sampleBarycenter = m.sampleBarycenter
                 sampleClosest    = m.sampleClosest
                 sampleNorm       = m.sampleNorm
+                sampleMRP        = m.sampleMRP
             }
 
         let ssApproxRenderTask (data : RenderData) (ssData : SSData) (sceneSg : ISg) = 
@@ -438,6 +440,7 @@ module Rendering =
                 |> Sg.uniform "sampleBarycenter" ssData.sampleBarycenter
                 |> Sg.uniform "sampleClosest"    ssData.sampleClosest
                 |> Sg.uniform "sampleNorm"       ssData.sampleNorm
+                |> Sg.uniform "sampleMRP"        ssData.sampleMRP
                 |> Sg.compile data.runtime (signature data.runtime)
 
         let ssApproxFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) = 

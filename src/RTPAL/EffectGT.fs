@@ -96,7 +96,7 @@ module EffectGT =
 
                                     illumination <-
                                         let brdf = v.c / PI 
-                                        illumination + irr * (brdf / pdf) * i.Z                            
+                                        illumination + irr * v.c//(brdf / pdf) * i.Z                            
                                     ()                            
                              
                             ////////////////////////////////////////////////////////

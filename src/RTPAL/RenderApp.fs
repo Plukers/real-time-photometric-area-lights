@@ -11,15 +11,19 @@
 
     open Aardvark.Service
 
-    open Aardvark.UI.Html.SemUi
-    open System.Windows.Forms
+    
     open Aardvark.UI
+    open Aardvark.UI.Html.SemUi
+    open Aardvark.UI.Combinators
+
+    open System.Windows.Forms
 
     open Aardvark.SceneGraph.IO
     open Aardvark.SceneGraph.RuntimeSgExtensions
     open Aardvark.Base.Rendering
 
     open Aardvark.Data.Photometry
+    
     
 
     open Utils
@@ -146,6 +150,7 @@
             | TOGGLE_SAMPLE_BARYCENTER -> { s with sampleBarycenter = (not s.sampleBarycenter) }
             | TOGGLE_SAMPLE_CLOSEST -> { s with sampleClosest = (not s.sampleClosest) }
             | TOGGLE_SAMPLE_NORM -> { s with sampleNorm = (not s.sampleNorm) }
+            | TOGGLE_SAMPLE_MRP -> { s with sampleMRP = (not s.sampleMRP) }
 
     let openFileDialog (form : System.Windows.Forms.Form) =
         let mutable final = ""
@@ -210,6 +215,20 @@
                                                     
             )
 
+            let toggleBox (state : IMod<bool>) (toggle : 'msg) =
+
+                let attributes = 
+                    amap {
+                         yield "type" => "checkbox"
+                         yield onChange (fun _ -> toggle)
+
+                         let! check = state
+                         if check then
+                            yield "checked" => ""
+                    }
+                    
+                Incremental.input (AttributeMap.ofAMap attributes)
+
             // view
             let semui =
                 [ 
@@ -229,16 +248,16 @@
                             div [ clazz "ui stackable equal width grid" ] [
 
                                 div [ clazz "column" ][ 
-                                        button [ clazz "ui button" ; onClick (fun _ -> 
+                                        button [ clazz "ui button" ; onClick (fun () -> 
                                                 form.BeginInvoke openGameWindowAction |> ignore
                                                 OPENED_WINDOW
                                             )] [text "Open Window"]
 
-                                        button [ clazz "ui button" ; onClick (fun _ -> 
+                                        button [ clazz "ui button" ; onClick (fun () -> 
                                                 IMPORT_PHOTOMETRY (openFileDialog form)
                                             )] [text "Load Object"] 
 
-                                        button [ clazz "ui button" ; onClick (fun _ -> 
+                                        button [ clazz "ui button" ; onClick (fun () -> 
                                                 IMPORT_PHOTOMETRY (openFileDialog form)
                                             )] [text "Load Photometric Data"]        
                                                 
@@ -266,9 +285,9 @@
                                             div [ clazz "ui divider"] []
 
                                             div [ clazz "ui buttons"] [
-                                                button [ clazz "ui button"; onClick (fun _ -> CHANGE_LIGHT_TRANSFORM_MODE Translate) ] [ text "Translate" ]
+                                                button [ clazz "ui button"; onClick (fun () -> CHANGE_LIGHT_TRANSFORM_MODE Translate) ] [ text "Translate" ]
                                                 div [ clazz "or" ] []
-                                                button [ clazz "ui button"; onClick (fun _ -> CHANGE_LIGHT_TRANSFORM_MODE Rotate) ] [ text "Rotate" ]
+                                                button [ clazz "ui button"; onClick (fun () -> CHANGE_LIGHT_TRANSFORM_MODE Rotate) ] [ text "Rotate" ]
                                             ]
 
                                             
@@ -277,7 +296,7 @@
                                                 alist {
                                                     let! mode = m.lightTransformMode
                                                     
-                                                    yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                    yield   button [clazz "ui button"; onClick (fun () -> 
                                                                     match mode with 
                                                                     | Translate ->
                                                                         TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, translationStepSize, 0.0)) 
@@ -286,7 +305,7 @@
                                                                 )] [
                                                                 i [ clazz "arrow left icon"][]
                                                             ]
-                                                    yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                    yield   button [clazz "ui button"; onClick (fun () -> 
                                                                     match mode with 
                                                                     | Translate ->
                                                                         TRANSLATE_LIGHT (activeTrafoLightId, V3d(-translationStepSize, 0.0, 0.0))
@@ -295,7 +314,7 @@
                                                                 )] [
                                                                 i [ clazz "arrow down icon"][]
                                                             ]
-                                                    yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                    yield   button [clazz "ui button"; onClick (fun () -> 
                                                                     match mode with 
                                                                     | Translate ->
                                                                         TRANSLATE_LIGHT (activeTrafoLightId, V3d(translationStepSize, 0.0, 0.0))
@@ -304,7 +323,7 @@
                                                                 )] [
                                                                 i [ clazz "arrow up icon"][]
                                                             ]
-                                                    yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                    yield   button [clazz "ui button"; onClick (fun () -> 
                                                                     match mode with 
                                                                     | Translate ->
                                                                         TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, -translationStepSize, 0.0))
@@ -322,12 +341,12 @@
 
                                                     match mode with
                                                     | Translate ->
-                                                        yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                        yield   button [clazz "ui button"; onClick (fun () -> 
                                                                     TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, 0.0, -translationStepSize)) 
                                                                 )] [
                                                                     i [ clazz "chevron down icon"][]
                                                                 ]
-                                                        yield   button [clazz "ui button"; onClick (fun _ -> 
+                                                        yield   button [clazz "ui button"; onClick (fun () -> 
                                                                     TRANSLATE_LIGHT (activeTrafoLightId, V3d(0.0, 0.0, translationStepSize)) 
                                                                 )] [
                                                                     i [ clazz "chevron up icon"][]
@@ -357,11 +376,11 @@
 
                                                         yield p[][
                                                             if updateGT then
-                                                                yield button [ clazz "ui button" ; onClick (fun _ -> 
+                                                                yield button [ clazz "ui button" ; onClick (fun () -> 
                                                                                 UPDATE_GROUND_TRUTH false
                                                                             )] [text "Pause Update"]
                                                             else 
-                                                                yield button [ clazz "ui button" ; onClick (fun _ -> 
+                                                                yield button [ clazz "ui button" ; onClick (fun () -> 
                                                                                 UPDATE_GROUND_TRUTH true
                                                                             )] [text "Continue Update"]
                                                         ]
@@ -392,9 +411,7 @@
                          
                                                         yield p [] [ text ("Compare Ground Truth with")]
                                                         yield p [] [ dropDown m.compare (fun mode -> CHANGE_COMPARE mode) ]
-                                                        
-                                                        yield br[]
-                                        
+                                                                                                
                                                 }
                                             )
 
@@ -406,21 +423,25 @@
                                                     if mode = RenderMode.StructuredSampling || (mode = RenderMode.Compare && c = RenderMode.StructuredSampling) then    
                                                         
                                                         yield p [] [     
-                                                            yield Html.SemUi.toggleBox m.sampleCorners TOGGLE_SAMPLE_CORNERS 
+                                                            yield toggleBox m.sampleCorners TOGGLE_SAMPLE_CORNERS 
                                                             yield text "Sample Corners"                                                                                               
                                                             yield br[]
-
-                                                            yield Html.SemUi.toggleBox m.sampleBarycenter TOGGLE_SAMPLE_BARYCENTER  
+                                                            
+                                                            yield toggleBox m.sampleBarycenter TOGGLE_SAMPLE_BARYCENTER  
                                                             yield text "Sample Barycenter"                                                      
                                                             yield br[]
 
-                                                            yield Html.SemUi.toggleBox m.sampleClosest TOGGLE_SAMPLE_CLOSEST  
+                                                            yield toggleBox m.sampleClosest TOGGLE_SAMPLE_CLOSEST  
                                                             yield text "Sample Closest"                     
                                                             yield br[]
                                                             
-                                                            yield Html.SemUi.toggleBox m.sampleNorm TOGGLE_SAMPLE_NORM        
+                                                            yield toggleBox m.sampleNorm TOGGLE_SAMPLE_NORM        
                                                             yield text "Sample Norm"                                                    
-                                                            yield br[]                                                         
+                                                            yield br[]        
+                                                            
+                                                            yield toggleBox m.sampleNorm TOGGLE_SAMPLE_MRP       
+                                                            yield text "Sample MRP"                                                    
+                                                            yield br[]   
                                                         ]
                                                         
                                                 }
@@ -447,7 +468,7 @@
                                                             br []
                                                             text ("Dark: " + (sprintf "%.5f" darkError)) 
                                                             ]
-                                                        yield p [] [ button [clazz "ui button" ; onClick (fun _ -> computeError())] [text "Compute Error"] ]
+                                                        yield p [] [ button [clazz "ui button" ; onClick (fun () -> computeError())] [text "Compute Error"] ]
                                                 }
                                             )
 
@@ -471,8 +492,8 @@
 
         // Setup Lights
         let lc = emptyLightCollection
-        //let light1 = addTriangleLight lc
-        let light1 = addSquareLight lc
+        let light1 = addTriangleLight lc
+        //let light1 = addSquareLight lc
         
         match light1 with
         | Some lightId ->             
@@ -502,8 +523,9 @@
             mrpWeights    = V3d(1.0/3.0, 1.0/3.0, 1.0/3.0)
             sampleCorners    = false
             sampleBarycenter = true
-            sampleClosest    = true
+            sampleClosest    = false
             sampleNorm       = true
+            sampleMRP        = true
         }
        
 
