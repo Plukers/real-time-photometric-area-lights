@@ -21,7 +21,8 @@ module EffectApStructuredSampling =
         [<Normal>]          n       : V3d
         [<Color>]           c       : V4d
     }  
-    (*
+    
+
     [<ReflectedDefinition>]
     let private sample L weightSum t2w addr (p : V3d) = 
 
@@ -180,9 +181,9 @@ module EffectApStructuredSampling =
 
             return V4d(illumination.XYZ, v.c.W)
         }
-    *)
-
     
+
+    (*
     [<ReflectedDefinition>]
     let private sample (t2w : M33d) (addr : int) (p : V3d) = 
 
@@ -191,7 +192,9 @@ module EffectApStructuredSampling =
         let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
 
-        irr * i.Z
+        let weight = uniform.LAreas.[addr] * dotOut / Vec.lengthSquared p 
+
+        (weight * irr * i.Z, weight)
 
     let structuredSampling (v : Vertex) = 
         fragment {
@@ -202,9 +205,7 @@ module EffectApStructuredSampling =
 
             let t2w = v.n |> Vec.normalize |> basisFrisvad 
             let w2t = t2w |> Mat.transpose
-
-            let brdf = v.c / PI 
-
+            
             let mutable illumination = V4d.Zero
             
             ////////////////////////////////////////////////////////
@@ -302,32 +303,46 @@ module EffectApStructuredSampling =
 
 
                                     let mutable patchIllumination = 0.0
+                                    let mutable weightSum = 0.0
                                     let mutable sampleCount = 0
                                                                         
                                     if uniform.sampleCorners then
                                         for l in 0 .. clippedVc - 1 do
-                                             patchIllumination <- patchIllumination + sample t2w addr clippedVa.[l] 
-                                             sampleCount <- sampleCount + 1 
+                                             let (irr, weight) = sample t2w addr clippedVa.[l]
+                                             patchIllumination <- patchIllumination + irr
+                                             weightSum <- weightSum + weight
+                                             sampleCount <- sampleCount + 1
 
                                     if uniform.sampleBarycenter then
-                                         patchIllumination <- patchIllumination + sample t2w addr barycenter 
-                                         sampleCount <- sampleCount + 1
+                                        let (irr, weight) = sample t2w addr barycenter
+                                        patchIllumination <- patchIllumination + irr
+                                        weightSum <- weightSum + weight
+                                        sampleCount <- sampleCount + 1
 
                                     if uniform.sampleNorm then 
-                                         patchIllumination <- patchIllumination + sample t2w addr normPlanePoint
-                                         sampleCount <- sampleCount + 1
+                                        let (irr, weight) = sample t2w addr normPlanePoint
+                                        patchIllumination <- patchIllumination + irr
+                                        weightSum <- weightSum + weight
+                                        sampleCount <- sampleCount + 1
 
                                     if uniform.sampleMRP then
-                                         let mrpDir = ((closestPoint |> Vec.normalize) + (barycenter |> Vec.normalize)) |> Vec.normalize
-                                         let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
+                                        
+                                        let mrpDir = ((closestPoint |> Vec.normalize) + (barycenter |> Vec.normalize)) |> Vec.normalize
+                                        let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
-                                         patchIllumination <- patchIllumination + sample t2w addr mrp 
+                                        let (irr, weight) = sample t2w addr mrp
+
+                                        patchIllumination <- patchIllumination + irr
+                                        weightSum <- weightSum + weight
+                                        sampleCount <- sampleCount + 1
 
                                     if uniform.sampleClosest then 
-                                         patchIllumination <- patchIllumination + sample t2w addr closestPoint 
-                                         sampleCount <- sampleCount + 1
+                                        let (irr, weight) = sample t2w addr closestPoint
+                                        patchIllumination <- patchIllumination + irr
+                                        weightSum <- weightSum + weight
+                                        sampleCount <- sampleCount + 1
 
-                                    illumination <- illumination + (v.c / PI) * solidAngle * patchIllumination / float(sampleCount)
+                                    illumination <- illumination + (1.0 / float(sampleCount)) * (v.c / PI) * patchIllumination
                                 ()
                                                                 
                             ////////////////////////////////////////////////////////
@@ -337,3 +352,4 @@ module EffectApStructuredSampling =
         }
 
         
+        *)

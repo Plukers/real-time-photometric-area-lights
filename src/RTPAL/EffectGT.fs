@@ -54,7 +54,7 @@ module EffectGT =
                 // let i = sampleHemisphere u1 u2
                 let i = cosineSampleHemisphere u1 u2   
 
-                let pdf = i.Z / PI  
+                //let pdf = i.Z / PI  
 
                 for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
                     match uniform.Lights.[addr] with
@@ -95,7 +95,7 @@ module EffectGT =
                                 if irr > 0.0 then 
 
                                     illumination <-
-                                        let brdf = v.c / PI 
+                                        //let brdf = v.c / PI 
                                         illumination + irr * v.c//(brdf / pdf) * i.Z                            
                                     ()                            
                              

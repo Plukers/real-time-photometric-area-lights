@@ -46,6 +46,9 @@ let config =
     let (MAX_PATCH_IDX_BUFFER_SIZE_ALL_LIGHT, c) = c |> newEntry "MAX_PATCH_IDX_BUFFER_SIZE_ALL_LIGHT" (NUM_LIGHTS * MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT)
     
     let (NUM_SAMPLES, c) = c |> newEntry "NUM_SAMPLES" 8
+
+
+    let (NUM_SS_LIGHT_SAMPLES, c) = c |> newEntry "NUM_SS_LIGHT_SAMPLES" 12
     
     c
 

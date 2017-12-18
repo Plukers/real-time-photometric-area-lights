@@ -22,10 +22,72 @@ module Utils =
         open Aardvark.UI
 
         let loadFromFile zUp f =  
-            f |> Aardvark.SceneGraph.IO.Loader.Assimp.load 
-              |> Sg.adapter 
-              |> Sg.noEvents
-              |> Sg.transform (if zUp then Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO) else Trafo3d.Identity)
+            f 
+                |> Aardvark.SceneGraph.IO.Loader.Assimp.load 
+                |> Sg.adapter 
+                |> Sg.noEvents
+                |> Sg.transform (if zUp then Trafo3d.FromOrthoNormalBasis(V3d.IOO, V3d.OOI, -V3d.OIO) else Trafo3d.Identity)
+
+    module PoissonSequence = 
+
+        open Aardvark.Base
+        open Aardvark.UI.Static
+
+        let private genRandomNumbers count =
+            let rnd = System.Random()
+            List.init count (fun _ -> rnd.Next ())
+
+        
+                
+        (*
+            Returns sample points for a given triangle of size  Config.NUM_SS_LIGHT_SAMPLES
+        *)
+        let computeSequenceForTriangle p1 p2 p3 (discard : V3d -> bool )= 
+        
+            let u = p2 - p1
+            let v = p3 - p1
+            
+            let seed = genRandomNumbers 2
+            let seed = V2d(seed.[0] * u, seed.[1] * v)
+
+            let samplePoints = seed :: List.empty<V2d>
+
+            for i in 1 .. Config.NUM_SS_LIGHT_SAMPLES - 1 do
+
+                let mutable maxDistance = 0.0
+            
+                for sampleCandidate in genRandomNumbers (500 * samplePoints.Length) do
+
+                    
+
+                    ()
+
+                ()
+
+
+
+
+
+            for i in 1 .. Config.NUM_SS_LIGHT_SAMPLES - 1 do
+
+                let sampleCandidates = genRandomNumbers (500 * samplePoints.Length)
+                let mutable sample = sampleCandidates.[0]
+                let mutable sampleDist = 0.0
+                
+
+
+                ()
+
+
+
+            ()
+
+        let computeSequenceForSquare = 
+
+
+            ()
+
+        ()
     
     module HaltonSequence = 
         open FShade
@@ -44,7 +106,7 @@ module Utils =
             h.[0] <- V2d(0.5, 1.0/3.0)
 
             for i in 1 .. Config.NUM_SAMPLES - 1 do
-
+               
                 h.[i] <- V2d(
                     Quasi.QuasiHaltonWithIndex(0, h.[i - 1].X),
                     Quasi.QuasiHaltonWithIndex(1, h.[i - 1].Y))
