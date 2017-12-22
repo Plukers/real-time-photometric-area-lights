@@ -33,61 +33,117 @@ module Utils =
         open Aardvark.Base
         open Aardvark.UI.Static
 
-        let private genRandomNumbers count =
+        let private genRandomUV count =
             let rnd = System.Random()
-            List.init count (fun _ -> rnd.Next ())
-
+            List.init count (fun _ -> V2d(rnd.Next (), rnd.Next ()))
         
-                
         (*
-            Returns sample points for a given triangle of size  Config.NUM_SS_LIGHT_SAMPLES
+            Returns sample points for a given triangle of size Config.NUM_SS_LIGHT_SAMPLES
         *)
-        let computeSequenceForTriangle p1 p2 p3 (discard : V3d -> bool )= 
-        
-            let u = p2 - p1
-            let v = p3 - p1
-            
-            let seed = genRandomNumbers 2
-            let seed = V2d(seed.[0] * u, seed.[1] * v)
+        let private generateUVSequence (discard : V2d -> bool) (distance : V2d -> V2d -> float) = 
+                    
+            let mutable seed = (genRandomUV 1).[0]
 
-            let samplePoints = seed :: List.empty<V2d>
+            while discard seed do
+                seed <- (genRandomUV 1).[0]
+
+            let mutable samplePoints = seed :: List.empty<V2d>
 
             for i in 1 .. Config.NUM_SS_LIGHT_SAMPLES - 1 do
 
                 let mutable maxDistance = 0.0
+                let mutable nextSample = V2d.Zero
             
-                for sampleCandidate in genRandomNumbers (500 * samplePoints.Length) do
+                for sampleCandidate in genRandomUV (500 * samplePoints.Length) do
 
+                    if not (discard sampleCandidate) then 
+
+                        let mutable sampleCandidateDist = infinity
                     
+                        for sample in samplePoints do
+                        
+                            let dist = distance sample sampleCandidate
+                            
+                            if dist < sampleCandidateDist then
+                                sampleCandidateDist <- dist                   
 
-                    ()
+                        if sampleCandidateDist > maxDistance then
+                            maxDistance <- sampleCandidateDist
+                            nextSample  <- sampleCandidate
 
-                ()
+                samplePoints <- nextSample :: samplePoints
+
+            samplePoints
 
 
+        let generatePointSequenceForTriangle (p0 : V3d) (p1 : V3d) (p2 : V3d) =
+
+            let u = p1 - p0
+            let v = p2 - p0
+            
+
+            let uvtw (uv : V2d) = uv.X * u + uv.Y * v
+
+            let t2w = 
+                let up = V3d.Cross(u, v ) |> Vec.normalize
+                let t  = V3d.Cross(u, up) |> Vec.normalize
+                M33d(u.X, t.X, up.X, u.Y, t.Y, up.Y, u.Z, t.Z, up.Z)
+
+            let w2t = t2w |> Mat.transpose
 
 
-
-            for i in 1 .. Config.NUM_SS_LIGHT_SAMPLES - 1 do
-
-                let sampleCandidates = genRandomNumbers (500 * samplePoints.Length)
-                let mutable sample = sampleCandidates.[0]
-                let mutable sampleDist = 0.0
+            let to2d (p : V3d) = 
+                let v = w2t * (p - p0)
+                V2d(v.X, v.Y)
                 
+            let p02d = p0 |> to2d
+            let p12d = p1 |> to2d
+            let p22d = p2 |> to2d
+            
 
+            let discard  (p : V2d) = 
 
-                ()
+                let p2d = uvtw p |> to2d
 
+                let (u, v, w) = Render.EffectUtils.barycentricCoordinates p2d p02d p12d p22d
 
+                if u >= 0.0 && v >= 0.0 && w >= 0.0 then
+                    false
+                else
+                    true
 
-            ()
+            let distance (a : V2d) (b : V2d) = 
 
-        let computeSequenceForSquare = 
+                let a = uvtw a
+                let b = uvtw b
 
+                V3d.Distance(a, b)
+                
+            generateUVSequence discard distance |> List.map (fun uv -> uvtw uv)
 
-            ()
+        
+        (*
+            Rectangle is given by its sides a and b, which have a corner point in common and are orthonormal
+        *)
+        let computePointSequenceForRectangle (a : V3d) (b : V3d) = 
 
-        ()
+            
+            let uvtw (uv : V2d) = uv.X * a + uv.Y * b
+
+            let discard  (p : V2d) = 
+                false
+
+            let distance (p0 : V2d) (p1 : V2d) = 
+
+                let p0 = uvtw p0
+                let p1 = uvtw p1
+
+                V3d.Distance(p0, p1)
+                
+            generateUVSequence discard distance |> List.map (fun uv -> uvtw uv)
+
+            
+
     
     module HaltonSequence = 
         open FShade
