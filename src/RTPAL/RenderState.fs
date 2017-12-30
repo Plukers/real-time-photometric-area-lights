@@ -14,8 +14,9 @@ type RenderMode =
     | CenterPointApprox = 1
     | MRPApprox = 2
     | BaumFFApprox = 3
-    | StructuredSampling = 4
-    | Compare = 5
+    //| StructuredSamplingIrradiance = 4
+    | StructuredSampling = 5
+    | Compare = 6
 
 type LightTransformMode =
     | Translate
@@ -42,6 +43,7 @@ type Action =
     | TOGGLE_SAMPLE_CLOSEST
     | TOGGLE_SAMPLE_NORM
     | TOGGLE_SAMPLE_MRP
+    | TOGGLE_SAMPLE_RND
 
 [<DomainType>]
 type RenderState =
@@ -58,6 +60,7 @@ type RenderState =
         sampleClosest      : bool
         sampleNorm         : bool
         sampleMRP          : bool
+        sampleRandom       : bool
         
         compare            : RenderMode        
         error              : double

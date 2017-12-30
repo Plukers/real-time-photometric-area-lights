@@ -9,7 +9,7 @@ module EffectUtils =
     open FShade.Imperative
     open Aardvark.Base.Rendering.Effects
 
-    open Light.Effect
+    //open Light.Effect
     open PhotometricLight
     
 

@@ -151,6 +151,7 @@
             | TOGGLE_SAMPLE_CLOSEST -> { s with sampleClosest = (not s.sampleClosest) }
             | TOGGLE_SAMPLE_NORM -> { s with sampleNorm = (not s.sampleNorm) }
             | TOGGLE_SAMPLE_MRP -> { s with sampleMRP = (not s.sampleMRP) }
+            | TOGGLE_SAMPLE_RND -> { s with sampleRandom = (not s.sampleRandom) }
 
     let openFileDialog (form : System.Windows.Forms.Form) =
         let mutable final = ""
@@ -439,9 +440,13 @@
                                                             yield text "Sample Norm"                                                    
                                                             yield br[]        
                                                             
-                                                            yield toggleBox m.sampleNorm TOGGLE_SAMPLE_MRP       
+                                                            yield toggleBox m.sampleMRP TOGGLE_SAMPLE_MRP       
                                                             yield text "Sample MRP"                                                    
                                                             yield br[]   
+
+                                                            yield toggleBox m.sampleRandom TOGGLE_SAMPLE_RND      
+                                                            yield text "Sample Random"                                                    
+                                                            yield br[]  
                                                         ]
                                                         
                                                 }
@@ -494,14 +499,14 @@
         let lc = emptyLightCollection
         let light1 = addTriangleLight lc
         //let light1 = addSquareLight lc
-        
+        (*
         match light1 with
         | Some lightId ->             
             // let t = Trafo3d.Translation(-8.0, 0.0, -5.0)        
             let t = Trafo3d.Translation(-4.0, 0.0, 1.0)
             transformLight lc lightId t |> ignore
         | None -> ()
-        
+        *)
         let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"60712332_(STD).ldt"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         
@@ -522,10 +527,11 @@
             lightTransformMode = Translate
             mrpWeights    = V3d(1.0/3.0, 1.0/3.0, 1.0/3.0)
             sampleCorners    = false
-            sampleBarycenter = true
+            sampleBarycenter = false
             sampleClosest    = false
-            sampleNorm       = true
-            sampleMRP        = true
+            sampleNorm       = false
+            sampleMRP        = false
+            sampleRandom     = true
         }
        
 

@@ -35,7 +35,7 @@ module Utils =
 
         let private genRandomUV count =
             let rnd = System.Random()
-            List.init count (fun _ -> V2d(rnd.Next (), rnd.Next ()))
+            List.init count (fun _ -> V2d(rnd.NextDouble (), rnd.NextDouble ()))
         
         (*
             Returns sample points for a given triangle of size Config.NUM_SS_LIGHT_SAMPLES
@@ -49,7 +49,7 @@ module Utils =
 
             let mutable samplePoints = seed :: List.empty<V2d>
 
-            for i in 1 .. Config.NUM_SS_LIGHT_SAMPLES - 1 do
+            for i in 1 .. Config.SS_LIGHT_SAMPLES_PER_LIGHT - 1 do
 
                 let mutable maxDistance = 0.0
                 let mutable nextSample = V2d.Zero
@@ -82,7 +82,7 @@ module Utils =
             let v = p2 - p0
             
 
-            let uvtw (uv : V2d) = uv.X * u + uv.Y * v
+            let uvtw (uv : V2d) = (uv.X * u + uv.Y * v) + p0
 
             let t2w = 
                 let up = V3d.Cross(u, v ) |> Vec.normalize
@@ -103,7 +103,9 @@ module Utils =
 
             let discard  (p : V2d) = 
 
-                let p2d = uvtw p |> to2d
+                let p = p |> uvtw
+
+                let p2d = p  |> to2d
 
                 let (u, v, w) = Render.EffectUtils.barycentricCoordinates p2d p02d p12d p22d
 
@@ -125,10 +127,10 @@ module Utils =
         (*
             Rectangle is given by its sides a and b, which have a corner point in common and are orthonormal
         *)
-        let computePointSequenceForRectangle (a : V3d) (b : V3d) = 
+        let computePointSequenceForRectangle (a : V3d) (b : V3d) (o : V3d) = 
 
             
-            let uvtw (uv : V2d) = uv.X * a + uv.Y * b
+            let uvtw (uv : V2d) = (uv.X * a + uv.Y * b) + o
 
             let discard  (p : V2d) = 
                 false

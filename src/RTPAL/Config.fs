@@ -38,7 +38,10 @@ module Config =
     let NUM_SAMPLES = 8
                       
     [<Literal>]
-    let NUM_SS_LIGHT_SAMPLES = 12
+    let SS_LIGHT_SAMPLES_ALL_LIGHT = 50
+                      
+    [<Literal>]
+    let SS_LIGHT_SAMPLES_PER_LIGHT = 50
                       
     [<Literal>]
     let VERT_ALL_LIGHT = 4

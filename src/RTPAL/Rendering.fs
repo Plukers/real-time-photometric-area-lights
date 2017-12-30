@@ -410,23 +410,50 @@ module Rendering =
     module StructuredSamplingApprox =
 
         type SSData = {
-            sampleCorners      : IMod<bool>
-            sampleBarycenter   : IMod<bool>
-            sampleClosest      : IMod<bool>
-            sampleNorm         : IMod<bool>
-            sampleMRP          : IMod<bool>
+            sampleCorners       : IMod<bool>
+            sampleBarycenter    : IMod<bool>
+            sampleClosest       : IMod<bool>
+            sampleNorm          : IMod<bool>
+            sampleMRP           : IMod<bool>
+            sampleRandom        : IMod<bool>
         }
 
         let initSSData (m : MRenderState) = 
             {
-                sampleCorners    = m.sampleCorners
-                sampleBarycenter = m.sampleBarycenter
-                sampleClosest    = m.sampleClosest
-                sampleNorm       = m.sampleNorm
-                sampleMRP        = m.sampleMRP
+                sampleCorners       = m.sampleCorners
+                sampleBarycenter    = m.sampleBarycenter
+                sampleClosest       = m.sampleClosest
+                sampleNorm          = m.sampleNorm
+                sampleMRP           = m.sampleMRP
+                sampleRandom        = m.sampleRandom
             }
 
         let ssApproxRenderTask (data : RenderData) (ssData : SSData) (sceneSg : ISg) = 
+
+            let pointSg color trafo = 
+                 IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 0.01)) 6 color
+                |> Sg.ofIndexedGeometry
+                |> Sg.trafo trafo
+                |> Sg.effect [
+                        DefaultSurfaces.trafo |> toEffect
+                        DefaultSurfaces.vertexColor |> toEffect
+                    ]
+
+            let mutable sceneSg = sceneSg
+
+            
+            let getTrafo sidx = 
+                    data.lights.SamplePoints |>
+                    Mod.map(fun sp -> 
+                        Trafo3d.Translation sp.[sidx]
+                    )
+
+            for i in 0 .. Config.SS_LIGHT_SAMPLES_ALL_LIGHT - 1 do               
+
+                let sampleSg = pointSg C4b.Red (getTrafo i)
+
+                sceneSg <- Sg.group' [sceneSg; sampleSg]
+
             
             sceneSg
                 |> setupFbEffects [ 
@@ -441,6 +468,7 @@ module Rendering =
                 |> Sg.uniform "sampleClosest"    ssData.sampleClosest
                 |> Sg.uniform "sampleNorm"       ssData.sampleNorm
                 |> Sg.uniform "sampleMRP"        ssData.sampleMRP
+                |> Sg.uniform "sampleRandom"     ssData.sampleRandom
                 |> Sg.compile data.runtime (signature data.runtime)
 
         let ssApproxFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) = 

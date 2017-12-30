@@ -15,6 +15,7 @@ module EffectApStructuredSampling =
         member uniform.sampleClosest   : bool = uniform?sampleClosest     
         member uniform.sampleNorm      : bool = uniform?sampleNorm 
         member uniform.sampleMRP       : bool = uniform?sampleMRP 
+        member uniform.sampleRandom    : bool = uniform?sampleRandom
     
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
@@ -22,7 +23,7 @@ module EffectApStructuredSampling =
         [<Color>]           c       : V4d
     }  
     
-
+    (*
     [<ReflectedDefinition>]
     let private sample L weightSum t2w addr (p : V3d) = 
 
@@ -181,9 +182,9 @@ module EffectApStructuredSampling =
 
             return V4d(illumination.XYZ, v.c.W)
         }
-    
+    *)
 
-    (*
+    
     [<ReflectedDefinition>]
     let private sample (t2w : M33d) (addr : int) (p : V3d) = 
 
@@ -217,6 +218,7 @@ module EffectApStructuredSampling =
                         
                         let vAddr = addr * Config.VERT_PER_LIGHT
                         let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                        let sAddr = addr * Config.SS_LIGHT_SAMPLES_PER_LIGHT
 
                         ////////////////////////////////////////////////////////
 
@@ -342,6 +344,13 @@ module EffectApStructuredSampling =
                                         weightSum <- weightSum + weight
                                         sampleCount <- sampleCount + 1
 
+                                    if uniform.sampleRandom then
+                                        for l in 0 .. Config.SS_LIGHT_SAMPLES_PER_LIGHT - 1 do
+                                            let (irr, weight) = sample t2w addr (w2t * (uniform.LSamplePoints.[l] - P))
+                                            patchIllumination <- patchIllumination + irr
+                                            weightSum <- weightSum + weight
+                                            sampleCount <- sampleCount + 1
+
                                     illumination <- illumination + (1.0 / float(sampleCount)) * (v.c / PI) * patchIllumination
                                 ()
                                                                 
@@ -352,4 +361,4 @@ module EffectApStructuredSampling =
         }
 
         
-        *)
+        
