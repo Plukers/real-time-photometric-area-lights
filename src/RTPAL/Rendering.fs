@@ -229,7 +229,7 @@ module Rendering =
                     |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                     |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
             
-            (sg, fb)
+            //(sg, fb)
             ((fb |> fbToSg data.viewportSize), fb)
             
 
@@ -333,7 +333,7 @@ module Rendering =
                         |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            (sg, fb)
+            //(sg, fb)
             ((fb |> fbToSg data.viewportSize), fb)
             
 
@@ -375,7 +375,7 @@ module Rendering =
                         |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            (sg, fb)
+            //(sg, fb)
             ((fb |> fbToSg data.viewportSize), fb)
                       
 
@@ -404,7 +404,7 @@ module Rendering =
                     |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                     |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
             
-            (sg, fb)
+            //(sg, fb)
             ((fb |> fbToSg data.viewportSize), fb)
 
     module StructuredSamplingApprox =
@@ -428,7 +428,7 @@ module Rendering =
                 sampleRandom        = m.sampleRandom
             }
 
-        let ssApproxRenderTask (data : RenderData) (ssData : SSData) (sceneSg : ISg) = 
+        let private setupSS_RenderTask (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect)= 
 
             let pointSg color trafo = 
                  IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 0.01)) 6 color
@@ -457,7 +457,7 @@ module Rendering =
             
             sceneSg
                 |> setupFbEffects [ 
-                        EffectApStructuredSampling.structuredSampling |> toEffect
+                        ssEffect
                         EffectUtils.effectClearNaN |> toEffect
                     ]
                 |> setupLights data.lights
@@ -471,20 +471,27 @@ module Rendering =
                 |> Sg.uniform "sampleRandom"     ssData.sampleRandom
                 |> Sg.compile data.runtime (signature data.runtime)
 
-        let ssApproxFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) = 
-            ssApproxRenderTask data ssData sceneSg
-            |> RenderTask.renderToColor data.viewportSize
+        let private setupSS_Fb (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect) = 
+            setupSS_RenderTask data ssData sceneSg ssEffect
+            |> RenderTask.renderToColor data.viewportSize 
 
-        let ssApproxSgAndFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) = 
-            let fb = ssApproxFb data ssData sceneSg 
+        let private setupSS_SgAndFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect) = 
+            let fb = setupSS_Fb data ssData sceneSg ssEffect
             
             let sg = Sg.fullscreenQuad data.viewportSize
                         |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
                         |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
                         |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            (sg, fb)
+            // (sg, fb)
             ((fb |> fbToSg data.viewportSize), fb)
+
+        
+        let ssApproxSgAndFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
+            EffectApStructuredSampling.structuredSampling |> toEffect |> setupSS_SgAndFb data ssData sceneSg 
+
+        let ssBaumApproxSgAndFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
+            EffectApStructuredSampling.structuredSamplingBaum |> toEffect |> setupSS_SgAndFb data ssData sceneSg
             
     module Compare = 
         
@@ -615,28 +622,31 @@ module Rendering =
             let (centerPointApproxSg, centerPointApproxFb)  = centerPointApproxSgAndFb data sceneSg
             let (mrpApproxSg, mrpApproxFb)                  = mrpApproxSgAndFb data mrpData sceneSg 
             let (baumFFApproxSg, baumFFApproxFb)            = baumFFApproxSgAndFb data sceneSg
+            let (ssBaumApproxSg, ssBaumApproxFb)            = ssBaumApproxSgAndFb data ssData sceneSg
             let (ssApproxSg, ssApproxFb)                    = ssApproxSgAndFb data ssData sceneSg
 
             let effectFbs = 
                 Map.empty
-                |> Map.add RenderMode.GroundTruth        groundTruthFb
-                |> Map.add RenderMode.CenterPointApprox  centerPointApproxFb
-                |> Map.add RenderMode.MRPApprox          mrpApproxFb
-                |> Map.add RenderMode.BaumFFApprox       baumFFApproxFb
-                |> Map.add RenderMode.StructuredSampling ssApproxFb
+                |> Map.add RenderMode.GroundTruth           groundTruthFb
+                |> Map.add RenderMode.CenterPointApprox     centerPointApproxFb
+                |> Map.add RenderMode.MRPApprox             mrpApproxFb
+                |> Map.add RenderMode.BaumFFApprox          baumFFApproxFb
+                |> Map.add RenderMode.StructuredIrrSampling ssBaumApproxFb
+                |> Map.add RenderMode.StructuredSampling    ssApproxFb
                 
             let diffFrameBuffer = diffFb data effectFbs
 
             let signature = signature data.runtime
             let tasks = 
                 Map.empty
-                |> Map.add RenderMode.GroundTruth        (groundTruthSg         |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.CenterPointApprox  (centerPointApproxSg   |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.MRPApprox          (mrpApproxSg           |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.BaumFFApprox       (baumFFApproxSg        |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.StructuredSampling (ssApproxSg            |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.GroundTruth           (groundTruthSg         |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.CenterPointApprox     (centerPointApproxSg   |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.MRPApprox             (mrpApproxSg           |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.BaumFFApprox          (baumFFApproxSg        |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.StructuredIrrSampling (ssBaumApproxSg        |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.StructuredSampling    (ssApproxSg            |> Sg.compile data.runtime signature)
 
-                |> Map.add RenderMode.Compare            (compareSg data gtData sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.Compare (compareSg data gtData sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
                 
             tasks |> Map.iter (fun _ t -> t.Update(AdaptiveToken.Top, RenderToken.Empty)) // iterate over tasks initially one time to create them
 

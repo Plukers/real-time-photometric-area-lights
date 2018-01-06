@@ -48,7 +48,7 @@ let config =
     let (NUM_SAMPLES, c) = c |> newEntry "NUM_SAMPLES" 8
 
 
-    let (SS_LIGHT_SAMPLES_PER_LIGHT, c) = c |> newEntry "SS_LIGHT_SAMPLES_PER_LIGHT" 50
+    let (SS_LIGHT_SAMPLES_PER_LIGHT, c) = c |> newEntry "SS_LIGHT_SAMPLES_PER_LIGHT" 32
 
     let (SS_LIGHT_SAMPLES_ALL_LIGHT, c) = c |> newEntry "SS_LIGHT_SAMPLES_ALL_LIGHT" (NUM_LIGHTS * SS_LIGHT_SAMPLES_PER_LIGHT)
     

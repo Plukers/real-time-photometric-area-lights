@@ -14,7 +14,7 @@ type RenderMode =
     | CenterPointApprox = 1
     | MRPApprox = 2
     | BaumFFApprox = 3
-    //| StructuredSamplingIrradiance = 4
+    | StructuredIrrSampling = 4
     | StructuredSampling = 5
     | Compare = 6
 

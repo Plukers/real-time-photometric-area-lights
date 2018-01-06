@@ -421,7 +421,10 @@
                                                     let! mode = m.renderMode
                                                     let! c = m.compare
 
-                                                    if mode = RenderMode.StructuredSampling || (mode = RenderMode.Compare && c = RenderMode.StructuredSampling) then    
+                                                    let ssActive = mode = RenderMode.StructuredSampling || mode = RenderMode.StructuredIrrSampling
+                                                    let ssCompActive = c = RenderMode.StructuredSampling || c = RenderMode.StructuredIrrSampling
+
+                                                    if ssActive || (mode = RenderMode.Compare && ssCompActive) then    
                                                         
                                                         yield p [] [     
                                                             yield toggleBox m.sampleCorners TOGGLE_SAMPLE_CORNERS 

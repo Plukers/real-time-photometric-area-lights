@@ -23,22 +23,26 @@ module EffectApStructuredSampling =
         [<Color>]           c       : V4d
     }  
     
-    (*
+    
     [<ReflectedDefinition>]
-    let private sample L weightSum t2w addr (p : V3d) = 
+    let private sampleForBaum (t2w : M33d) (addr : int) (p : V3d) = 
 
         let i = p |> Vec.normalize  
-
+ 
         let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
 
-        let weight = dotOut / (Vec.lengthSquared p)
 
-        let weightSum = weightSum + weight
-        let L = L +  weight * getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+        let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
 
-        (L, weightSum)
-    
-    let structuredSampling (v : Vertex) = 
+        let weight = i.Z / Vec.lengthSquared p // added i.Z for a better weight
+
+        let sampledIrr = weight * irr
+
+        let weight = (uniform.LAreas.[addr] * dotOut) * weight
+
+        (sampledIrr, weight)
+
+    let structuredSamplingBaum (v : Vertex) = 
         fragment {
 
             ////////////////////////////////////////////////////////
@@ -133,39 +137,64 @@ module EffectApStructuredSampling =
                                     let barycenter = barycenter / (float clippedVc)
 
 
-                                    let mutable sampleSums = (0.0, 0.0) // L, weightSum
+
                                     
+
+                                    let mutable patchIllumination = 0.0
+                                    let mutable weightSum = 0.0
+                                    let mutable sampleCount = 0
+                                                                        
                                     if uniform.sampleCorners then
                                         for l in 0 .. clippedVc - 1 do
-                                            let (L, weightSum) = sampleSums
-                                            let (L, weightSum) = sample L weightSum t2w addr clippedVa.[l]
-                                            sampleSums <- (L, weightSum)
+                                            let (irr, weight) = sampleForBaum t2w addr clippedVa.[l]
+                                            patchIllumination <- patchIllumination + irr
+                                            weightSum <- weightSum + weight
+                                            sampleCount <- sampleCount + 1
 
                                     if uniform.sampleBarycenter then 
-                                        let (L, weightSum) = sampleSums
-                                        let (L, weightSum) = sample L weightSum t2w addr barycenter
-                                        sampleSums <- (L, weightSum)
+                                        let (irr, weight) = sampleForBaum t2w addr barycenter
+                                        patchIllumination <- patchIllumination + irr
+                                        weightSum <- weightSum + weight
+                                        sampleCount <- sampleCount + 1
 
                                     if uniform.sampleNorm then 
-                                        let (L, weightSum) = sampleSums
-                                        let (L, weightSum) = sample L weightSum t2w addr normPlanePoint
-                                        sampleSums <- (L, weightSum)
+                                        let (irr, weight) = sampleForBaum t2w addr normPlanePoint
+                                        patchIllumination <- patchIllumination + irr
+                                        weightSum <- weightSum + weight
+                                        sampleCount <- sampleCount + 1
 
                                     if uniform.sampleClosest then 
-                                        let (L, weightSum) = sampleSums
-                                        let (L, weightSum) = sample L weightSum t2w addr closestPoint 
-                                        sampleSums <- (L, weightSum)
+                                        let (irr, weight) = sampleForBaum t2w addr closestPoint
+                                        patchIllumination <- patchIllumination + irr
+                                        weightSum <- weightSum + weight
+                                        sampleCount <- sampleCount + 1
 
+                                    if uniform.sampleMRP then
+                                        let mrpDir = ((closestPoint |> Vec.normalize) + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
+                                        let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
+                                        
+                                        let (irr, weight) = sampleForBaum t2w addr mrp
+                                        patchIllumination <- patchIllumination + irr
+                                        weightSum <- weightSum + weight
+                                        sampleCount <- sampleCount + 1
 
-                                    let (L, weightSum) = sampleSums
+                                    if uniform.sampleRandom then
+                                        for l in 0 .. Config.SS_LIGHT_SAMPLES_PER_LIGHT - 1 do
+                                            let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
 
+                                            if samplePoint.Z >= eps then
+                                                let (irr, weight) = sampleForBaum t2w addr samplePoint
+                                                patchIllumination <- patchIllumination + irr
+                                                weightSum <- weightSum + weight
+                                                sampleCount <- sampleCount + 1
+                                                
                                     let L =
-                                        if weightSum <> 0.0 then
-                                            L / weightSum
+                                        if sampleCount > 0 then
+                                            patchIllumination / weightSum
                                         else 
                                             0.0
 
-                                    if L > 0.0 then 
+                                    if L > eps then 
 
                                         for l in 0 .. clippedVc - 1 do
                                             // Project polygon light onto sphere
@@ -182,7 +211,7 @@ module EffectApStructuredSampling =
 
             return V4d(illumination.XYZ, v.c.W)
         }
-    *)
+    
 
     
     [<ReflectedDefinition>]
@@ -191,11 +220,11 @@ module EffectApStructuredSampling =
         let i = p |> Vec.normalize  
  
         let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
-        let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+        let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
 
-        let weight = uniform.LAreas.[addr] * dotOut / Vec.lengthSquared p 
+        let weight = (* uniform.LAreas.[addr] * dotOut *) 1.0 / Vec.lengthSquared p 
 
-        (weight * irr * i.Z, weight)
+        weight * irr * i.Z
 
     let structuredSampling (v : Vertex) = 
         fragment {
@@ -290,66 +319,48 @@ module EffectApStructuredSampling =
                                     
                                     let barycenter = barycenter / (float clippedVc)
 
-                                    let solidAngle = 
-                                        if clippedVc = 3 then
-                                            computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
-                                        elif clippedVc = 4 then
-                                            let sa1 = computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
-                                            let sa2 = computeSolidAngle clippedVa.[0] clippedVa.[2] clippedVa.[3]
-                                            sa1 + sa2
-                                        else
-                                            let sa1 = computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
-                                            let sa2 = computeSolidAngle clippedVa.[0] clippedVa.[2] clippedVa.[3]
-                                            let sa3 = computeSolidAngle clippedVa.[0] clippedVa.[3] clippedVa.[4]
-                                            sa1 + sa2 + sa3
-
-
+                                    
                                     let mutable patchIllumination = 0.0
-                                    let mutable weightSum = 0.0
                                     let mutable sampleCount = 0
                                                                         
                                     if uniform.sampleCorners then
                                         for l in 0 .. clippedVc - 1 do
-                                             let (irr, weight) = sample t2w addr clippedVa.[l]
+                                             let irr = sample t2w addr clippedVa.[l]
                                              patchIllumination <- patchIllumination + irr
-                                             weightSum <- weightSum + weight
                                              sampleCount <- sampleCount + 1
 
                                     if uniform.sampleBarycenter then
-                                        let (irr, weight) = sample t2w addr barycenter
+                                        let irr = sample t2w addr barycenter
                                         patchIllumination <- patchIllumination + irr
-                                        weightSum <- weightSum + weight
                                         sampleCount <- sampleCount + 1
 
                                     if uniform.sampleNorm then 
-                                        let (irr, weight) = sample t2w addr normPlanePoint
+                                        let irr= sample t2w addr normPlanePoint
                                         patchIllumination <- patchIllumination + irr
-                                        weightSum <- weightSum + weight
                                         sampleCount <- sampleCount + 1
 
                                     if uniform.sampleMRP then
-                                        
-                                        let mrpDir = ((closestPoint |> Vec.normalize) + (barycenter |> Vec.normalize)) |> Vec.normalize
+                                        let mrpDir = ((closestPoint |> Vec.normalize) + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
                                         let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
-                                        let (irr, weight) = sample t2w addr mrp
+                                        let irr = sample t2w addr mrp
 
                                         patchIllumination <- patchIllumination + irr
-                                        weightSum <- weightSum + weight
                                         sampleCount <- sampleCount + 1
 
                                     if uniform.sampleClosest then 
-                                        let (irr, weight) = sample t2w addr closestPoint
+                                        let irr = sample t2w addr closestPoint
                                         patchIllumination <- patchIllumination + irr
-                                        weightSum <- weightSum + weight
                                         sampleCount <- sampleCount + 1
 
                                     if uniform.sampleRandom then
                                         for l in 0 .. Config.SS_LIGHT_SAMPLES_PER_LIGHT - 1 do
-                                            let (irr, weight) = sample t2w addr (w2t * (uniform.LSamplePoints.[l] - P))
-                                            patchIllumination <- patchIllumination + irr
-                                            weightSum <- weightSum + weight
-                                            sampleCount <- sampleCount + 1
+                                            let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
+
+                                            if samplePoint.Z >= eps then
+                                                let irr = sample t2w addr samplePoint
+                                                patchIllumination <- patchIllumination + irr
+                                                sampleCount <- sampleCount + 1
 
                                     illumination <- illumination + (1.0 / float(sampleCount)) * (v.c / PI) * patchIllumination
                                 ()
@@ -359,6 +370,6 @@ module EffectApStructuredSampling =
 
             return V4d(illumination.XYZ, v.c.W)
         }
-
+        
         
         
