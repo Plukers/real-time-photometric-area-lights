@@ -549,7 +549,7 @@
             sampleRandom     = true
             toneMap = true
             toneMapScale     = {
-                                    value   = 1.00
+                                    value   = 0.2
                                     min     = 1e-3
                                     max     = 10.0
                                     step    = 0.001

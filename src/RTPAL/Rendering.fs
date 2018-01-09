@@ -88,6 +88,7 @@ module Rendering =
         )
         |> Sg.dynamic
 
+    (*
     let private setupMipMaps (runtime : IRuntime) (fb : IOutputMod<ITexture>) =
 
         let mutable mipmapped : Option<IBackendTexture> = None
@@ -133,13 +134,14 @@ module Rendering =
             }
                 
         result :> IOutputMod<_>
+    *)
 
     let setupToneMapping (data : RenderData) fb = 
         Sg.fullscreenQuad data.viewportSize
             |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
             |> Sg.uniform "ToneMapScale" data.toneMapScale
             |> Sg.uniform "ActivateTM" data.toneMap
-            |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
+            |> Sg.texture (Sym.ofString "InputTex") fb
 
         
     let private fbToSg (viewportSize : IMod<V2i>) fb = 
