@@ -33,19 +33,20 @@ module Utils =
         open Aardvark.Base
         open Aardvark.UI.Static
 
-        let private genRandomUV count =
-            let rnd = System.Random()
+        let private genRandomUV (rnd : System.Random) count =
             List.init count (fun _ -> V2d(rnd.NextDouble (), rnd.NextDouble ()))
         
         (*
             Returns sample points for a given triangle of size Config.NUM_SS_LIGHT_SAMPLES
         *)
-        let private generateUVSequence (discard : V2d -> bool) (distance : V2d -> V2d -> float) = 
-                    
-            let mutable seed = (genRandomUV 1).[0]
+        let private generateUVSequence (discard : V2d -> bool) (distance : V2d -> V2d -> float) =
+
+            let rnd = System.Random(061815)
+                        
+            let mutable seed = (genRandomUV rnd 1).[0]
 
             while discard seed do
-                seed <- (genRandomUV 1).[0]
+                seed <- (genRandomUV rnd 1).[0]
 
             let mutable samplePoints = seed :: List.empty<V2d>
 
@@ -54,7 +55,7 @@ module Utils =
                 let mutable maxDistance = 0.0
                 let mutable nextSample = V2d.Zero
             
-                for sampleCandidate in genRandomUV (500 * samplePoints.Length) do
+                for sampleCandidate in genRandomUV rnd (500 * samplePoints.Length) do
 
                     if not (discard sampleCandidate) then 
 

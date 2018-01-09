@@ -430,6 +430,7 @@ module Rendering =
 
         let private setupSS_RenderTask (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect)= 
 
+            (*
             let pointSg color trafo = 
                  IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 0.01)) 6 color
                 |> Sg.ofIndexedGeometry
@@ -453,7 +454,7 @@ module Rendering =
                 let sampleSg = pointSg C4b.Red (getTrafo i)
 
                 sceneSg <- Sg.group' [sceneSg; sampleSg]
-
+            *)
             
             sceneSg
                 |> setupFbEffects [ 

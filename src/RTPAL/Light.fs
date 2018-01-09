@@ -338,7 +338,7 @@ module Light =
                                                 DefaultSurfaces.trafo |> toEffect
                                                 DefaultSurfaces.vertexColor |> toEffect
                                             ]
-
+                        (*
                         let lightCoordSysSg = 
                             [
                                 yield IndexedGeometryPrimitives.wireframeCone
@@ -357,9 +357,9 @@ module Light =
                                     DefaultSurfaces.trafo |> toEffect
                                     DefaultSurfaces.vertexColor |> toEffect
                                 ]
-                        
+                        *)
 
-                        yield [lightSg; lightCoordSysSg] |> Sg.group'
+                        yield [lightSg(*; lightCoordSysSg*)] |> Sg.group'
             ]
             
             Sg.group (sg :: lightSgList) :> ISg

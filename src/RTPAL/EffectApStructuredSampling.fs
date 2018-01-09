@@ -29,12 +29,12 @@ module EffectApStructuredSampling =
 
         let i = p |> Vec.normalize  
  
-        let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
+        let dotOut = max 1e-9 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
 
 
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
 
-        let weight = i.Z / Vec.lengthSquared p // added i.Z for a better weight
+        let weight = 1.0 / (max (Vec.lengthSquared p) 1e-9) // add i.Z for a better weight
 
         let sampledIrr = weight * irr
 
@@ -222,7 +222,7 @@ module EffectApStructuredSampling =
         let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
 
-        let weight = (* uniform.LAreas.[addr] * dotOut *) 1.0 / Vec.lengthSquared p 
+        let weight = (* uniform.LAreas.[addr] * dotOut *) 1.0 / (max (Vec.lengthSquared p) 1e-9)
 
         weight * irr * i.Z
 
@@ -362,7 +362,8 @@ module EffectApStructuredSampling =
                                                 patchIllumination <- patchIllumination + irr
                                                 sampleCount <- sampleCount + 1
 
-                                    illumination <- illumination + (1.0 / float(sampleCount)) * (v.c / PI) * patchIllumination
+                                    if sampleCount > 0 then
+                                        illumination <- illumination + (1.0 / float(sampleCount)) * (v.c / PI) * patchIllumination
                                 ()
                                                                 
                             ////////////////////////////////////////////////////////
