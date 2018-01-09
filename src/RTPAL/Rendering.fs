@@ -135,14 +135,6 @@ module Rendering =
                 
         result :> IOutputMod<_>
     *)
-
-    let setupToneMapping (data : RenderData) fb = 
-        Sg.fullscreenQuad data.viewportSize
-            |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-            |> Sg.uniform "ToneMapScale" data.toneMapScale
-            |> Sg.uniform "ActivateTM" data.toneMap
-            |> Sg.texture (Sym.ofString "InputTex") fb
-
         
     let private fbToSg (viewportSize : IMod<V2i>) fb = 
         Sg.fullscreenQuad viewportSize
@@ -154,6 +146,18 @@ module Rendering =
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
             DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
+
+
+    let applyTonemappingOnFb (data : RenderData) fb = 
+        let task =
+            Sg.fullscreenQuad data.viewportSize
+                |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
+                |> Sg.uniform "ToneMapScale" data.toneMapScale
+                |> Sg.uniform "ActivateTM" data.toneMap
+                |> Sg.texture (Sym.ofString "InputTex") fb
+                |> Sg.compile data.runtime (signature data.runtime)
+
+        task |> RenderTask.renderToColor data.viewportSize     
      
     module GroundTruth = 
 
@@ -234,12 +238,6 @@ module Rendering =
         let groundTruthFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
             basicRenderTask data gtData sceneSg
             |> renderToColorWithoutClear data.viewportSize
-     
-        let groundTruthSgAndFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
-            let fb = groundTruthFb data gtData sceneSg
-            
-            (fb |> setupToneMapping data, fb)
-            // ((fb |> fbToSg data.viewportSize), fb)
             
 
         let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
@@ -315,8 +313,7 @@ module Rendering =
                 )
 
             update
-        
-
+             
     module CenterPointApprox =
 
         let centerPointApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
@@ -333,12 +330,6 @@ module Rendering =
         let centerPointApproxFb (data : RenderData) (sceneSg : ISg) = 
             centerPointApproxRenderTask data sceneSg
             |> RenderTask.renderToColor data.viewportSize
-
-        let centerPointApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
-            let fb = centerPointApproxFb data sceneSg 
-                        
-            (fb |> setupToneMapping data, fb)
-            // ((fb |> fbToSg data.viewportSize), fb)
             
 
     module MRPApprox =
@@ -370,12 +361,6 @@ module Rendering =
         let mrpApproxFb (data : RenderData) (mrpData : MRPData) (sceneSg : ISg) = 
             mrpApproxRenderTask data mrpData sceneSg
             |> RenderTask.renderToColor data.viewportSize
-
-        let mrpApproxSgAndFb (data : RenderData) (mrpData : MRPData) (sceneSg : ISg) = 
-            let fb = mrpApproxFb data mrpData sceneSg 
-                        
-            (fb |> setupToneMapping data, fb)
-            // ((fb |> fbToSg data.viewportSize), fb)
                       
 
     module BaumFFApprox =
@@ -394,12 +379,6 @@ module Rendering =
         let baumFFApproxFb (data : RenderData) (sceneSg : ISg) = 
             baumFFApproxRenderTask data sceneSg
             |> RenderTask.renderToColor data.viewportSize
-
-        let baumFFApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
-            let fb = baumFFApproxFb data sceneSg 
-            
-            (fb |> setupToneMapping data, fb)
-            // ((fb |> fbToSg data.viewportSize), fb)
 
     module StructuredSamplingApprox =
 
@@ -469,21 +448,13 @@ module Rendering =
         let private setupSS_Fb (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect) = 
             setupSS_RenderTask data ssData sceneSg ssEffect
             |> RenderTask.renderToColor data.viewportSize 
-
-
-
-        let private setupSS_SgAndFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect) = 
-            let fb = setupSS_Fb data ssData sceneSg ssEffect
             
-            (fb |> setupToneMapping data, fb)
-            //((fb |> fbToSg data.viewportSize), fb)
+            
+        let ssApproxFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
+            EffectApStructuredSampling.structuredSampling |> toEffect |> setupSS_Fb data ssData sceneSg 
 
-        
-        let ssApproxSgAndFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
-            EffectApStructuredSampling.structuredSampling |> toEffect |> setupSS_SgAndFb data ssData sceneSg 
-
-        let ssBaumApproxSgAndFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
-            EffectApStructuredSampling.structuredSamplingBaum |> toEffect |> setupSS_SgAndFb data ssData sceneSg
+        let ssBaumApproxFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
+            EffectApStructuredSampling.structuredSamplingBaum |> toEffect |> setupSS_Fb data ssData sceneSg
             
     module Compare = 
         
@@ -612,13 +583,13 @@ module Rendering =
                 // |> Sg.scale 18.0
                 |> Sg.scale 200.0
 
-            let (groundTruthSg, groundTruthFb)              = groundTruthSgAndFb data gtData sceneSg
-            let (centerPointApproxSg, centerPointApproxFb)  = centerPointApproxSgAndFb data sceneSg
-            let (mrpApproxSg, mrpApproxFb)                  = mrpApproxSgAndFb data mrpData sceneSg 
-            let (baumFFApproxSg, baumFFApproxFb)            = baumFFApproxSgAndFb data sceneSg
-            let (ssBaumApproxSg, ssBaumApproxFb)            = ssBaumApproxSgAndFb data ssData sceneSg
-            let (ssApproxSg, ssApproxFb)                    = ssApproxSgAndFb data ssData sceneSg
-
+            let groundTruthFb       = groundTruthFb data gtData sceneSg    |> applyTonemappingOnFb data
+            let centerPointApproxFb = centerPointApproxFb data sceneSg     |> applyTonemappingOnFb data
+            let mrpApproxFb         = mrpApproxFb data mrpData sceneSg     |> applyTonemappingOnFb data
+            let baumFFApproxFb      = baumFFApproxFb data sceneSg          |> applyTonemappingOnFb data
+            let ssBaumApproxFb      = ssBaumApproxFb data ssData sceneSg   |> applyTonemappingOnFb data
+            let ssApproxFb          = ssApproxFb data ssData sceneSg       |> applyTonemappingOnFb data
+                  
             let effectFbs = 
                 Map.empty
                 |> Map.add RenderMode.GroundTruth           groundTruthFb
@@ -633,12 +604,12 @@ module Rendering =
             let signature = signature data.runtime
             let tasks = 
                 Map.empty
-                |> Map.add RenderMode.GroundTruth           (groundTruthSg         |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.CenterPointApprox     (centerPointApproxSg   |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.MRPApprox             (mrpApproxSg           |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.BaumFFApprox          (baumFFApproxSg        |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.StructuredIrrSampling (ssBaumApproxSg        |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.StructuredSampling    (ssApproxSg            |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.GroundTruth           (groundTruthFb       |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.CenterPointApprox     (centerPointApproxFb |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.MRPApprox             (mrpApproxFb         |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.BaumFFApprox          (baumFFApproxFb      |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.StructuredIrrSampling (ssBaumApproxFb      |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.StructuredSampling    (ssApproxFb          |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
 
                 |> Map.add RenderMode.Compare (compareSg data gtData sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
                 
