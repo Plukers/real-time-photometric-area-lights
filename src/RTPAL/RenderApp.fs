@@ -153,6 +153,9 @@
             | TOGGLE_SAMPLE_MRP -> { s with sampleMRP = (not s.sampleMRP) }
             | TOGGLE_SAMPLE_RND -> { s with sampleRandom = (not s.sampleRandom) }
 
+            | TOGGLE_TONEMAPPING -> { s with toneMap = (not s.toneMap) }
+            | CHANGE_TONEMAP_SCALE tms -> { s with toneMapScale = Numeric.update s.toneMapScale tms}
+
     let openFileDialog (form : System.Windows.Forms.Form) =
         let mutable final = ""
 
@@ -353,7 +356,16 @@
                                                                     i [ clazz "chevron up icon"][]
                                                                 ]
                                                     | Rotate -> ()
-                                                })                                            
+                                                })  
+
+                                            div [ clazz "ui divider"] []
+
+                                            toggleBox m.toneMap TOGGLE_TONEMAPPING    
+                                            text "Tonemapping"
+                                            br[]                                                
+                                            div [clazz "ui input"] [ Numeric.view' [InputBox] m.toneMapScale |> UI.map CHANGE_TONEMAP_SCALE ]
+                                            br[]
+                                              
                                         ]
                                     ]  
                                     div [ clazz "column" ] [ 
@@ -535,6 +547,14 @@
             sampleNorm       = false
             sampleMRP        = false
             sampleRandom     = true
+            toneMap = true
+            toneMapScale     = {
+                                    value   = 1.00
+                                    min     = 1e-3
+                                    max     = 10.0
+                                    step    = 0.001
+                                    format  = "{0:F3}"
+                                }
         }
        
 

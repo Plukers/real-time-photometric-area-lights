@@ -30,6 +30,9 @@ module Rendering =
         compare         : IMod<RenderMode>
         lights          : LightCollection
         photometricData : IMod<Option<IntensityProfileSampler>>
+
+        toneMap : IMod<bool>
+        toneMapScale : IMod<float>
         }
 
     type RenderFeedback = {
@@ -58,6 +61,8 @@ module Rendering =
                                 DefaultSurfaces.trafo |> toEffect
                                 DefaultSurfaces.diffuseTexture |> toEffect
                             ] effects)
+
+
 
     let private setupLights (lights : LightCollection) (sg : ISg) =
         sg
@@ -128,6 +133,13 @@ module Rendering =
             }
                 
         result :> IOutputMod<_>
+
+    let setupToneMapping (data : RenderData) fb = 
+        Sg.fullscreenQuad data.viewportSize
+            |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
+            |> Sg.uniform "ToneMapScale" data.toneMapScale
+            |> Sg.uniform "ActivateTM" data.toneMap
+            |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
 
         
     let private fbToSg (viewportSize : IMod<V2i>) fb = 
@@ -223,14 +235,9 @@ module Rendering =
      
         let groundTruthSgAndFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
             let fb = groundTruthFb data gtData sceneSg
-           
-            let sg = Sg.fullscreenQuad data.viewportSize
-                    |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-                    |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-                    |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
             
-            //(sg, fb)
-            ((fb |> fbToSg data.viewportSize), fb)
+            (fb |> setupToneMapping data, fb)
+            // ((fb |> fbToSg data.viewportSize), fb)
             
 
         let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
@@ -327,14 +334,9 @@ module Rendering =
 
         let centerPointApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
             let fb = centerPointApproxFb data sceneSg 
-            
-            let sg = Sg.fullscreenQuad data.viewportSize
-                        |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-                        |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-                        |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            //(sg, fb)
-            ((fb |> fbToSg data.viewportSize), fb)
+            (fb |> setupToneMapping data, fb)
+            // ((fb |> fbToSg data.viewportSize), fb)
             
 
     module MRPApprox =
@@ -369,14 +371,9 @@ module Rendering =
 
         let mrpApproxSgAndFb (data : RenderData) (mrpData : MRPData) (sceneSg : ISg) = 
             let fb = mrpApproxFb data mrpData sceneSg 
-            
-            let sg = Sg.fullscreenQuad data.viewportSize
-                        |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-                        |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-                        |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
                         
-            //(sg, fb)
-            ((fb |> fbToSg data.viewportSize), fb)
+            (fb |> setupToneMapping data, fb)
+            // ((fb |> fbToSg data.viewportSize), fb)
                       
 
     module BaumFFApprox =
@@ -399,13 +396,8 @@ module Rendering =
         let baumFFApproxSgAndFb (data : RenderData) (sceneSg : ISg) = 
             let fb = baumFFApproxFb data sceneSg 
             
-            let sg = Sg.fullscreenQuad data.viewportSize
-                    |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-                    |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-                    |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
-            
-            //(sg, fb)
-            ((fb |> fbToSg data.viewportSize), fb)
+            (fb |> setupToneMapping data, fb)
+            // ((fb |> fbToSg data.viewportSize), fb)
 
     module StructuredSamplingApprox =
 
@@ -430,7 +422,7 @@ module Rendering =
 
         let private setupSS_RenderTask (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect)= 
 
-            (*
+            
             let pointSg color trafo = 
                  IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 0.01)) 6 color
                 |> Sg.ofIndexedGeometry
@@ -454,7 +446,7 @@ module Rendering =
                 let sampleSg = pointSg C4b.Red (getTrafo i)
 
                 sceneSg <- Sg.group' [sceneSg; sampleSg]
-            *)
+            
             
             sceneSg
                 |> setupFbEffects [ 
@@ -476,16 +468,13 @@ module Rendering =
             setupSS_RenderTask data ssData sceneSg ssEffect
             |> RenderTask.renderToColor data.viewportSize 
 
+
+
         let private setupSS_SgAndFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect) = 
             let fb = setupSS_Fb data ssData sceneSg ssEffect
             
-            let sg = Sg.fullscreenQuad data.viewportSize
-                        |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-                        |> Sg.uniform "ToneMapScale" (1.0 |> Mod.init)
-                        |> Sg.texture (Sym.ofString "InputTex") (fb |> setupMipMaps data.runtime)
-                        
-            // (sg, fb)
-            ((fb |> fbToSg data.viewportSize), fb)
+            (fb |> setupToneMapping data, fb)
+            //((fb |> fbToSg data.viewportSize), fb)
 
         
         let ssApproxSgAndFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
@@ -576,7 +565,7 @@ module Rendering =
         open Compare
 
         let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (viewportSize : V2i) (m : MRenderState) =
-             {
+            {
                 runtime = app.Runtime
                 scenePath = m.scenePath
                 view = view
@@ -586,6 +575,8 @@ module Rendering =
                 photometricData = m.photometryData
                 mode = m.renderMode
                 compare = m.compare
+                toneMap = m.toneMap
+                toneMapScale = m.toneMapScale.value
             }
 
         let fpsUpdate (feedback : RenderFeedback) =

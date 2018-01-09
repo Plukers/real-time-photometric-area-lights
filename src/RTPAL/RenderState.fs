@@ -8,6 +8,7 @@ open Aardvark.Application
 open Utils
 open Light
 open Aardvark.Data.Photometry
+open EffectToneMapping
 
 type RenderMode =
     | GroundTruth = 0
@@ -45,6 +46,9 @@ type Action =
     | TOGGLE_SAMPLE_MRP
     | TOGGLE_SAMPLE_RND
 
+    | TOGGLE_TONEMAPPING
+    | CHANGE_TONEMAP_SCALE of Numeric.Action
+
 [<DomainType>]
 type RenderState =
     {    
@@ -61,6 +65,9 @@ type RenderState =
         sampleNorm         : bool
         sampleMRP          : bool
         sampleRandom       : bool
+
+        toneMap            : bool
+        toneMapScale       : NumericInput
         
         compare            : RenderMode        
         error              : double

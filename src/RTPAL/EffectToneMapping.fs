@@ -8,8 +8,9 @@ module EffectToneMapping =
     open FShade
 
     type UniformScope with
-        member uniform.InputTex : ShaderTextureHandle = uniform?InputTex
-        member unfirom.ToneMapScale : float = uniform?ToneMapScale
+        member uniform.InputTex      : ShaderTextureHandle = uniform?InputTex
+        member uniform.ActivateTM    : bool                = uniform?ActivateTM
+        member uniform.ToneMapScale  : float               = uniform?ToneMapScale
 
     let private InputTex =
         sampler2d {
@@ -29,15 +30,23 @@ module EffectToneMapping =
 
     let toneMap (v : ToneMapVertex) = 
         fragment {   
+            
             let tc = V2i(V2d(InputTex.Size) * v.tc)
-
             let L  = InputTex.Item (V2i(V2d(InputTex.Size) * v.tc))
+
+            if uniform.ActivateTM then
+
+                let L  = InputTex.Item (V2i(V2d(InputTex.Size) * v.tc))
             
-            let Lavg = InputTex.Read(V2i(0, 0), mipLevels InputTex - 1)
+                let Lavg = InputTex.Read(V2i(0, 0), mipLevels InputTex - 1)
                         
-            let Lscaled = uniform.ToneMapScale * L / Lavg
+                let Lscaled = uniform.ToneMapScale * L / Lavg
             
-            return Lscaled / (1.0 + Lscaled)
+                return Lscaled / (1.0 + Lscaled)
+
+            else
+
+                return L
             
         }
 
