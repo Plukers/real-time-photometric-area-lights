@@ -89,6 +89,8 @@
   -->
   <ItemGroup>
     <Compile Include="ConfigGenerator.fsx" />
+    <None Include="GenerateBlueNoise.fsx" />
+    <Compile Include="BlueNoiseSamples.fs" />
     <Compile Include="Config.fs" />
     <Compile Include="PhotometricLight.fs" />
     <Compile Include="EffectUtils.fs" />

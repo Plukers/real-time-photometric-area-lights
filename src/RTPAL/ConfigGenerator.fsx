@@ -48,7 +48,7 @@ let config =
     let (NUM_SAMPLES, c) = c |> newEntry "NUM_SAMPLES" 8
 
 
-    let (SS_LIGHT_SAMPLES_PER_LIGHT, c) = c |> newEntry "SS_LIGHT_SAMPLES_PER_LIGHT" 32
+    let (SS_LIGHT_SAMPLES_PER_LIGHT, c) = c |> newEntry "SS_LIGHT_SAMPLES_PER_LIGHT" 256
 
     let (SS_LIGHT_SAMPLES_ALL_LIGHT, c) = c |> newEntry "SS_LIGHT_SAMPLES_ALL_LIGHT" (NUM_LIGHTS * SS_LIGHT_SAMPLES_PER_LIGHT)
     
@@ -70,7 +70,7 @@ config |> Map.iter (fun entry value ->
     let entrystring = 
         String.Format("""
     [<Literal>]
-    let {0} = {1}
+    let {0:f} = {1:f}
                       """, entry, value)
 
     configStr <- String.concat "" [ configStr; entrystring ] 

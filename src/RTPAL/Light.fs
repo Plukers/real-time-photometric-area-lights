@@ -152,7 +152,9 @@ module Light =
                     lc.BaseComponents.Value.[addr] <- LIGHT_BASE_TYPE_TRIANGLE
                     addPatchIndices lc addr [| 0; 1; 2 |]
 
-                    addSamplePoints lc addr (generatePointSequenceForTriangle vertices.[0] vertices.[1] vertices.[2] |> List.toArray)
+                    let (samplePoints, abstractSamplePoints) = Triangle.generateNewPointSequence vertices.[0] vertices.[1] vertices.[2] Config.SS_LIGHT_SAMPLES_ALL_LIGHT
+
+                    addSamplePoints lc addr (samplePoints |> List.toArray)
 
                     let vAddr = addr * Config.VERT_PER_LIGHT
                     let iAddr = addr * Config.MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT
@@ -197,7 +199,9 @@ module Light =
                     lc.BaseComponents.Value.[addr] <- LIGHT_BASE_TYPE_SQUARE
                     addPatchIndices lc addr [| 0; 1; 2; 3 |]
 
-                    addSamplePoints lc addr (computePointSequenceForRectangle (vertices.[1] - vertices.[0]) (vertices.[3] - vertices.[0]) (vertices.[0]) |> List.toArray)
+                    let (samplePoints, abstractSamplePoints) = Rectangle.generateNewPointSequence (vertices.[1] - vertices.[0]) (vertices.[3] - vertices.[0]) (vertices.[0]) Config.SS_LIGHT_SAMPLES_ALL_LIGHT
+
+                    addSamplePoints lc addr (samplePoints |> List.toArray)
 
                     let vAddr = addr * Config.VERT_PER_LIGHT
                     let iAddr = addr * Config.MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT

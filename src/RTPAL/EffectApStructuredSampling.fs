@@ -179,7 +179,7 @@ module EffectApStructuredSampling =
                                         sampleCount <- sampleCount + 1
 
                                     if uniform.sampleRandom then
-                                        for l in 0 .. Config.SS_LIGHT_SAMPLES_PER_LIGHT - 1 do
+                                        for l in 0 .. 127 do
                                             let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
 
                                             if samplePoint.Z >= eps then
@@ -354,7 +354,7 @@ module EffectApStructuredSampling =
                                         sampleCount <- sampleCount + 1
 
                                     if uniform.sampleRandom then
-                                        for l in 0 .. Config.SS_LIGHT_SAMPLES_PER_LIGHT - 1 do
+                                        for l in 0 .. 127 do
                                             let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
 
                                             if samplePoint.Z >= eps then
