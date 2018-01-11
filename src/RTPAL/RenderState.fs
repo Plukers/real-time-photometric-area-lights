@@ -45,7 +45,9 @@ type Action =
     | TOGGLE_SAMPLE_NORM
     | TOGGLE_SAMPLE_MRP
     | TOGGLE_SAMPLE_RND
-    | CHANGE_SS_SAMPLE_NUM of Numeric.Action
+    | CHANGE_SRS_SAMPLE_NUM of Numeric.Action
+    | CHANGE_SRS_WEIGHT_SCALE of Numeric.Action
+    | CHANGE_SRS_WEIGHT_SCALE_DIST of Numeric.Action
 
     | TOGGLE_TONEMAPPING
     | CHANGE_TONEMAP_SCALE of Numeric.Action
@@ -67,6 +69,8 @@ type RenderState =
         sampleMRP          : bool
         sampleRandom       : bool
         numOfSRSamples     : NumericInput
+        SRSWeightScale     : NumericInput
+        SRSWeightScaleDist : NumericInput
 
         toneMap            : bool
         toneMapScale       : NumericInput

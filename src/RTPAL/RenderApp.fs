@@ -152,7 +152,9 @@
             | TOGGLE_SAMPLE_NORM -> { s with sampleNorm = (not s.sampleNorm) }
             | TOGGLE_SAMPLE_MRP -> { s with sampleMRP = (not s.sampleMRP) }
             | TOGGLE_SAMPLE_RND -> { s with sampleRandom = (not s.sampleRandom) }
-            | CHANGE_SS_SAMPLE_NUM nss -> { s with numOfSRSamples = Numeric.update s.numOfSRSamples nss}
+            | CHANGE_SRS_SAMPLE_NUM nss -> { s with numOfSRSamples = Numeric.update s.numOfSRSamples nss}
+            | CHANGE_SRS_WEIGHT_SCALE srss -> { s with SRSWeightScale = Numeric.update s.SRSWeightScale srss }
+            | CHANGE_SRS_WEIGHT_SCALE_DIST srsd -> { s with SRSWeightScaleDist = Numeric.update s.SRSWeightScaleDist srsd }
 
             | TOGGLE_TONEMAPPING -> { s with toneMap = (not s.toneMap) }
             | CHANGE_TONEMAP_SCALE tms -> { s with toneMapScale = Numeric.update s.toneMapScale tms}
@@ -469,9 +471,18 @@
                                                         let! sampleRandom = m.sampleRandom
 
                                                         if sampleRandom then
-                                                            yield p [] [     
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.numOfSRSamples |> UI.map CHANGE_SS_SAMPLE_NUM ]
-                                                                yield br[]  
+                                                            yield p [] [   
+                                                                yield text "Samples"
+                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.numOfSRSamples |> UI.map CHANGE_SRS_SAMPLE_NUM ]
+                                                                yield br[] 
+
+                                                                yield text "Scale factor"
+                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScale |> UI.map CHANGE_SRS_WEIGHT_SCALE ]
+                                                                yield br[] 
+
+                                                                yield text "Max scaling dist"
+                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScaleDist |> UI.map CHANGE_SRS_WEIGHT_SCALE_DIST ]
+                                                                yield br[] 
                                                             ]
                                                         
                                                 }
@@ -557,10 +568,24 @@
             sampleNorm       = false
             sampleMRP        = false
             sampleRandom     = true
+            SRSWeightScale = {
+                                value   = 1.0
+                                min     = 1e-5
+                                max     = 2.0
+                                step    = 1e-3
+                                format  = "{0:F3}"
+                             }
+            SRSWeightScaleDist = {
+                                    value   = 1.0
+                                    min     = 1e-3
+                                    max     = 10.0
+                                    step    = 0.5
+                                    format  = "{0:F3}"
+                                 }
             numOfSRSamples   = {
                                     value   = 128.0
                                     min     = 0.0
-                                    max     = (float)Config.SS_LIGHT_SAMPLES_ALL_LIGHT
+                                    max     = (float) Config.SS_LIGHT_SAMPLES_ALL_LIGHT
                                     step    = 1.0
                                     format  = "{0:0}"
                                 }

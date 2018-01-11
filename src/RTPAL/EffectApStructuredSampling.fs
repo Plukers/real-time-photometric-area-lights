@@ -10,13 +10,15 @@ module EffectApStructuredSampling =
     open PhotometricLight
 
     type UniformScope with
-        member uniform.sampleCorners   : bool = uniform?sampleCorners     
-        member uniform.sampleBarycenter: bool = uniform?sampleBarycenter  
-        member uniform.sampleClosest   : bool = uniform?sampleClosest     
-        member uniform.sampleNorm      : bool = uniform?sampleNorm 
-        member uniform.sampleMRP       : bool = uniform?sampleMRP 
-        member uniform.sampleRandom    : bool = uniform?sampleRandom
-        member uniform.numSRSamples    : int  = uniform?numSRSamples
+        member uniform.sampleCorners        : bool  = uniform?sampleCorners     
+        member uniform.sampleBarycenter     : bool  = uniform?sampleBarycenter  
+        member uniform.sampleClosest        : bool  = uniform?sampleClosest     
+        member uniform.sampleNorm           : bool  = uniform?sampleNorm 
+        member uniform.sampleMRP            : bool  = uniform?sampleMRP 
+        member uniform.sampleRandom         : bool  = uniform?sampleRandom
+        member uniform.numSRSamples         : int   = uniform?numSRSamples
+        member uniform.weightScaleSRSamples : float = uniform?weightScaleSRSamples
+        member uniform.scaleSRSampleDist    : float = uniform?scaleSRSampleDist
     
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
@@ -30,11 +32,10 @@ module EffectApStructuredSampling =
         let i = p |> Vec.normalize  
  
         let dotOut = max 1e-9 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
-
-
+        
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
 
-        let weight = i.Z / (max 1e-9 (Vec.lengthSquared p)) // add i.Z for a better weight
+        let weight = (i.Z / (max 1e-9 (Vec.lengthSquared p))) // add i.Z for a better weight
 
         let sampledIrr = weight * irr
 
@@ -203,7 +204,10 @@ module EffectApStructuredSampling =
 
                                         let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
-                                        illumination <- illumination + L * brdf * I // * i.Z  
+                                        let clampedDist = (clamp 0.0 uniform.scaleSRSampleDist (Vec.length closestPoint)) / uniform.scaleSRSampleDist
+                                        let scale = clampedDist * 1.0 + (1.0 - clampedDist) * uniform.weightScaleSRSamples
+
+                                        illumination <- illumination + L * brdf * I * scale // * i.Z  
                                     
                                 ()
                                                                 
@@ -364,7 +368,11 @@ module EffectApStructuredSampling =
                                                 sampleCount <- sampleCount + 1
 
                                     if sampleCount > 0 then
-                                        illumination <- illumination + (1.0 / float(sampleCount)) * (v.c / PI) * patchIllumination
+
+                                        let clampedDist = (clamp 0.0 uniform.scaleSRSampleDist (Vec.length closestPoint)) / uniform.scaleSRSampleDist
+                                        let scale = clampedDist * 1.0 + (1.0 - clampedDist) * uniform.weightScaleSRSamples
+                                           
+                                        illumination <- illumination + (1.0 / float(sampleCount)) * (v.c / PI) * patchIllumination * scale  
                                 ()
                                                                 
                             ////////////////////////////////////////////////////////

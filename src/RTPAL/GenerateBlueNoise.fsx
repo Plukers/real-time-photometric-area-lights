@@ -17,6 +17,8 @@ let private genRandomUV (rnd : System.Random) count =
 (*
     Returns sample points for a given triangle of size Config.NUM_SS_LIGHT_SAMPLES
 *)
+(*
+TODO add average distance
 let private generateUVSequenceBestCandidate (discard : V2d -> bool) (distance : V2d -> V2d -> float) num (samplePoints : List<V2d>) =
 
     let rnd = System.Random(061815)
@@ -56,7 +58,7 @@ let private generateUVSequenceBestCandidate (discard : V2d -> bool) (distance : 
     printfn "Finished generating sample soints. New num of sample points: %A" (samplePoints.Length)
 
     samplePoints
-
+*)
 
 (*
     Returns sample points
@@ -108,7 +110,7 @@ let private generateUVSequenceRelaxDartThrowing (discard : V2d -> bool) (distanc
                     
     printfn "Finished generating sample points. New num of sample points: %A" (samplePoints.Length)
 
-    samplePoints
+    (samplePoints, radius)
 
 
 module Triangle = 
@@ -179,9 +181,9 @@ module Triangle =
 
                 seed :: List.empty<V2d>
                 
-        let uvSamplePoints = samplePoints |> generateUVSequenceRelaxDartThrowing discard distance num 
+        let (uvSamplePoints, avgDist) = samplePoints |> generateUVSequenceRelaxDartThrowing discard distance num 
 
-        uvSamplePoints |> List.map (fun uv -> uvtw uv)
+        (uvSamplePoints |> List.map (fun uv -> uvtw uv), avgDist)
 
     (*
         Returns the sample points for the triangle and the abstract sample points which can later be used to continue the sequence
@@ -222,9 +224,9 @@ module Rectangle =
 
                 seed :: List.empty<V2d>
                 
-        let uvSamplePoints = samplePoints |> generateUVSequenceRelaxDartThrowing discard distance num 
+        let (uvSamplePoints, avgDist) = samplePoints |> generateUVSequenceRelaxDartThrowing discard distance num 
 
-        uvSamplePoints |> List.map (fun uv -> uvtw uv)
+        (uvSamplePoints |> List.map (fun uv -> uvtw uv), avgDist)
 
     (*
         Rectangle is given by its sides a and b, which have a corner point in common and are orthonormal
@@ -264,7 +266,7 @@ let tri_title =
 
 sampleStr <- String.concat "" [ sampleStr; tri_title ] 
 
-let tri_samples = Triangle.generateNewPointSequence tri_vertices.[0] tri_vertices.[1] tri_vertices.[2] numOfSamples 
+let (tri_samples, tri_avg_dist) = Triangle.generateNewPointSequence tri_vertices.[0] tri_vertices.[1] tri_vertices.[2] numOfSamples 
 
 for s in tri_samples |> List.rev do
     let sampleString = 
@@ -299,7 +301,7 @@ let sqr_title =
 
 sampleStr <- String.concat "" [ sampleStr; sqr_title ] 
 
-let sqr_samples = Rectangle.generateNewPointSequence (sqr_vertices.[1] - sqr_vertices.[0]) (sqr_vertices.[3] - sqr_vertices.[0]) (sqr_vertices.[0]) numOfSamples 
+let (sqr_samples, sqr_avg_dist) = Rectangle.generateNewPointSequence (sqr_vertices.[1] - sqr_vertices.[0]) (sqr_vertices.[3] - sqr_vertices.[0]) (sqr_vertices.[0]) numOfSamples 
 
 for s in sqr_samples |> List.rev do
     let sampleString = 

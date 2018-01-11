@@ -383,24 +383,28 @@ module Rendering =
     module StructuredSamplingApprox =
 
         type SSData = {
-            sampleCorners    : IMod<bool>
-            sampleBarycenter : IMod<bool>
-            sampleClosest    : IMod<bool>
-            sampleNorm       : IMod<bool>
-            sampleMRP        : IMod<bool>
-            sampleRandom     : IMod<bool>
-            numSRSamples     : IMod<int>
+            sampleCorners        : IMod<bool>
+            sampleBarycenter     : IMod<bool>
+            sampleClosest        : IMod<bool>
+            sampleNorm           : IMod<bool>
+            sampleMRP            : IMod<bool>
+            sampleRandom         : IMod<bool>
+            numSRSamples         : IMod<int>
+            SRSWeightScale       : IMod<float>
+            SRSscaleSRSampleDist : IMod<float>
         }
 
         let initSSData (m : MRenderState) = 
             {
-                sampleCorners       = m.sampleCorners
-                sampleBarycenter    = m.sampleBarycenter
-                sampleClosest       = m.sampleClosest
-                sampleNorm          = m.sampleNorm
-                sampleMRP           = m.sampleMRP
-                sampleRandom        = m.sampleRandom
-                numSRSamples        = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
+                sampleCorners        = m.sampleCorners
+                sampleBarycenter     = m.sampleBarycenter
+                sampleClosest        = m.sampleClosest
+                sampleNorm           = m.sampleNorm
+                sampleMRP            = m.sampleMRP
+                sampleRandom         = m.sampleRandom
+                numSRSamples         = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
+                SRSWeightScale       = m.SRSWeightScale.value
+                SRSscaleSRSampleDist = m.SRSWeightScaleDist.value
             }
 
         let private setupSS_RenderTask (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect)= 
@@ -439,13 +443,15 @@ module Rendering =
                 |> setupLights data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.frustum data.viewportSize
-                |> Sg.uniform "sampleCorners"    ssData.sampleCorners
-                |> Sg.uniform "sampleBarycenter" ssData.sampleBarycenter
-                |> Sg.uniform "sampleClosest"    ssData.sampleClosest
-                |> Sg.uniform "sampleNorm"       ssData.sampleNorm
-                |> Sg.uniform "sampleMRP"        ssData.sampleMRP
-                |> Sg.uniform "sampleRandom"     ssData.sampleRandom
-                |> Sg.uniform "numSRSamples"     ssData.numSRSamples
+                |> Sg.uniform "sampleCorners"        ssData.sampleCorners
+                |> Sg.uniform "sampleBarycenter"     ssData.sampleBarycenter
+                |> Sg.uniform "sampleClosest"        ssData.sampleClosest
+                |> Sg.uniform "sampleNorm"           ssData.sampleNorm
+                |> Sg.uniform "sampleMRP"            ssData.sampleMRP
+                |> Sg.uniform "sampleRandom"         ssData.sampleRandom
+                |> Sg.uniform "numSRSamples"         ssData.numSRSamples
+                |> Sg.uniform "weightScaleSRSamples" ssData.SRSWeightScale
+                |> Sg.uniform "scaleSRSampleDist"    ssData.SRSscaleSRSampleDist
                 |> Sg.compile data.runtime (signature data.runtime)
 
         let private setupSS_Fb (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect) = 
