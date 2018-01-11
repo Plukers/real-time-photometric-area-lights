@@ -103,9 +103,7 @@ module Utils =
             while genCount <> num - 1 do
 
                 if failedCount = maxFailedCount then
-                    printfn "Failed or radius %A" radius
                     radius <- radius * scaleFactor
-                    printfn "New radius: %A" radius
                     failedCount <- 0
 
                 let sampleCandiate = getOneRandomUV rnd
@@ -182,9 +180,9 @@ module Utils =
 
                     V3d.Distance(a, b)
 
-                let (samplePoints, num) = 
+                let samplePoints = 
                     match samplePoints with 
-                    | Some sps -> (sps, num)
+                    | Some sps -> sps
                     | None ->
                         let rnd = System.Random(061815)
                         let mutable seed = (genRandomUV rnd 1).[0]
@@ -192,7 +190,7 @@ module Utils =
                         while discard seed do
                             seed <- (genRandomUV rnd 1).[0]
 
-                        (seed :: List.empty<V2d>, num - 1)
+                        seed :: List.empty<V2d>
                 
                 let uvSamplePoints = samplePoints |> generateUVSequenceRelaxDartThrowing discard distance num 
 

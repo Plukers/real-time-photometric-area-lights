@@ -466,7 +466,7 @@ module EffectUtils =
 
     [<ReflectedDefinition>] 
     let private integrateSegment(a: V3d, b: V3d) =              
-        let theta = acos ( clamp -1.0 1.0 (V3d.Dot(a, b)))
+        let theta = acos ( clamp -0.99999 0.99999 (V3d.Dot(a, b)))
         V3d.Cross(a, b).Z * if theta < 1e-5 then 1.0 else theta/sin(theta)
 
     [<ReflectedDefinition>] 

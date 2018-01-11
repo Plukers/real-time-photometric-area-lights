@@ -16,6 +16,7 @@ module EffectApStructuredSampling =
         member uniform.sampleNorm      : bool = uniform?sampleNorm 
         member uniform.sampleMRP       : bool = uniform?sampleMRP 
         member uniform.sampleRandom    : bool = uniform?sampleRandom
+        member uniform.numSRSamples    : int  = uniform?numSRSamples
     
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
@@ -26,7 +27,6 @@ module EffectApStructuredSampling =
     
     [<ReflectedDefinition>]
     let private sampleForBaum (t2w : M33d) (addr : int) (p : V3d) = 
-
         let i = p |> Vec.normalize  
  
         let dotOut = max 1e-9 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
@@ -34,13 +34,14 @@ module EffectApStructuredSampling =
 
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
 
-        let weight = 1.0 / (max (Vec.lengthSquared p) 1e-9) // add i.Z for a better weight
+        let weight = i.Z / (max 1e-9 (Vec.lengthSquared p)) // add i.Z for a better weight
 
         let sampledIrr = weight * irr
 
         let weight = (uniform.LAreas.[addr] * dotOut) * weight
 
         (sampledIrr, weight)
+        
 
     let structuredSamplingBaum (v : Vertex) = 
         fragment {
@@ -179,7 +180,7 @@ module EffectApStructuredSampling =
                                         sampleCount <- sampleCount + 1
 
                                     if uniform.sampleRandom then
-                                        for l in 0 .. 127 do
+                                        for l in 0 .. uniform.numSRSamples do
                                             let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
 
                                             if samplePoint.Z >= eps then
@@ -219,7 +220,7 @@ module EffectApStructuredSampling =
 
         let i = p |> Vec.normalize  
  
-        let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
+        //let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
 
         let weight = (* uniform.LAreas.[addr] * dotOut *) 1.0 / (max (Vec.lengthSquared p) 1e-9)
@@ -354,7 +355,7 @@ module EffectApStructuredSampling =
                                         sampleCount <- sampleCount + 1
 
                                     if uniform.sampleRandom then
-                                        for l in 0 .. 127 do
+                                        for l in 0 .. uniform.numSRSamples do
                                             let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
 
                                             if samplePoint.Z >= eps then

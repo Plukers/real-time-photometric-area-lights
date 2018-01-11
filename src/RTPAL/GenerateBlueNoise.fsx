@@ -48,8 +48,8 @@ let private generateUVSequenceBestCandidate (discard : V2d -> bool) (distance : 
                     nextSample  <- sampleCandidate
 
 
-        let currentPercent = (int)((((float) i)/((float) (num - 1))) * 100.0)
-        printfn "%A%%" currentPercent
+        let currentPercent = (((float) i)/((float) (num - 1))) * 100.0
+        printfn "%4f%%" currentPercent
 
         samplePoints <- nextSample :: samplePoints
 
@@ -67,7 +67,7 @@ let private generateUVSequenceRelaxDartThrowing (discard : V2d -> bool) (distanc
 
     let mutable samplePoints = samplePoints
 
-    printfn "AAComputing %A new sample points. Current num of sample points: %A" num (samplePoints.Length)
+    printfn "Computing %A new sample points. Current num of sample points: %A" num (samplePoints.Length)
 
     let mutable radius = 2.0
     let scaleFactor = 0.96
@@ -79,31 +79,32 @@ let private generateUVSequenceRelaxDartThrowing (discard : V2d -> bool) (distanc
 
     while genCount <> num - 1 do
 
-        if failedCount = maxFailedCount then
-            printfn "Failed or radius %A" radius
-            radius <- radius * scaleFactor
-            printfn "New radius: %A" radius
-            failedCount <- 0
+        let sampleCandidate = getOneRandomUV rnd
 
-        let sampleCandiate = getOneRandomUV rnd
-        let mutable sampleCandidateDist = infinity
+        if not (discard sampleCandidate) then 
 
-        for sample in samplePoints do
+            if failedCount = maxFailedCount then
+                radius <- radius * scaleFactor
+                failedCount <- 0
 
-            let dist = distance sample sampleCandiate
+            let mutable sampleCandidateDist = infinity
 
-            if dist < sampleCandidateDist then
-                sampleCandidateDist <- dist     
+            for sample in samplePoints do
+
+                let dist = distance sample sampleCandidate
+
+                if dist < sampleCandidateDist then
+                    sampleCandidateDist <- dist     
                         
-        if sampleCandidateDist >= radius then
-            genCount <- genCount + 1
-            failedCount <- 0
-            samplePoints <- sampleCandiate :: samplePoints
+            if sampleCandidateDist >= radius then
+                genCount <- genCount + 1
+                failedCount <- 0
+                samplePoints <- sampleCandidate :: samplePoints
 
-            let currentPercent = ((((float) genCount)/((float) (num - 1))) * 100.0)
-            printfn "%f%%" currentPercent
-        else
-            failedCount <- failedCount + 1
+                let currentPercent = ((((float) genCount)/((float) (num))) * 100.0)
+                printfn "%f%%" currentPercent
+            else
+                failedCount <- failedCount + 1
                     
     printfn "Finished generating sample points. New num of sample points: %A" (samplePoints.Length)
 
@@ -166,9 +167,9 @@ module Triangle =
 
             V3d.Distance(a, b)
 
-        let (samplePoints, num) = 
+        let samplePoints = 
             match samplePoints with 
-            | Some sps -> (sps, num)
+            | Some sps -> sps
             | None ->
                 let rnd = System.Random(061815)
                 let mutable seed = (genRandomUV rnd 1).[0]
@@ -176,7 +177,7 @@ module Triangle =
                 while discard seed do
                     seed <- (genRandomUV rnd 1).[0]
 
-                (seed :: List.empty<V2d>, num - 1)
+                seed :: List.empty<V2d>
                 
         let uvSamplePoints = samplePoints |> generateUVSequenceRelaxDartThrowing discard distance num 
 
@@ -233,8 +234,7 @@ module Rectangle =
         computePointSequence a b o None num
 
 
-
-
+let numOfSamples = 400
 
 let mutable sampleStr = 
     """namespace Render
@@ -244,40 +244,78 @@ let mutable sampleStr =
         fsi --exec GenerateBlueNoise.fsx
 *)
 
-module StructuredSamplePoints = 
+module OfflineStructuredSamplePoints = 
     open Aardvark.Base
 """
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Triangle Samples 
-let vertices = [|
+let tri_vertices = [|
         V3d(0.0, -0.5, -0.5)
         V3d(0.0,  0.5, -0.5)
         V3d(0.0,  0.0,  1.0)
     |] 
 
 let tri_title = 
-    String.Format("""
+    sprintf "
     module Triangle = 
         let samples = 
-            let l = [
-                """)
+            let l = ["
 
 sampleStr <- String.concat "" [ sampleStr; tri_title ] 
 
-let tri_samples = Triangle.generateNewPointSequence vertices.[0] vertices.[1] vertices.[2] 5
+let tri_samples = Triangle.generateNewPointSequence tri_vertices.[0] tri_vertices.[1] tri_vertices.[2] numOfSamples 
 
-for s in tri_samples do
+for s in tri_samples |> List.rev do
     let sampleString = 
-        String.Format("""V3d({0:f.10}, {1:f.10}, {2:f.10})
-        """, s.X, s.Y, s.Z)
+        sprintf "
+                V3d(%.10f, %.10f, %.10f)"  s.X s.Y s.Z
     sampleStr <- String.concat "" [ sampleStr; sampleString ]
     
 let tri_close = 
-    String.Format("""]
-        l
-        """)
+    sprintf "   
+                ]
+            l
+        "
 sampleStr <- String.concat "" [ sampleStr; tri_close ]
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Square Samples 
+let sqr_vertices = [|
+            V3d(0.0, -0.5, -0.5)
+            V3d(0.0,  0.5, -0.5)
+            V3d(0.0,  0.5,  0.5)
+            V3d(0.0, -0.5,  0.5)
+        |] 
+
+let sqr_title = 
+    sprintf "
+    module Square = 
+        let samples = 
+            let l = ["
+
+sampleStr <- String.concat "" [ sampleStr; sqr_title ] 
+
+let sqr_samples = Rectangle.generateNewPointSequence (sqr_vertices.[1] - sqr_vertices.[0]) (sqr_vertices.[3] - sqr_vertices.[0]) (sqr_vertices.[0]) numOfSamples 
+
+for s in sqr_samples |> List.rev do
+    let sampleString = 
+        sprintf "
+                V3d(%.10f, %.10f, %.10f)"  s.X s.Y s.Z
+    sampleStr <- String.concat "" [ sampleStr; sampleString ]
+    
+let sqr_close = 
+    sprintf "   
+                ]
+            l
+        "
+   
+sampleStr <- String.concat "" [ sampleStr; sqr_close ]
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 File.WriteAllText("BlueNoiseSamples.fs", sampleStr);
 

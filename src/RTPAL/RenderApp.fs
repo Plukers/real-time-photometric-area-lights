@@ -152,6 +152,7 @@
             | TOGGLE_SAMPLE_NORM -> { s with sampleNorm = (not s.sampleNorm) }
             | TOGGLE_SAMPLE_MRP -> { s with sampleMRP = (not s.sampleMRP) }
             | TOGGLE_SAMPLE_RND -> { s with sampleRandom = (not s.sampleRandom) }
+            | CHANGE_SS_SAMPLE_NUM nss -> { s with numOfSRSamples = Numeric.update s.numOfSRSamples nss}
 
             | TOGGLE_TONEMAPPING -> { s with toneMap = (not s.toneMap) }
             | CHANGE_TONEMAP_SCALE tms -> { s with toneMapScale = Numeric.update s.toneMapScale tms}
@@ -437,7 +438,7 @@
                                                     let ssCompActive = c = RenderMode.StructuredSampling || c = RenderMode.StructuredIrrSampling
 
                                                     if ssActive || (mode = RenderMode.Compare && ssCompActive) then    
-                                                        
+                                                                                                                
                                                         yield p [] [     
                                                             yield toggleBox m.sampleCorners TOGGLE_SAMPLE_CORNERS 
                                                             yield text "Sample Corners"                                                                                               
@@ -462,7 +463,16 @@
                                                             yield toggleBox m.sampleRandom TOGGLE_SAMPLE_RND      
                                                             yield text "Sample Random"                                                    
                                                             yield br[]  
+                                                            
                                                         ]
+
+                                                        let! sampleRandom = m.sampleRandom
+
+                                                        if sampleRandom then
+                                                            yield p [] [     
+                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.numOfSRSamples |> UI.map CHANGE_SS_SAMPLE_NUM ]
+                                                                yield br[]  
+                                                            ]
                                                         
                                                 }
                                             )
@@ -547,6 +557,13 @@
             sampleNorm       = false
             sampleMRP        = false
             sampleRandom     = true
+            numOfSRSamples   = {
+                                    value   = 128.0
+                                    min     = 0.0
+                                    max     = (float)Config.SS_LIGHT_SAMPLES_ALL_LIGHT
+                                    step    = 1.0
+                                    format  = "{0:0}"
+                                }
             toneMap = true
             toneMapScale     = {
                                     value   = 0.2

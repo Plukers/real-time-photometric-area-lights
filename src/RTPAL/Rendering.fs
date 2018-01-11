@@ -383,12 +383,13 @@ module Rendering =
     module StructuredSamplingApprox =
 
         type SSData = {
-            sampleCorners       : IMod<bool>
-            sampleBarycenter    : IMod<bool>
-            sampleClosest       : IMod<bool>
-            sampleNorm          : IMod<bool>
-            sampleMRP           : IMod<bool>
-            sampleRandom        : IMod<bool>
+            sampleCorners    : IMod<bool>
+            sampleBarycenter : IMod<bool>
+            sampleClosest    : IMod<bool>
+            sampleNorm       : IMod<bool>
+            sampleMRP        : IMod<bool>
+            sampleRandom     : IMod<bool>
+            numSRSamples     : IMod<int>
         }
 
         let initSSData (m : MRenderState) = 
@@ -399,11 +400,12 @@ module Rendering =
                 sampleNorm          = m.sampleNorm
                 sampleMRP           = m.sampleMRP
                 sampleRandom        = m.sampleRandom
+                numSRSamples        = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
             }
 
         let private setupSS_RenderTask (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect)= 
 
-            
+            (*
             let pointSg color trafo = 
                  IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 0.01)) 6 color
                 |> Sg.ofIndexedGeometry
@@ -427,7 +429,7 @@ module Rendering =
                 let sampleSg = pointSg C4b.Red (getTrafo i)
 
                 sceneSg <- Sg.group' [sceneSg; sampleSg]
-            
+            *)
             
             sceneSg
                 |> setupFbEffects [ 
@@ -443,6 +445,7 @@ module Rendering =
                 |> Sg.uniform "sampleNorm"       ssData.sampleNorm
                 |> Sg.uniform "sampleMRP"        ssData.sampleMRP
                 |> Sg.uniform "sampleRandom"     ssData.sampleRandom
+                |> Sg.uniform "numSRSamples"     ssData.numSRSamples
                 |> Sg.compile data.runtime (signature data.runtime)
 
         let private setupSS_Fb (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect) = 
@@ -583,12 +586,12 @@ module Rendering =
                 // |> Sg.scale 18.0
                 |> Sg.scale 200.0
 
-            let groundTruthFb       = groundTruthFb data gtData sceneSg    |> applyTonemappingOnFb data
-            let centerPointApproxFb = centerPointApproxFb data sceneSg     |> applyTonemappingOnFb data
-            let mrpApproxFb         = mrpApproxFb data mrpData sceneSg     |> applyTonemappingOnFb data
-            let baumFFApproxFb      = baumFFApproxFb data sceneSg          |> applyTonemappingOnFb data
-            let ssBaumApproxFb      = ssBaumApproxFb data ssData sceneSg   |> applyTonemappingOnFb data
-            let ssApproxFb          = ssApproxFb data ssData sceneSg       |> applyTonemappingOnFb data
+            let groundTruthFb       = groundTruthFb data gtData sceneSg  |> applyTonemappingOnFb data
+            let centerPointApproxFb = centerPointApproxFb data sceneSg   |> applyTonemappingOnFb data
+            let mrpApproxFb         = mrpApproxFb data mrpData sceneSg   |> applyTonemappingOnFb data
+            let baumFFApproxFb      = baumFFApproxFb data sceneSg        |> applyTonemappingOnFb data
+            let ssBaumApproxFb      = ssBaumApproxFb data ssData sceneSg |> applyTonemappingOnFb data
+            let ssApproxFb          = ssApproxFb data ssData sceneSg     |> applyTonemappingOnFb data
                   
             let effectFbs = 
                 Map.empty
