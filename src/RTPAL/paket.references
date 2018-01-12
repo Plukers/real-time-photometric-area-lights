@@ -9,6 +9,8 @@ Aardvark.SceneGraph.IO
 Aardvark.Rendering.NanoVg
 Aardvark.Rendering.Text
 
+FShade.Debug	
+
 Aardvark.Data.Photometry
 
 Aardvark.UI.Primitives

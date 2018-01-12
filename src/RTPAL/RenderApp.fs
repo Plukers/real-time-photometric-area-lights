@@ -543,7 +543,7 @@
             transformLight lc lightId t |> ignore
         | None -> ()
         *)
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"60712332_(STD).ldt"]
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"ARC3_60712332_(STD).ldt"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         
         let photometryData = Some(IntensityProfileSampler(lightData))    

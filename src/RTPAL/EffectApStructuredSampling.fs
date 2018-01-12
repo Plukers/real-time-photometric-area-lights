@@ -35,7 +35,7 @@ module EffectApStructuredSampling =
         
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
 
-        let weight = (i.Z / (max 1e-9 (Vec.lengthSquared p))) // add i.Z for a better weight
+        let weight = (i.Z / (max (uniform.weightScaleSRSamples) (Vec.lengthSquared p))) // add i.Z for a better weight
 
         let sampledIrr = weight * irr
 
@@ -204,10 +204,10 @@ module EffectApStructuredSampling =
 
                                         let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
-                                        let clampedDist = (clamp 0.0 uniform.scaleSRSampleDist (Vec.length closestPoint)) / uniform.scaleSRSampleDist
-                                        let scale = clampedDist * 1.0 + (1.0 - clampedDist) * uniform.weightScaleSRSamples
+                                        //let clampedDist = (clamp 0.0 uniform.scaleSRSampleDist (Vec.length closestPoint)) / uniform.scaleSRSampleDist
+                                        //let scale = clampedDist * 1.0 + (1.0 - clampedDist) * uniform.weightScaleSRSamples
 
-                                        illumination <- illumination + L * brdf * I * scale // * i.Z  
+                                        illumination <- illumination + L * brdf * I //* scale // * i.Z  
                                     
                                 ()
                                                                 
@@ -227,7 +227,7 @@ module EffectApStructuredSampling =
         //let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
 
-        let weight = (* uniform.LAreas.[addr] * dotOut *) 1.0 / (max (Vec.lengthSquared p) 1e-9)
+        let weight = (* uniform.LAreas.[addr] * dotOut *) 1.0 / (max (Vec.lengthSquared p) (uniform.weightScaleSRSamples))
 
         weight * irr * i.Z
 
@@ -369,10 +369,10 @@ module EffectApStructuredSampling =
 
                                     if sampleCount > 0 then
 
-                                        let clampedDist = (clamp 0.0 uniform.scaleSRSampleDist (Vec.length closestPoint)) / uniform.scaleSRSampleDist
-                                        let scale = clampedDist * 1.0 + (1.0 - clampedDist) * uniform.weightScaleSRSamples
+                                        //let clampedDist = (clamp 0.0 uniform.scaleSRSampleDist (Vec.length closestPoint)) / uniform.scaleSRSampleDist
+                                        //let scale = clampedDist * 1.0 + (1.0 - clampedDist) * uniform.weightScaleSRSamples
                                            
-                                        illumination <- illumination + (1.0 / float(sampleCount)) * (v.c / PI) * patchIllumination * scale  
+                                        illumination <- illumination + (1.0 / float(sampleCount)) * (v.c / PI) * patchIllumination //* scale  
                                 ()
                                                                 
                             ////////////////////////////////////////////////////////
