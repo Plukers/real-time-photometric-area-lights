@@ -21,7 +21,7 @@ let main argv =
     Aardvark.Init()
     use app = new OpenGlApplication(true)
 
-    FShade.EffectDebugger.attach()
+    // FShade.EffectDebugger.attach()
     
     let runtime = app.Runtime
     
