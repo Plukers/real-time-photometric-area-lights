@@ -17,7 +17,8 @@ type RenderMode =
     | BaumFFApprox = 3
     | StructuredIrrSampling = 4
     | StructuredSampling = 5
-    | Compare = 6
+    | CombinedStructuredSampling = 6
+    | Compare = 7
 
 type LightTransformMode =
     | Translate
@@ -47,7 +48,10 @@ type Action =
     | TOGGLE_SAMPLE_RND
     | CHANGE_SRS_SAMPLE_NUM of Numeric.Action
     | CHANGE_SRS_WEIGHT_SCALE of Numeric.Action
-    | CHANGE_SRS_WEIGHT_SCALE_DIST of Numeric.Action
+    | CHANGE_TANGENT_APPROX_DIST of Numeric.Action
+    | CHANGE_SRS_WEIGHT_SCALE_IRR of Numeric.Action
+    | CHANGE_TANGENT_APPROX_DIST_IRR of Numeric.Action
+    | CHANGE_COMBINED_WEIGHT       of Numeric.Action
 
     | TOGGLE_TONEMAPPING
     | CHANGE_TONEMAP_SCALE of Numeric.Action
@@ -62,15 +66,18 @@ type RenderState =
 
         mrpWeights         : V3d // closest, normal, barycenter
 
-        sampleCorners      : bool
-        sampleBarycenter   : bool
-        sampleClosest      : bool
-        sampleNorm         : bool
-        sampleMRP          : bool
-        sampleRandom       : bool
-        numOfSRSamples     : NumericInput
-        SRSWeightScale     : NumericInput
-        SRSWeightScaleDist : NumericInput
+        sampleCorners        : bool
+        sampleBarycenter     : bool
+        sampleClosest        : bool
+        sampleNorm           : bool
+        sampleMRP            : bool
+        sampleRandom         : bool
+        numOfSRSamples       : NumericInput
+        SRSWeightScale       : NumericInput
+        TangentApproxDist    : NumericInput
+        SRSWeightScaleIrr    : NumericInput
+        TangentApproxDistIrr : NumericInput
+        CombinedSSWeight     : NumericInput
 
         toneMap            : bool
         toneMapScale       : NumericInput

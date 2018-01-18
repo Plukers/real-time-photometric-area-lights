@@ -154,7 +154,10 @@
             | TOGGLE_SAMPLE_RND -> { s with sampleRandom = (not s.sampleRandom) }
             | CHANGE_SRS_SAMPLE_NUM nss -> { s with numOfSRSamples = Numeric.update s.numOfSRSamples nss}
             | CHANGE_SRS_WEIGHT_SCALE srss -> { s with SRSWeightScale = Numeric.update s.SRSWeightScale srss }
-            | CHANGE_SRS_WEIGHT_SCALE_DIST srsd -> { s with SRSWeightScaleDist = Numeric.update s.SRSWeightScaleDist srsd }
+            | CHANGE_TANGENT_APPROX_DIST tad -> { s with TangentApproxDist = Numeric.update s.TangentApproxDist tad }
+            | CHANGE_SRS_WEIGHT_SCALE_IRR srss -> { s with SRSWeightScaleIrr = Numeric.update s.SRSWeightScaleIrr srss}
+            | CHANGE_TANGENT_APPROX_DIST_IRR tad -> { s with TangentApproxDistIrr = Numeric.update s.TangentApproxDistIrr tad }
+            | CHANGE_COMBINED_WEIGHT t -> { s with CombinedSSWeight = Numeric.update s.CombinedSSWeight t }
 
             | TOGGLE_TONEMAPPING -> { s with toneMap = (not s.toneMap) }
             | CHANGE_TONEMAP_SCALE tms -> { s with toneMapScale = Numeric.update s.toneMapScale tms}
@@ -436,8 +439,8 @@
                                                     let! mode = m.renderMode
                                                     let! c = m.compare
 
-                                                    let ssActive = mode = RenderMode.StructuredSampling || mode = RenderMode.StructuredIrrSampling
-                                                    let ssCompActive = c = RenderMode.StructuredSampling || c = RenderMode.StructuredIrrSampling
+                                                    let ssActive = mode = RenderMode.StructuredSampling || mode = RenderMode.StructuredIrrSampling || mode = RenderMode.CombinedStructuredSampling
+                                                    let ssCompActive = c = RenderMode.StructuredSampling || c = RenderMode.StructuredIrrSampling || c = RenderMode.CombinedStructuredSampling
 
                                                     if ssActive || (mode = RenderMode.Compare && ssCompActive) then    
                                                                                                                 
@@ -471,18 +474,51 @@
                                                         let! sampleRandom = m.sampleRandom
 
                                                         if sampleRandom then
-                                                            yield p [] [   
+                                                            yield p [] [
                                                                 yield text "Samples"
                                                                 yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.numOfSRSamples |> UI.map CHANGE_SRS_SAMPLE_NUM ]
                                                                 yield br[] 
-
+                                                            ]
+                                                        
+                                                        if mode = RenderMode.StructuredSampling || mode = RenderMode.CombinedStructuredSampling || c = RenderMode.StructuredSampling || c = RenderMode.CombinedStructuredSampling then
+                                                            yield p [] [   
+                                                                yield p [style "font-weight: bold;"] [ 
+                                                                    text ("Structured Sampling")
+                                                                ]
+                                                                
                                                                 yield text "Scale factor"
                                                                 yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScale |> UI.map CHANGE_SRS_WEIGHT_SCALE ]
                                                                 yield br[] 
 
-                                                                yield text "Max scaling dist"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScaleDist |> UI.map CHANGE_SRS_WEIGHT_SCALE_DIST ]
+                                                                yield text "Tangent Approx Dist"
+                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDist |> UI.map CHANGE_TANGENT_APPROX_DIST ]
                                                                 yield br[] 
+                                                            ]
+
+                                                        if mode = RenderMode.StructuredIrrSampling || mode = RenderMode.CombinedStructuredSampling || c = RenderMode.StructuredIrrSampling || c = RenderMode.CombinedStructuredSampling then
+                                                            yield p [] [   
+                                                                yield p [style "font-weight: bold;"] [ 
+                                                                    text ("Structured Irradiance Sampling")
+                                                                ]
+                                                                
+                                                                yield text "Scale factor"
+                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScaleIrr |> UI.map CHANGE_SRS_WEIGHT_SCALE_IRR ]
+                                                                yield br[] 
+
+                                                                yield text "Tangent Approx Dist"
+                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDistIrr |> UI.map CHANGE_TANGENT_APPROX_DIST_IRR ]
+                                                                yield br[] 
+                                                            ]
+
+                                                        if mode = RenderMode.CombinedStructuredSampling || c = RenderMode.CombinedStructuredSampling then
+                                                            yield p [] [   
+                                                                yield p [style "font-weight: bold;"] [ 
+                                                                    text ("Combined Structured Sampling")
+                                                                ]
+                                                                
+                                                                yield text "Lerp Value: 1.0 = Structured Sampling  - 0.0 = Irr Sampling"
+                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.CombinedSSWeight |> UI.map CHANGE_COMBINED_WEIGHT ]
+                                                                yield br[]  
                                                             ]
                                                         
                                                 }
@@ -568,27 +604,48 @@
             sampleNorm       = false
             sampleMRP        = false
             sampleRandom     = true
+            numOfSRSamples   = {
+                        value   = 8.0
+                        min     = 0.0
+                        max     = (float) Config.SS_LIGHT_SAMPLES_ALL_LIGHT
+                        step    = 1.0
+                        format  = "{0:0}"
+                    }
             SRSWeightScale = {
-                                value   = 1.0
-                                min     = 1e-5
-                                max     = 2.0
-                                step    = 1e-3
+                                value   = 0.0
+                                min     = 0.0
+                                max     = 1000.0
+                                step    = 0.1
                                 format  = "{0:F3}"
                              }
-            SRSWeightScaleDist = {
+            TangentApproxDist = {
                                     value   = 1.0
-                                    min     = 1e-3
-                                    max     = 10.0
+                                    min     = 0.0
+                                    max     = 1000.0
                                     step    = 0.5
                                     format  = "{0:F3}"
                                  }
-            numOfSRSamples   = {
-                                    value   = 128.0
+            SRSWeightScaleIrr = {
+                                value   = 0.0
+                                min     = 0.0
+                                max     = 1000.0
+                                step    = 0.1
+                                format  = "{0:F3}"
+                             }
+            TangentApproxDistIrr = {
+                                    value   = 1.0
                                     min     = 0.0
-                                    max     = (float) Config.SS_LIGHT_SAMPLES_ALL_LIGHT
-                                    step    = 1.0
-                                    format  = "{0:0}"
-                                }
+                                    max     = 1000.0
+                                    step    = 0.5
+                                    format  = "{0:F3}"
+                                 }    
+            CombinedSSWeight = {
+                                    value   = 0.5
+                                    min     = 0.0
+                                    max     = 1.0
+                                    step    = 0.1
+                                    format  = "{0:F3}"
+                                 }              
             toneMap = true
             toneMapScale     = {
                                     value   = 0.2
