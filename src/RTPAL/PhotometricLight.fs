@@ -1,10 +1,19 @@
 ﻿namespace Render
 
-open Aardvark.Base
-open Aardvark.Base.Incremental
-open FShade
 
 module PhotometricLight =
+
+    open Aardvark.Base
+    open Aardvark.Base.Incremental
+
+    open Aardvark.Data.Photometry
+
+    open Aardvark.SceneGraph.SgFSharp
+    open Aardvark.SceneGraph
+
+    open FShade
+
+
     
     let ProfileAddressing           = Symbol.Create "ProfileAddressing"
     let TextureOffsetScale          = Symbol.Create "TextureOffsetScale"
@@ -49,6 +58,18 @@ module PhotometricLight =
             addressV WrapMode.Wrap
             borderColor C4f.Black
         }
+
+    let setupPhotometricData (photometricData : IMod<Option<IntensityProfileSampler>>) (sg : ISg) = 
+        photometricData |> Mod.map( fun (pd : Option<IntensityProfileSampler>) ->
+            match pd with 
+            | Some data ->
+                sg
+                    |> Sg.uniform "ProfileAddressing" (data.AddressingParameters |> Mod.init)
+                    |> Sg.uniform "TextureOffsetScale" (data.ImageOffsetScale |> Mod.init)
+                    |> Sg.texture IntensityTexture (((PixTexture2d(PixImageMipMap(data.Image), false)) :> ITexture) |> Mod.constant)
+            | None -> sg
+        )
+        |> Sg.dynamic
 
     
 

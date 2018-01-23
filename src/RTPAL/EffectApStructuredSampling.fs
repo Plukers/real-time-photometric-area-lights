@@ -661,6 +661,117 @@ module EffectApStructuredSampling =
         }
 
 
+    module Rendering =
+
+        open Aardvark.SceneGraph
+        open Aardvark.Base.Incremental
+
+        open RenderInterop
+        open Utils
+        open Utils.Sg
+
+        type SSData = {
+            sampleCorners        : IMod<bool>
+            sampleBarycenter     : IMod<bool>
+            sampleClosest        : IMod<bool>
+            sampleNorm           : IMod<bool>
+            sampleMRP            : IMod<bool>
+            sampleRandom         : IMod<bool>
+            numSRSamples         : IMod<int>
+            SRSWeightScale       : IMod<float>
+            TangentApproxDist    : IMod<float>
+            SRSWeightScaleIrr    : IMod<float>
+            TangentApproxDistIrr : IMod<float>
+            CombinedLerpValue    : IMod<float>
+        }
+
+        let initSSData (m : MRenderState) = 
+            {
+                sampleCorners        = m.sampleCorners
+                sampleBarycenter     = m.sampleBarycenter
+                sampleClosest        = m.sampleClosest
+                sampleNorm           = m.sampleNorm
+                sampleMRP            = m.sampleMRP
+                sampleRandom         = m.sampleRandom
+                numSRSamples         = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
+                SRSWeightScale       = m.SRSWeightScale.value
+                TangentApproxDist    = m.TangentApproxDist.value
+                SRSWeightScaleIrr    = m.SRSWeightScaleIrr.value
+                TangentApproxDistIrr = m.TangentApproxDistIrr.value
+                CombinedLerpValue    = m.CombinedSSWeight.value
+            }
+
+        let private setupSS_RenderTask (data : RenderData) (ssData : SSData) (signature : IFramebufferSignature) (sceneSg : ISg) (ssEffect : FShade.Effect)= 
+
+            (*
+            let pointSg color trafo = 
+                 IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 0.01)) 6 color
+                |> Sg.ofIndexedGeometry
+                |> Sg.trafo trafo
+                |> Sg.effect [
+                        DefaultSurfaces.trafo |> toEffect
+                        DefaultSurfaces.vertexColor |> toEffect
+                    ]
+                    
+            let getTrafo sidx = 
+                    data.lights.SamplePoints |>
+                    Mod.map(fun sp -> 
+                        Trafo3d.Translation sp.[sidx]
+                    )
+
+            let pointSg = 
+                ssData.numSRSamples |> Mod.map (fun numSRSamples ->
+
+                    let mutable sg = Sg.empty
+
+                    if numSRSamples > 0 then
+                        for i in 0 .. numSRSamples - 1 do               
+
+                            let sampleSg = pointSg C4b.Red (getTrafo i)
+
+                            sg <- Sg.group' [sg; sampleSg]
+
+                    sg
+
+                ) |> Sg.dynamic
+
+            let sceneSg = Sg.group' [sceneSg; pointSg]
+            *)
+            
+            sceneSg
+                |> setupFbEffects [ 
+                        ssEffect
+                        EffectUtils.effectClearNaN |> toEffect
+                    ]
+                |> Sg.uniform "sampleCorners"           ssData.sampleCorners
+                |> Sg.uniform "sampleBarycenter"        ssData.sampleBarycenter
+                |> Sg.uniform "sampleClosest"           ssData.sampleClosest
+                |> Sg.uniform "sampleNorm"              ssData.sampleNorm
+                |> Sg.uniform "sampleMRP"               ssData.sampleMRP
+                |> Sg.uniform "sampleRandom"            ssData.sampleRandom
+                |> Sg.uniform "numSRSamples"            ssData.numSRSamples
+                |> Sg.uniform "weightScaleSRSamples"    ssData.SRSWeightScale
+                |> Sg.uniform "tangentApproxDist"       ssData.TangentApproxDist
+                |> Sg.uniform "weightScaleSRSamplesIrr" ssData.SRSWeightScaleIrr
+                |> Sg.uniform "tangentApproxDistIrr"    ssData.TangentApproxDistIrr
+                |> Sg.uniform "combinedLerpValue"       ssData.CombinedLerpValue
+                |> Sg.compile data.runtime signature
+
+        let private setupSS_Fb (data : RenderData) (ssData : SSData) (signature : IFramebufferSignature)  (sceneSg : ISg) (ssEffect : FShade.Effect) = 
+            setupSS_RenderTask data ssData signature sceneSg ssEffect
+            |> RenderTask.renderToColor data.viewportSize 
+            
+            
+        let ssApproxFb (data : RenderData) (ssData : SSData) (signature : IFramebufferSignature)  (sceneSg : ISg) =
+            structuredSampling |> toEffect |> setupSS_Fb data ssData signature sceneSg 
+
+        let ssIrrApproxFb (data : RenderData) (ssData : SSData) (signature : IFramebufferSignature)  (sceneSg : ISg) =
+            structuredIrradianceSampling |> toEffect |> setupSS_Fb data ssData signature sceneSg
+
+        let ssCombinedApproxFb (data : RenderData) (ssData : SSData) (signature : IFramebufferSignature)  (sceneSg : ISg) =
+            combinedStructuredSampling |> toEffect |> setupSS_Fb data ssData signature sceneSg
+
+
         
         
         

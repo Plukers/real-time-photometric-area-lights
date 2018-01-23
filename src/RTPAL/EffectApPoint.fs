@@ -74,4 +74,25 @@ module EffectApPoint =
 
             return V4d(illumination.XYZ, v.c.W)
         }     
+
+
+    module Rendering =
+
+        open Aardvark.SceneGraph
+
+        open RenderInterop
+        open Utils
+        open Utils.Sg
+
+        let centerPointApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+            sceneSg
+                |> setupFbEffects [ 
+                        centerPointApprox |> toEffect  
+                        EffectUtils.effectClearNaN |> toEffect
+                    ]
+                |> Sg.compile data.runtime signature
+
+        let centerPointApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+            centerPointApproxRenderTask data signature sceneSg
+            |> RenderTask.renderToColor data.viewportSize
         

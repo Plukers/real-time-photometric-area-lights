@@ -83,3 +83,23 @@ module EffectApBaumFF =
 
             return V4d(illumination.XYZ, v.c.W)
         }
+
+    module Rendering =
+
+        open Aardvark.SceneGraph
+
+        open RenderInterop
+        open Utils
+        open Utils.Sg
+
+        let baumFFApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+            sceneSg
+                |> setupFbEffects [ 
+                        baumFFApprox |> toEffect 
+                        EffectUtils.effectClearNaN |> toEffect
+                    ]
+                |> Sg.compile data.runtime signature
+
+        let baumFFApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+            baumFFApproxRenderTask data signature sceneSg
+            |> RenderTask.renderToColor data.viewportSize

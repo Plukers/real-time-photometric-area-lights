@@ -101,3 +101,79 @@ module EffectCompare =
             }
 
         ()
+
+    module Rendering = 
+        
+        
+        open Aardvark.SceneGraph
+        open Aardvark.Base.RenderTask
+        open Aardvark.Base.Incremental
+
+        open EffectGT.Rendering
+
+        open RenderInterop
+        open Utils
+        open Utils.Sg
+
+
+        let private renderToFbo (fbo : IOutputMod<IFramebuffer>) (task : IRenderTask) =
+            let sem = (Set.singleton DefaultSemantic.Colors)
+            let res = 
+                new SequentialRenderTask([|task|]) |> renderTo fbo
+        
+            sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
+
+        let private depthSignature (runtime : Aardvark.Rendering.GL.Runtime) = 
+            runtime.CreateFramebufferSignature [
+                DefaultSemantic.Depth, { format = RenderbufferFormat.DepthComponent32; samples = 1 }
+            ]
+                
+        let private  diffSignature (runtime : Aardvark.Rendering.GL.Runtime) =
+            runtime.CreateFramebufferSignature [
+                DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
+            ]
+                                        
+        let diffFb (data : RenderData) (effectFbs : Map<RenderMode, IOutputMod<ITexture>>) =
+                        
+            Sg.fullscreenQuad data.viewportSize
+                |> Sg.effect [ 
+                    Compute.computeError |> toEffect 
+                ]
+                |> Sg.texture (Sym.ofString "GTTex") (Map.find RenderMode.GroundTruth effectFbs)
+                |> Sg.texture (Sym.ofString "CompTex") 
+                    (
+                        data.compare |> Mod.bind (fun rm ->
+                            match rm with
+                                | RenderMode.Compare -> Map.find RenderMode.GroundTruth effectFbs
+                                | _ -> Map.find rm effectFbs
+                            )
+                    )
+                |> Sg.compile data.runtime (diffSignature data.runtime)
+                |> RenderTask.renderToColor data.viewportSize
+                                
+        let private depthFb (data : RenderData) (sceneSg : ISg)=
+            sceneSg
+                |> Sg.effect [ 
+                    DefaultSurfaces.trafo |> toEffect
+                    DefaultSurfaces.vertexColor |> toEffect 
+                    ]
+                |> Sg.compile data.runtime (depthSignature data.runtime)
+                |> RenderTask.renderToDepth data.viewportSize
+
+        let compareRenderTask (data : RenderData) (gtData : GroundTruthData) (signature : IFramebufferSignature) (sceneSg : ISg) (diffFb : IOutputMod<ITexture>) = 
+            Sg.fullscreenQuad data.viewportSize
+                |> Sg.effect [ 
+                    Visualize.visualize |> toEffect
+                ]
+                |> Sg.uniform "PixelSize" (data.viewportSize |> Mod.map (fun vs -> V2d(1.0 / (float) vs.X, 1.0 / (float) vs.Y)))
+                |> Sg.texture (Sym.ofString "TexError") diffFb
+                |> Sg.texture (Sym.ofString "TexDepth") (depthFb data sceneSg)
+                |> Sg.compile data.runtime signature
+
+        let compareFb (data : RenderData) (gtData : GroundTruthData) (signature : IFramebufferSignature) (sceneSg : ISg) (diffFb : IOutputMod<ITexture>) = 
+            compareRenderTask data gtData signature sceneSg diffFb
+            |> RenderTask.renderToColor data.viewportSize
+     
+        let compareSg (data : RenderData) (gtData : GroundTruthData) (signature : IFramebufferSignature) (sceneSg : ISg) (diffFb : IOutputMod<ITexture>) = 
+            compareFb data gtData signature sceneSg diffFb
+            |> fbToSg data.viewportSize

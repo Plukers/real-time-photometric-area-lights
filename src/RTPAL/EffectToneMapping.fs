@@ -47,3 +47,22 @@ module EffectToneMapping =
         }
 
     ()
+
+    module Rendering = 
+        
+        open Aardvark.SceneGraph
+
+        open RenderInterop
+        open Utils
+        
+        
+        let applyTonemappingOnFb (data : RenderData) (signature : IFramebufferSignature) fb = 
+            let task =
+                Sg.fullscreenQuad data.viewportSize
+                    |> Sg.effect [ toneMap |> toEffect ]
+                    |> Sg.uniform "ToneMapScale" data.toneMapScale
+                    |> Sg.uniform "ActivateTM" data.toneMap
+                    |> Sg.texture (Sym.ofString "InputTex") fb
+                    |> Sg.compile data.runtime signature
+
+            task |> RenderTask.renderToColor data.viewportSize     

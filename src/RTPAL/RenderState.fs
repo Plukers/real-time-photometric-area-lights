@@ -8,7 +8,6 @@ open Aardvark.Application
 open Utils
 open Light
 open Aardvark.Data.Photometry
-open EffectToneMapping
 
 type RenderMode =
     | GroundTruth = 0
@@ -55,6 +54,7 @@ type Action =
 
     | TOGGLE_TONEMAPPING
     | CHANGE_TONEMAP_SCALE of Numeric.Action
+    | RENDER_IMAGES of Async<unit>
 
 [<DomainType>]
 type RenderState =

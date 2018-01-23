@@ -8,7 +8,9 @@ module Utils =
         open Aardvark.Base.Incremental
         open Aardvark.Base.Incremental.Operators        
         open Aardvark.Base.Rendering
-        open Aardvark.UI
+                
+        open Aardvark.SceneGraph
+        
 
         let fullscreenQuad size =
             Sg.draw IndexedGeometryMode.TriangleStrip
@@ -16,6 +18,25 @@ module Utils =
                 |> Sg.vertexAttribute DefaultSemantic.DiffuseColorCoordinates (Mod.constant [|V2f.OO; V2f.IO; V2f.OI; V2f.II|])
                 |> Sg.depthTest ~~DepthTestMode.None
                 |> Sg.uniform "ViewportSize" size
+
+
+        let setupCamera (view : IMod<CameraView>) (frustum : IMod<Frustum>) (viewportSize : IMod<V2i>) sg =
+            sg
+                |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
+                |> Sg.projTrafo (frustum |> Mod.map Frustum.projTrafo)
+                |> Sg.uniform "ViewportSize" viewportSize
+                
+        let fbToSg (viewportSize : IMod<V2i>) fb = 
+            fullscreenQuad viewportSize
+                |> Sg.texture DefaultSemantic.DiffuseColorTexture fb
+                |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
+
+        let setupFbEffects effects sg =   
+            sg
+            |> Sg.effect ( List.append [
+                                DefaultSurfaces.trafo |> toEffect
+                                DefaultSurfaces.diffuseTexture |> toEffect
+                            ] effects)
 
     module Assimp =
         open Aardvark.Base

@@ -137,3 +137,41 @@ module EffectApMRP =
             return V4d(illumination.XYZ, v.c.W)
         }
 
+    module Rendering =
+
+        open Aardvark.SceneGraph
+        open Aardvark.Base.Incremental
+
+        open RenderInterop
+        open Utils
+        open Utils.Sg
+
+        type MRPData = {
+            mrpWeights : IMod<V3d>
+        }
+
+        let initMRPData (m : MRenderState) = 
+            {
+                mrpWeights = m.mrpWeights
+            }
+
+        let initMRPData' (weights : IMod<V3d>) =
+            {
+                mrpWeights = weights
+            }
+
+        let mrpApproxRenderTask (data : RenderData) (mrpData : MRPData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+
+            //let sceneSg = MRPApproxDebug.sceneSg data.lights
+
+            sceneSg
+                |> setupFbEffects [ 
+                        mostRepresentativePointApprox |> toEffect
+                        EffectUtils.effectClearNaN |> toEffect
+                    ]
+                |> Sg.uniform "mrpWeights" mrpData.mrpWeights
+                |> Sg.compile data.runtime signature
+
+        let mrpApproxFb (data : RenderData) (mrpData : MRPData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+            mrpApproxRenderTask data mrpData signature sceneSg
+            |> RenderTask.renderToColor data.viewportSize

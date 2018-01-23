@@ -24,23 +24,134 @@
 
     open Aardvark.Data.Photometry
     
+    open Aardvark.Rendering.GL
+    open Aardvark.UI.Chromium
+    
     
 
     open Utils
     open Light
-
-    open Rendering
-    open Rendering.GroundTruth
-    open Rendering.MRPApprox
-    open Rendering.StructuredSamplingApprox
-    open Rendering.Compare
-    open Rendering.Effects
-
-
-    open Aardvark.Rendering.GL
-    open Aardvark.UI.Chromium
+    open RenderInterop
     
-    let createGameWindow (app : OpenGlApplication) (viewportSize : V2i) (m : MRenderState) =
+    open EffectGT.Rendering
+    open EffectApMRP.Rendering
+    open EffectApStructuredSampling.Rendering
+    open EffectCompare.Rendering
+
+    open Rendering.RealTime
+
+
+    let setupOfflineRendering (app : OpenGlApplication) (m : MRenderState) = 
+
+        let viewportSize = V2i(1024, 1024)
+
+        let view = CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO |> Mod.init
+        let frustum = Frustum.ortho (Box3d(Range1d(-20.0, 20.0), Range1d(-20.0, 20.0), Range1d(-10.0, 10.0))) |> Mod.init
+
+        
+        let view = CameraView.lookAt (V3d(2.0, 0.0, 3.0)) (V3d(-4.0, 0.0, -1.0)) V3d.OOI |> Mod.init
+        let frustum = Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y) |> Mod.init
+        
+
+        let renderMode = RenderMode.GroundTruth |> Mod.init
+        let updateRenderMode mode = 
+            transact (fun _ ->
+                mode |> Mod.change renderMode 
+            )
+        let compareMode = RenderMode.GroundTruth |> Mod.init
+        let updateCompareMode mode = 
+            transact (fun _ ->
+                mode |> Mod.change compareMode 
+            )
+
+        let toneMap = false |> Mod.init
+        let changeToneMap tm = 
+            transact (fun _ ->
+                tm |> Mod.change toneMap 
+            )
+
+        let toneMapScale = 0.2 |> Mod.init
+        let updateToneMapScale tms = 
+            transact (fun _ ->
+                tms |> Mod.change toneMapScale
+            )
+        
+        let photometryData = None |> Mod.init
+        let updatePhotometryData name = 
+            let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";name]
+            let lightData = LightMeasurementData.FromFile(photometryPath)
+            let data = Some(IntensityProfileSampler(lightData))
+        
+            transact (fun _ ->
+                data |> Mod.change photometryData 
+            )
+           
+        updatePhotometryData "ARC3_60712332_(STD).ldt"
+
+
+        let renderData = 
+                            {
+                                runtime = app.Runtime
+                                scenePath = m.scenePath
+                                view = view
+                                frustum = frustum 
+                                viewportSize = viewportSize |> Mod.init
+                                lights = m.lights |> Mod.force // mod force necessary ? 
+                                photometricData = photometryData
+                                mode = renderMode
+                                compare = compareMode
+                                toneMap = toneMap
+                                toneMapScale = toneMapScale
+                            }
+            
+            
+            
+            
+        //initialRenderData app scView scFrustum viewportSize m 
+
+        let gtData = initGTData' (true |> Mod.init)
+        let mrpData = initMRPData m
+        let ssData = initSSData m
+
+        let (scRenderTask, _) = Rendering.RealTime.CreateAndLinkRenderTask renderData gtData mrpData ssData
+
+        let update = groundTruthRenderUpdate renderData gtData
+
+        let scSignature =
+            app.Runtime.CreateFramebufferSignature [
+                DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba8; samples = 1 }
+            ]
+
+        let scColor = app.Runtime.CreateTexture(viewportSize, TextureFormat.Rgba8, 1, 1, 1)
+
+        
+        let createImageTask = 
+            async {
+                    // Create a framebuffer matching signature and capturing the render to texture targets
+                    let fbo = 
+                        app.Runtime.CreateFramebuffer(
+                            scSignature, 
+                            Map.ofList [
+                                DefaultSemantic.Colors, ({ texture = scColor; slice = 0; level = 0 } :> IFramebufferOutput)
+                            ]
+                        )
+                    
+                    for i in 1..1 do
+                        scRenderTask.Run(RenderToken.Empty, fbo)
+                        printfn "update"
+                        update()
+
+                    let pix = app.Runtime.Download(scColor)
+
+
+                    pix.SaveAsImage("IMAGE.png")
+
+                }
+            
+        createImageTask
+
+
+    let setupRendering (app : OpenGlApplication) (viewportSize : V2i) (m : MRenderState) =
         
         let win = app.CreateGameWindow()
         win.Title <- "Render"
@@ -48,22 +159,39 @@
         win.Height <- viewportSize.Y
         win.Width <- viewportSize.X
 
+
+        //////////// REALTIME ////////////////////////
+        
         // let view = CameraView.lookAt (V3d(1.0, 0.0, 0.0)) (V3d(-1.0, 0.0, -1.0)) V3d.OOI
         let view = CameraView.lookAt (V3d(2.0, 0.0, 3.0)) (V3d(-4.0, 0.0, -1.0)) V3d.OOI
-        let renderData = initialRenderData app (DefaultCameraController.control win.Mouse win.Keyboard win.Time view) viewportSize m 
+        let renderData = initialRenderData app (DefaultCameraController.control win.Mouse win.Keyboard win.Time view) (Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y) |> Mod.init) viewportSize m 
+
         
         let gtData = initGTData m 
         let mrpData = initMRPData m
         let ssData = initSSData m
 
-        let (renderTask, renderFeedback) = Effects.CreateAndLinkRenderTask renderData gtData mrpData ssData
+        let (renderTask, renderFeedback) = Rendering.RealTime.CreateAndLinkRenderTask renderData gtData mrpData ssData
+
+        //////////////////////////////////////////////
+
+        let offlineRenderTask = setupOfflineRendering app m
+        
 
         win.RenderTask <- renderTask
+
+        let rtGroundTruthRenderUpdate =
+            let updateRT = groundTruthRenderUpdate renderData gtData
+
+            let update (args : OpenTK.FrameEventArgs) =
+                updateRT()
+
+            update
         
-        win.UpdateFrame.Add(groundTruthRenderUpdate renderData gtData)
+        win.UpdateFrame.Add(rtGroundTruthRenderUpdate)
         win.UpdateFrame.Add(fpsUpdate renderFeedback)
 
-        (win, renderFeedback)
+        (win, renderFeedback, offlineRenderTask)
         
 
     let update (s : RenderState) (a : Action) =
@@ -162,6 +290,10 @@
             | TOGGLE_TONEMAPPING -> { s with toneMap = (not s.toneMap) }
             | CHANGE_TONEMAP_SCALE tms -> { s with toneMapScale = Numeric.update s.toneMapScale tms}
 
+            | RENDER_IMAGES createImageTask ->    
+                createImageTask |> Async.Start
+                s
+
     let openFileDialog (form : System.Windows.Forms.Form) =
         let mutable final = ""
 
@@ -179,7 +311,7 @@
         
         let viewFunc (m : MRenderState) =
             
-            let (win, renderFeedback) = createGameWindow app (V2i(1024, 768)) m
+            let (win, renderFeedback, offlineRenderTask) = setupRendering app (V2i(1024, 768)) m
             
             let openGameWindowAction : System.Action = 
                 new System.Action( fun () -> 
@@ -270,6 +402,10 @@
                                         button [ clazz "ui button" ; onClick (fun () -> 
                                                 IMPORT_PHOTOMETRY (openFileDialog form)
                                             )] [text "Load Photometric Data"]        
+
+                                        button [ clazz "ui button" ; onClick (fun () -> 
+                                                RENDER_IMAGES (offlineRenderTask)
+                                            )] [text "Render Light Profiles"]    
                                                 
                                     ]
                             ]
@@ -571,14 +707,14 @@
         let lc = emptyLightCollection
         //let light1 = addTriangleLight lc
         let light1 = addSquareLight lc
-        (*
+        
         match light1 with
         | Some lightId ->             
             // let t = Trafo3d.Translation(-8.0, 0.0, -5.0)        
-            let t = Trafo3d.Translation(-4.0, 0.0, 1.0)
+            let t = Trafo3d.Translation(0.0, 0.0, 0.6)
             transformLight lc lightId t |> ignore
         | None -> ()
-        *)
+        
         let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"ARC3_60712332_(STD).ldt"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         

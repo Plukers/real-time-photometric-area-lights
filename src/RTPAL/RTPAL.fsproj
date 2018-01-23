@@ -97,6 +97,8 @@
     <Compile Include="Utils.fs" />
     <Compile Include="Light.fs" />
     <Compile Include="BRDF_GGX.fs" />
+    <Compile Include="RenderState.fs" />
+    <Compile Include="RenderInterop.fs" />
     <Compile Include="EffectGT.fs" />
     <Compile Include="EffectApPoint.fs" />
     <Compile Include="EffectApMRP.fs" />
@@ -106,7 +108,6 @@
     <Compile Include="EffectOutline.fs" />
     <Compile Include="EffectToneMapping.fs" />
     <Compile Include="MRPApproxDebug.fs" />
-    <Compile Include="RenderState.fs" />
     <Compile Include="Rendering.fs" />
     <Compile Include="RenderApp.fs" />
     <Compile Include="Program.fs" />

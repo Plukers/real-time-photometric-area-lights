@@ -14,575 +14,32 @@ module Rendering =
     
     open Aardvark.SceneGraph
 
+    
+    open PhotometricLight
     open Light
     open Utils
+    open Utils.Sg
+    open RenderInterop
     
-    type RenderData = {
-        runtime : Aardvark.Rendering.GL.Runtime
-
-        scenePath : IMod<string>
-
-        view         : IMod<CameraView>
-        frustum      : IMod<Frustum>
-        viewportSize : IMod<V2i>
-
-        mode            : IMod<RenderMode>
-        compare         : IMod<RenderMode>
-        lights          : LightCollection
-        photometricData : IMod<Option<IntensityProfileSampler>>
-
-        toneMap : IMod<bool>
-        toneMapScale : IMod<float>
-        }
-
-    type RenderFeedback = {
-        // global
-        fps : ModRef<float>
-
-        // ground truth
-        frameCount : ModRef<int>
-
-        // compare
-        compareTexture : IOutputMod<ITexture>
-        }
-
-    let private normalizeTrafo (b : Box3d) =
-            let size = b.Size
-            let scale = 4.0 / size.NormMax
-
-            let center = b.Center
-
-            Trafo3d.Translation(-center) *
-            Trafo3d.Scale(scale)
-
-    let private setupFbEffects effects sg =   
-        sg
-            |> Sg.effect ( List.append [
-                                DefaultSurfaces.trafo |> toEffect
-                                DefaultSurfaces.diffuseTexture |> toEffect
-                            ] effects)
-
-
-
-    let private setupLights (lights : LightCollection) (sg : ISg) =
-        sg
-            |> Light.Sg.addLightCollectionSg lights
-            |> Light.Sg.setLightCollectionUniforms lights
                 
-    let private setupCamera (view : IMod<CameraView>) (frustum : IMod<Frustum>) (viewportSize : IMod<V2i>) sg =
-        sg
-            |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
-            |> Sg.projTrafo (frustum |> Mod.map Frustum.projTrafo)
-            |> Sg.uniform "ViewportSize" viewportSize
-
-    let private setupPhotometricData (photometricData : IMod<Option<IntensityProfileSampler>>) (sg : ISg) = 
-        photometricData |> Mod.map( fun (pd : Option<IntensityProfileSampler>) ->
-            printfn "LOADED NEW DATA"
-            match pd with 
-            | Some data ->
-                sg
-                    |> Sg.uniform "ProfileAddressing" (data.AddressingParameters |> Mod.init)
-                    |> Sg.uniform "TextureOffsetScale" (data.ImageOffsetScale |> Mod.init)
-                    |> Sg.texture Render.PhotometricLight.IntensityTexture (((PixTexture2d(PixImageMipMap(data.Image), false)) :> ITexture) |> Mod.constant)
-            | None -> sg
-        )
-        |> Sg.dynamic
-
-    (*
-    let private setupMipMaps (runtime : IRuntime) (fb : IOutputMod<ITexture>) =
-
-        let mutable mipmapped : Option<IBackendTexture> = None
-        
-        let result = 
-            { new AbstractOutputMod<ITexture>() with
-                member x.Create() =
-                    fb.Acquire()
-                            
-                member x.Destroy() =
-                    fb.Release()
-                    match mipmapped with
-                        | Some t -> 
-                            runtime.DeleteTexture t
-                            mipmapped <- None
-                        | None -> ()
-
-                member x.Compute(t, rt) =
-                    let t = fb.GetValue(t, rt)
-                    let t = unbox<IBackendTexture> t
-
-                    let levels = 1.0 + floor (Fun.Log2 (max (float t.Size.X) (float t.Size.Y))) |> int
-                    let target = 
-                        match mipmapped with
-                            | Some mm ->
-                                if mm.Size.XY = t.Size.XY then 
-                                    mm
-                                else
-                                    runtime.DeleteTexture mm
-                                    let n = runtime.CreateTexture(t.Size.XY, t.Format, levels, 1)
-                                    mipmapped <- Some n
-                                    n
-                            | _ ->
-                                let n = runtime.CreateTexture(t.Size.XY, t.Format, levels, 1)
-                                mipmapped <- Some n
-                                n
-                    
-                    let runtime = unbox<Aardvark.Rendering.GL.Runtime> runtime
-                    runtime.Context.Copy(unbox<Texture> t, 0, 0, V2i.Zero, unbox<Texture> target, 0, 0, V2i.Zero, t.Size.XY)
-                    
-                    runtime.GenerateMipMaps(target)
-                    target :> ITexture
-            }
-                
-        result :> IOutputMod<_>
-    *)
-        
-    let private fbToSg (viewportSize : IMod<V2i>) fb = 
-        Sg.fullscreenQuad viewportSize
-            |> Sg.texture DefaultSemantic.DiffuseColorTexture fb
-            |> Sg.effect [DefaultSurfaces.diffuseTexture |> toEffect]
-
     let private signature (runtime : Aardvark.Rendering.GL.Runtime) =
         runtime.CreateFramebufferSignature [
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
             DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
 
-
-    let applyTonemappingOnFb (data : RenderData) fb = 
-        let task =
-            Sg.fullscreenQuad data.viewportSize
-                |> Sg.effect [ EffectToneMapping.toneMap |> toEffect ]
-                |> Sg.uniform "ToneMapScale" data.toneMapScale
-                |> Sg.uniform "ActivateTM" data.toneMap
-                |> Sg.texture (Sym.ofString "InputTex") fb
-                |> Sg.compile data.runtime (signature data.runtime)
-
-        task |> RenderTask.renderToColor data.viewportSize     
-     
-    module GroundTruth = 
-
-        type GroundTruthData = {
-            haltonSequence : ModRef<V2d[]>
-            clear : ModRef<bool>
-            frameCount : ModRef<int>
-            updateGroundTruth : IMod<bool>
-            }
-
-        let initGTData (m : MRenderState) =
-            {
-                haltonSequence = ModRef(HaltonSequence.init)
-                clear = ModRef(false) 
-                frameCount = ModRef(0)
-                updateGroundTruth = m.updateGroundTruth
-            }
-        
-        let private renderToColorWithoutClear (size : IMod<V2i>) (task : IRenderTask) =
-                let sem = (Set.singleton DefaultSemantic.Colors)
-                let runtime = task.Runtime.Value
-                let signature = task.FramebufferSignature.Value
-            
-                let fbo = runtime.CreateFramebuffer(signature, sem, size)
-                
-                let res = new SequentialRenderTask([|task|]) |> renderTo fbo
-                sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
-
-
-        let private basicRenderTask (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
-            
-            let mode = 
-                gtData.clear |> Mod.map ( fun c -> 
-                    if c then
-                        BlendMode(
-                            true, 
-                            SourceFactor = BlendFactor.One, 
-                            DestinationFactor = BlendFactor.Zero,
-                            Operation = BlendOperation.Add,
-                            SourceAlphaFactor = BlendFactor.One,
-                            DestinationAlphaFactor = BlendFactor.Zero,
-                            AlphaOperation = BlendOperation.Add
-                        )
-                    else    
-                        BlendMode(
-                            true, 
-                            SourceFactor = BlendFactor.SourceAlpha, 
-                            DestinationFactor = BlendFactor.InvSourceAlpha,
-                            Operation = BlendOperation.Add,
-                            SourceAlphaFactor = BlendFactor.SourceAlpha,
-                            DestinationAlphaFactor = BlendFactor.DestinationAlpha,
-                            AlphaOperation = BlendOperation.Add
-                        )
-                    )
-
-            let gteffect = EffectGT.groundTruthLighting |> toEffect
-                
-            let iterationRender =
-                sceneSg
-                    |> setupFbEffects [ 
-                            EffectGT.groundTruthLighting |> toEffect 
-                            EffectUtils.effectClearNaN |> toEffect
-                        ]
-                    |> setupLights data.lights
-                    |> setupPhotometricData data.photometricData
-                    |> setupCamera data.view data.frustum data.viewportSize 
-                    |> Sg.uniform "HaltonSamples" gtData.haltonSequence
-                    |> Sg.uniform "FrameCount" gtData.frameCount
-                    |> Sg.compile data.runtime (signature data.runtime)
-                    |> RenderTask.renderToColor data.viewportSize
-              
-            Sg.fullscreenQuad data.viewportSize
-                |> Sg.blendMode mode
-                |> setupFbEffects []
-                |> Sg.texture DefaultSemantic.DiffuseColorTexture iterationRender
-                |> Sg.compile data.runtime (signature data.runtime)
-
-        let groundTruthFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) = 
-            basicRenderTask data gtData sceneSg
-            |> renderToColorWithoutClear data.viewportSize
-            
-
-        let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
-            
-            let mutable prevLightTrafos : Trafo3d[] = Array.create Config.NUM_LIGHTS Trafo3d.Identity
-            let lightDemandsClear = 
-                data.lights.Trafos |> Mod.map (
-                    fun trafos -> 
-                        let clear = Array.forall2 (fun elem1 elem2 -> elem1 <> elem2) trafos prevLightTrafos
-                        prevLightTrafos <- trafos        
-                        clear
-                    )
-
-            let mutable prevView = Trafo3d.Identity
-            let camDemandsClear =
-                data.view |> Mod.map (
-                    fun view ->
-                        let currentView  = CameraView.viewTrafo view
-                        let clear = currentView <> prevView 
-                        prevView <- currentView
-                        clear
-                    )
-
-
-            let clearRequired = 
-                let required = Mod.map2 (fun l c -> l || c) lightDemandsClear camDemandsClear
-
-                required
-
-            // only update if the render mode is GroundTruth or Compare
-            let executeUpdate =
-                 Mod.map2  (
-                    fun update mode ->
-                        if not update then
-                            false
-                        else
-                            match mode with
-                            | RenderMode.GroundTruth -> true
-                            | RenderMode.Compare     -> true
-                            | _ -> false
-                    ) gtData.updateGroundTruth data.mode
-            
-            let update (args : OpenTK.FrameEventArgs) =
-                transact (fun _ -> 
-                    
-                    if executeUpdate |> Mod.force then
-                    
-                        let clear = clearRequired |> Mod.force 
-                                        
-                        if clear then
-                            if not gtData.clear.Value then 
-                                gtData.clear.Value <- true
-                        else
-                            if gtData.clear.Value then 
-                                gtData.clear.Value <- false       
-                                                
-                        gtData.haltonSequence.Value <-
-                            if clear then
-                                HaltonSequence.init
-                            else
-                                gtData.haltonSequence.Value.[Config.NUM_SAMPLES - 1] |> HaltonSequence.next     
-                                    
-                        gtData.frameCount.Value <- 
-                            if clear then
-                                1
-                            else
-                                gtData.frameCount.Value + 1
-                        
-                        // TODO find better solution than marking outdated
-                        if clear then
-                            lightDemandsClear.MarkOutdated()
-                            camDemandsClear.MarkOutdated()
-                )
-
-            update
-             
-    module CenterPointApprox =
-
-        let centerPointApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
-            sceneSg
-                |> setupFbEffects [ 
-                        EffectApPoint.centerPointApprox |> toEffect  
-                        EffectUtils.effectClearNaN |> toEffect
-                    ]
-                |> setupLights data.lights
-                |> setupPhotometricData data.photometricData
-                |> setupCamera data.view data.frustum data.viewportSize
-                |> Sg.compile data.runtime (signature data.runtime)
-
-        let centerPointApproxFb (data : RenderData) (sceneSg : ISg) = 
-            centerPointApproxRenderTask data sceneSg
-            |> RenderTask.renderToColor data.viewportSize
-            
-
-    module MRPApprox =
-
-        type MRPData = {
-            mrpWeights : IMod<V3d>
-        }
-
-        let initMRPData (m : MRenderState) = 
-            {
-                mrpWeights = m.mrpWeights
-            }
-
-        let mrpApproxRenderTask (data : RenderData) (mrpData : MRPData) (sceneSg : ISg) = 
-
-            //let sceneSg = MRPApproxDebug.sceneSg data.lights
-
-            sceneSg
-                |> setupFbEffects [ 
-                        EffectApMRP.mostRepresentativePointApprox |> toEffect
-                        EffectUtils.effectClearNaN |> toEffect
-                    ]
-                |> setupLights data.lights
-                |> setupPhotometricData data.photometricData
-                |> setupCamera data.view data.frustum data.viewportSize
-                |> Sg.uniform "mrpWeights" mrpData.mrpWeights
-                |> Sg.compile data.runtime (signature data.runtime)
-
-        let mrpApproxFb (data : RenderData) (mrpData : MRPData) (sceneSg : ISg) = 
-            mrpApproxRenderTask data mrpData sceneSg
-            |> RenderTask.renderToColor data.viewportSize
-                      
-
-    module BaumFFApprox =
-
-        let baumFFApproxRenderTask (data : RenderData) (sceneSg : ISg) = 
-            sceneSg
-                |> setupFbEffects [ 
-                        EffectApBaumFF.baumFFApprox |> toEffect 
-                        EffectUtils.effectClearNaN |> toEffect
-                    ]
-                |> setupLights data.lights
-                |> setupPhotometricData data.photometricData
-                |> setupCamera data.view data.frustum data.viewportSize
-                |> Sg.compile data.runtime (signature data.runtime)
-
-        let baumFFApproxFb (data : RenderData) (sceneSg : ISg) = 
-            baumFFApproxRenderTask data sceneSg
-            |> RenderTask.renderToColor data.viewportSize
-
-    module StructuredSamplingApprox =
-
-        type SSData = {
-            sampleCorners        : IMod<bool>
-            sampleBarycenter     : IMod<bool>
-            sampleClosest        : IMod<bool>
-            sampleNorm           : IMod<bool>
-            sampleMRP            : IMod<bool>
-            sampleRandom         : IMod<bool>
-            numSRSamples         : IMod<int>
-            SRSWeightScale       : IMod<float>
-            TangentApproxDist    : IMod<float>
-            SRSWeightScaleIrr    : IMod<float>
-            TangentApproxDistIrr : IMod<float>
-            CombinedLerpValue    : IMod<float>
-        }
-
-        let initSSData (m : MRenderState) = 
-            {
-                sampleCorners        = m.sampleCorners
-                sampleBarycenter     = m.sampleBarycenter
-                sampleClosest        = m.sampleClosest
-                sampleNorm           = m.sampleNorm
-                sampleMRP            = m.sampleMRP
-                sampleRandom         = m.sampleRandom
-                numSRSamples         = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
-                SRSWeightScale       = m.SRSWeightScale.value
-                TangentApproxDist    = m.TangentApproxDist.value
-                SRSWeightScaleIrr    = m.SRSWeightScaleIrr.value
-                TangentApproxDistIrr = m.TangentApproxDistIrr.value
-                CombinedLerpValue    = m.CombinedSSWeight.value
-            }
-
-        let private setupSS_RenderTask (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect)= 
-
-            
-            let pointSg color trafo = 
-                 IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 0.01)) 6 color
-                |> Sg.ofIndexedGeometry
-                |> Sg.trafo trafo
-                |> Sg.effect [
-                        DefaultSurfaces.trafo |> toEffect
-                        DefaultSurfaces.vertexColor |> toEffect
-                    ]
-                    
-
-            
-            let getTrafo sidx = 
-                    data.lights.SamplePoints |>
-                    Mod.map(fun sp -> 
-                        Trafo3d.Translation sp.[sidx]
-                    )
-
-            let pointSg = 
-                ssData.numSRSamples |> Mod.map (fun numSRSamples ->
-
-                    let mutable sg = Sg.empty
-
-                    if numSRSamples > 0 then
-                        for i in 0 .. numSRSamples - 1 do               
-
-                            let sampleSg = pointSg C4b.Red (getTrafo i)
-
-                            sg <- Sg.group' [sg; sampleSg]
-
-                    sg
-
-                ) |> Sg.dynamic
-
-            let sceneSg = Sg.group' [sceneSg; pointSg]
-            
-            
-            sceneSg
-                |> setupFbEffects [ 
-                        ssEffect
-                        EffectUtils.effectClearNaN |> toEffect
-                    ]
-                |> setupLights data.lights
-                |> setupPhotometricData data.photometricData
-                |> setupCamera data.view data.frustum data.viewportSize
-                |> Sg.uniform "sampleCorners"           ssData.sampleCorners
-                |> Sg.uniform "sampleBarycenter"        ssData.sampleBarycenter
-                |> Sg.uniform "sampleClosest"           ssData.sampleClosest
-                |> Sg.uniform "sampleNorm"              ssData.sampleNorm
-                |> Sg.uniform "sampleMRP"               ssData.sampleMRP
-                |> Sg.uniform "sampleRandom"            ssData.sampleRandom
-                |> Sg.uniform "numSRSamples"            ssData.numSRSamples
-                |> Sg.uniform "weightScaleSRSamples"    ssData.SRSWeightScale
-                |> Sg.uniform "tangentApproxDist"       ssData.TangentApproxDist
-                |> Sg.uniform "weightScaleSRSamplesIrr" ssData.SRSWeightScaleIrr
-                |> Sg.uniform "tangentApproxDistIrr"    ssData.TangentApproxDistIrr
-                |> Sg.uniform "combinedLerpValue"       ssData.CombinedLerpValue
-                |> Sg.compile data.runtime (signature data.runtime)
-
-        let private setupSS_Fb (data : RenderData) (ssData : SSData) (sceneSg : ISg) (ssEffect : FShade.Effect) = 
-            setupSS_RenderTask data ssData sceneSg ssEffect
-            |> RenderTask.renderToColor data.viewportSize 
-            
-            
-        let ssApproxFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
-            EffectApStructuredSampling.structuredSampling |> toEffect |> setupSS_Fb data ssData sceneSg 
-
-        let ssIrrApproxFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
-            EffectApStructuredSampling.structuredIrradianceSampling |> toEffect |> setupSS_Fb data ssData sceneSg
-
-        let ssCombinedApproxFb (data : RenderData) (ssData : SSData) (sceneSg : ISg) =
-            EffectApStructuredSampling.combinedStructuredSampling |> toEffect |> setupSS_Fb data ssData sceneSg
-            
-    module Compare = 
-        
-        open GroundTruth
-
-        let private renderToFbo (fbo : IOutputMod<IFramebuffer>) (task : IRenderTask) =
-            let sem = (Set.singleton DefaultSemantic.Colors)
-            let res = 
-                new SequentialRenderTask([|task|]) |> renderTo fbo
-        
-            sem |> Seq.map (fun k -> k, getResult k res) |> Map.ofSeq |> Map.find DefaultSemantic.Colors
-
-        let private depthSignature (runtime : Aardvark.Rendering.GL.Runtime) = 
-            runtime.CreateFramebufferSignature [
-                DefaultSemantic.Depth, { format = RenderbufferFormat.DepthComponent32; samples = 1 }
-            ]
-                
-        let private  diffSignature (runtime : Aardvark.Rendering.GL.Runtime) =
-            runtime.CreateFramebufferSignature [
-                DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
-            ]
-                                        
-        let diffFb (data : RenderData) (effectFbs : Map<RenderMode, IOutputMod<ITexture>>) =
-                        
-            Sg.fullscreenQuad data.viewportSize
-                |> Sg.effect [ 
-                    EffectCompare.Compute.computeError |> toEffect 
-                ]
-                |> Sg.texture (Sym.ofString "GTTex") (Map.find RenderMode.GroundTruth effectFbs)
-                |> Sg.texture (Sym.ofString "CompTex") 
-                    (
-                        data.compare |> Mod.bind (fun rm ->
-                            match rm with
-                                | RenderMode.Compare -> Map.find RenderMode.GroundTruth effectFbs
-                                | _ -> Map.find rm effectFbs
-                            )
-                    )
-                |> Sg.compile data.runtime (diffSignature data.runtime)
-                |> RenderTask.renderToColor data.viewportSize
-                                
-        let private depthFb (data : RenderData) (sceneSg : ISg)=
-            sceneSg
-                |> Sg.effect [ 
-                    DefaultSurfaces.trafo |> toEffect
-                    DefaultSurfaces.vertexColor |> toEffect 
-                    ]
-                |> setupLights data.lights                   
-                |> setupCamera data.view data.frustum data.viewportSize
-                |> Sg.compile data.runtime (depthSignature data.runtime)
-                |> RenderTask.renderToDepth data.viewportSize
-
-        let compareRenderTask (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) (diffFb : IOutputMod<ITexture>) = 
-            Sg.fullscreenQuad data.viewportSize
-                |> Sg.effect [ 
-                    // EffectOutline.outlineV |> toEffect 
-                    EffectCompare.Visualize.visualize |> toEffect
-                    // EffectOutline.outlineF |> toEffect 
-                ]
-                |> Sg.uniform "PixelSize" (data.viewportSize |> Mod.map (fun vs -> V2d(1.0 / (float) vs.X, 1.0 / (float) vs.Y)))
-                |> Sg.texture (Sym.ofString "TexError") diffFb
-                |> Sg.texture (Sym.ofString "TexDepth") (depthFb data sceneSg)
-                |> Sg.compile data.runtime (signature data.runtime) 
-
-        let compareFb (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) (diffFb : IOutputMod<ITexture>) = 
-            compareRenderTask data gtData sceneSg diffFb
-            |> RenderTask.renderToColor data.viewportSize
-     
-        let compareSg (data : RenderData) (gtData : GroundTruthData) (sceneSg : ISg) (diffFb : IOutputMod<ITexture>) = 
-            compareFb data gtData sceneSg diffFb
-            |> fbToSg data.viewportSize
  
-    module Effects = 
+    module RealTime = 
 
         open Aardvark.Application.WinForms
-
-        open GroundTruth
-        open CenterPointApprox
-        open MRPApprox
-        open BaumFFApprox
-        open StructuredSamplingApprox
-        open Compare
-
-        let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (viewportSize : V2i) (m : MRenderState) =
-            {
-                runtime = app.Runtime
-                scenePath = m.scenePath
-                view = view
-                frustum = Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y) |> Mod.init 
-                viewportSize = viewportSize |> Mod.init
-                lights = m.lights |> Mod.force // mod force necessary ? 
-                photometricData = m.photometryData
-                mode = m.renderMode
-                compare = m.compare
-                toneMap = m.toneMap
-                toneMapScale = m.toneMapScale.value
-            }
+        
+        open EffectGT.Rendering
+        open EffectApPoint.Rendering
+        open EffectApMRP.Rendering
+        open EffectApBaumFF.Rendering
+        open EffectToneMapping.Rendering
+        open EffectApStructuredSampling.Rendering
+        open EffectCompare.Rendering
 
         let fpsUpdate (feedback : RenderFeedback) =
 
@@ -613,15 +70,23 @@ module Rendering =
                 Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) data.scenePath
                 |> Sg.dynamic
                 |> Sg.scale 20.0
-                //|> Sg.scale 200.0
 
-            let groundTruthFb       = groundTruthFb data gtData sceneSg      |> applyTonemappingOnFb data
-            let centerPointApproxFb = centerPointApproxFb data sceneSg       |> applyTonemappingOnFb data
-            let mrpApproxFb         = mrpApproxFb data mrpData sceneSg       |> applyTonemappingOnFb data
-            let baumFFApproxFb      = baumFFApproxFb data sceneSg            |> applyTonemappingOnFb data
-            let ssIrrApproxFb       = ssIrrApproxFb data ssData sceneSg      |> applyTonemappingOnFb data
-            let ssApproxFb          = ssApproxFb data ssData sceneSg         |> applyTonemappingOnFb data
-            let ssCombinedApproxFb  = ssCombinedApproxFb data ssData sceneSg |> applyTonemappingOnFb data
+            let sceneSg = 
+                sceneSg 
+                    |> Light.Sg.setLightCollectionUniforms data.lights
+                    |> Light.Sg.addLightCollectionSg data.lights
+                    |> setupPhotometricData data.photometricData
+                    |> setupCamera data.view data.frustum data.viewportSize
+
+            let signature = signature data.runtime
+
+            let groundTruthFb       = groundTruthFb data gtData signature sceneSg       |> applyTonemappingOnFb data signature
+            let centerPointApproxFb = centerPointApproxFb data signature sceneSg        |> applyTonemappingOnFb data signature
+            let mrpApproxFb         = mrpApproxFb data mrpData signature sceneSg        |> applyTonemappingOnFb data signature
+            let baumFFApproxFb      = baumFFApproxFb data signature sceneSg             |> applyTonemappingOnFb data signature
+            let ssIrrApproxFb       = ssIrrApproxFb data ssData signature sceneSg       |> applyTonemappingOnFb data signature
+            let ssApproxFb          = ssApproxFb data ssData signature sceneSg          |> applyTonemappingOnFb data signature
+            let ssCombinedApproxFb  = ssCombinedApproxFb data ssData signature sceneSg  |> applyTonemappingOnFb data signature
                   
             let effectFbs = 
                 Map.empty
@@ -634,8 +99,8 @@ module Rendering =
                 |> Map.add RenderMode.CombinedStructuredSampling    ssCombinedApproxFb
                 
             let diffFrameBuffer = diffFb data effectFbs
+            
 
-            let signature = signature data.runtime
             let tasks = 
                 Map.empty
                 |> Map.add RenderMode.GroundTruth                   (groundTruthFb       |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
@@ -646,7 +111,7 @@ module Rendering =
                 |> Map.add RenderMode.StructuredSampling            (ssApproxFb          |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
                 |> Map.add RenderMode.CombinedStructuredSampling    (ssCombinedApproxFb  |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
 
-                |> Map.add RenderMode.Compare (compareSg data gtData sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.Compare (compareSg data gtData signature sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
                 
             tasks |> Map.iter (fun _ t -> t.Update(AdaptiveToken.Top, RenderToken.Empty)) // iterate over tasks initially one time to create them
 
