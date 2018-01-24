@@ -6,6 +6,9 @@ module RenderInterop =
     open Aardvark.Base.Incremental
     open Aardvark.Data.Photometry    
     open Aardvark.Base.Rendering
+
+    
+    open Aardvark.SceneGraph
     
     open Aardvark.Application.WinForms
 
@@ -14,10 +17,10 @@ module RenderInterop =
     type RenderData = {
             runtime : Aardvark.Rendering.GL.Runtime
 
-            scenePath : IMod<string>
+            sceneSg : ISg
 
             view         : IMod<CameraView>
-            frustum      : IMod<Frustum>
+            projTrafo    : IMod<Trafo3d>
             viewportSize : IMod<V2i>
 
             mode            : IMod<RenderMode>
@@ -40,12 +43,12 @@ module RenderInterop =
             compareTexture : IOutputMod<ITexture>
         }
 
-    let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (frustum : IMod<Frustum>) (viewportSize : V2i) (m : MRenderState) =
+    let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (projTrafo : IMod<Trafo3d>) (viewportSize : V2i) (m : MRenderState) (sceneSg : ISg) =
         {
             runtime = app.Runtime
-            scenePath = m.scenePath
+            sceneSg = sceneSg
             view = view
-            frustum = frustum // Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y) |> Mod.init 
+            projTrafo = projTrafo 
             viewportSize = viewportSize |> Mod.init
             lights = m.lights |> Mod.force // mod force necessary ? 
             photometricData = m.photometryData

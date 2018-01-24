@@ -20,10 +20,10 @@ module Utils =
                 |> Sg.uniform "ViewportSize" size
 
 
-        let setupCamera (view : IMod<CameraView>) (frustum : IMod<Frustum>) (viewportSize : IMod<V2i>) sg =
+        let setupCamera (view : IMod<CameraView>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) sg =
             sg
                 |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
-                |> Sg.projTrafo (frustum |> Mod.map Frustum.projTrafo)
+                |> Sg.projTrafo projTrafo
                 |> Sg.uniform "ViewportSize" viewportSize
                 
         let fbToSg (viewportSize : IMod<V2i>) fb = 

@@ -66,17 +66,13 @@ module Rendering =
 
         let CreateAndLinkRenderTask (data : RenderData) (gtData : GroundTruthData) (mrpData : MRPData) (ssData : SSData) =
 
-            let sceneSg = 
-                Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) data.scenePath
-                |> Sg.dynamic
-                |> Sg.scale 20.0
+
 
             let sceneSg = 
-                sceneSg 
+                data.sceneSg 
                     |> Light.Sg.setLightCollectionUniforms data.lights
-                    |> Light.Sg.addLightCollectionSg data.lights
                     |> setupPhotometricData data.photometricData
-                    |> setupCamera data.view data.frustum data.viewportSize
+                    |> setupCamera data.view data.projTrafo data.viewportSize
 
             let signature = signature data.runtime
 

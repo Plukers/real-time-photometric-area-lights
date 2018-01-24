@@ -18,6 +18,8 @@
 
     open System.Windows.Forms
 
+    
+    open Aardvark.SceneGraph
     open Aardvark.SceneGraph.IO
     open Aardvark.SceneGraph.RuntimeSgExtensions
     open Aardvark.Base.Rendering
@@ -41,17 +43,22 @@
     open Rendering.RealTime
 
 
-    let setupOfflineRendering (app : OpenGlApplication) (m : MRenderState) = 
+    let setupOfflineRendering (app : OpenGlApplication) (m : MRenderState) (sceneSg : ISg) = 
 
         let viewportSize = V2i(1024, 1024)
 
         let view = CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO |> Mod.init
-        let frustum = Frustum.ortho (Box3d(Range1d(-20.0, 20.0), Range1d(-20.0, 20.0), Range1d(-10.0, 10.0))) |> Mod.init
 
-        
-        let view = CameraView.lookAt (V3d(2.0, 0.0, 3.0)) (V3d(-4.0, 0.0, -1.0)) V3d.OOI |> Mod.init
-        let frustum = Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y) |> Mod.init
-        
+        let projTrafo = 
+            { 
+                left = -20.0
+                right = 20.0
+                bottom = -20.0
+                top = 20.0
+                near = 0.1
+                far = 20.1
+            } 
+            |> Frustum.orthoTrafo |> Mod.init
 
         let renderMode = RenderMode.GroundTruth |> Mod.init
         let updateRenderMode mode = 
@@ -87,14 +94,13 @@
             )
            
         updatePhotometryData "ARC3_60712332_(STD).ldt"
-
-
+        
         let renderData = 
                             {
                                 runtime = app.Runtime
-                                scenePath = m.scenePath
+                                sceneSg = sceneSg
                                 view = view
-                                frustum = frustum 
+                                projTrafo = projTrafo 
                                 viewportSize = viewportSize |> Mod.init
                                 lights = m.lights |> Mod.force // mod force necessary ? 
                                 photometricData = photometryData
@@ -105,9 +111,6 @@
                             }
             
             
-            
-            
-        //initialRenderData app scView scFrustum viewportSize m 
 
         let gtData = initGTData' (true |> Mod.init)
         let mrpData = initMRPData m
@@ -135,10 +138,11 @@
                                 DefaultSemantic.Colors, ({ texture = scColor; slice = 0; level = 0 } :> IFramebufferOutput)
                             ]
                         )
+
+                    let numOfSamples = 60000
                     
-                    for i in 1..1 do
+                    for i in 1.. (numOfSamples / Config.NUM_SAMPLES) do
                         scRenderTask.Run(RenderToken.Empty, fbo)
-                        printfn "update"
                         update()
 
                     let pix = app.Runtime.Download(scColor)
@@ -159,12 +163,31 @@
         win.Height <- viewportSize.Y
         win.Width <- viewportSize.X
 
+        
+        let sceneSg = 
+                m.scenePath 
+                |> Mod.map( fun path -> path |> Utils.Assimp.loadFromFile true |> Sg.normalize) 
+                |> Sg.dynamic
+                |> Sg.scale 20.0
 
-        //////////// REALTIME ////////////////////////
+        
+        let offlineRenderTask = setupOfflineRendering app m sceneSg
+
+
         
         // let view = CameraView.lookAt (V3d(1.0, 0.0, 0.0)) (V3d(-1.0, 0.0, -1.0)) V3d.OOI
-        let view = CameraView.lookAt (V3d(2.0, 0.0, 3.0)) (V3d(-4.0, 0.0, -1.0)) V3d.OOI
-        let renderData = initialRenderData app (DefaultCameraController.control win.Mouse win.Keyboard win.Time view) (Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y) |> Mod.init) viewportSize m 
+        
+        let view = 
+            CameraView.lookAt (V3d(2.0, 0.0, 3.0)) (V3d(-4.0, 0.0, -1.0)) V3d.OOI
+            |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
+        let projTrafo =
+            Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y)
+            |> Frustum.projTrafo |> Mod.init
+        
+        
+        let sceneSg = sceneSg |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
+
+        let renderData = initialRenderData app view projTrafo viewportSize m sceneSg
 
         
         let gtData = initGTData m 
@@ -172,10 +195,6 @@
         let ssData = initSSData m
 
         let (renderTask, renderFeedback) = Rendering.RealTime.CreateAndLinkRenderTask renderData gtData mrpData ssData
-
-        //////////////////////////////////////////////
-
-        let offlineRenderTask = setupOfflineRendering app m
         
 
         win.RenderTask <- renderTask
@@ -711,7 +730,7 @@
         match light1 with
         | Some lightId ->             
             // let t = Trafo3d.Translation(-8.0, 0.0, -5.0)        
-            let t = Trafo3d.Translation(0.0, 0.0, 0.6)
+            let t = Trafo3d.Translation(-15.0, 0.0, 0.6)
             transformLight lc lightId t |> ignore
         | None -> ()
         
@@ -741,12 +760,12 @@
             sampleMRP        = false
             sampleRandom     = true
             numOfSRSamples   = {
-                        value   = 8.0
-                        min     = 0.0
-                        max     = (float) Config.SS_LIGHT_SAMPLES_ALL_LIGHT
-                        step    = 1.0
-                        format  = "{0:0}"
-                    }
+                                value   = 8.0
+                                min     = 0.0
+                                max     = (float) Config.SS_LIGHT_SAMPLES_ALL_LIGHT
+                                step    = 1.0
+                                format  = "{0:0}"
+                                }
             SRSWeightScale = {
                                 value   = 0.0
                                 min     = 0.0

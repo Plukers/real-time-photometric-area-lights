@@ -247,7 +247,6 @@ module EffectGT =
 
             let update() = 
                 transact (fun _ -> 
-                    
                     if executeUpdate |> Mod.force then
                     
                         let clear = clearRequired |> Mod.force 
