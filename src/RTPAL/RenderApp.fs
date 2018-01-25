@@ -83,15 +83,18 @@
                 tms |> Mod.change toneMapScale
             )
         
+        let mutable photometryName = ""
         let photometryData = None |> Mod.init
         let updatePhotometryData name = 
-            let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";name]
+            let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";name]
             let lightData = LightMeasurementData.FromFile(photometryPath)
             let data = Some(IntensityProfileSampler(lightData))
         
             transact (fun _ ->
                 data |> Mod.change photometryData 
             )
+
+            photometryName <- name
            
         updatePhotometryData "ARC3_60712332_(STD).ldt"
         
@@ -127,29 +130,63 @@
 
         let scColor = app.Runtime.CreateTexture(viewportSize, TextureFormat.Rgba32f, 1, 1, 1)
 
+        // Create a framebuffer matching signature and capturing the render to texture targets
+        let fbo = 
+            app.Runtime.CreateFramebuffer(
+                scSignature, 
+                Map.ofList [
+                    DefaultSemantic.Colors, ({ texture = scColor; slice = 0; level = 0 } :> IFramebufferOutput)
+                ]
+            )
 
-        let path = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
+
+        let resultPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
+
+        let activeTrafoLightId = 0        
+        let numOfRotationSteps = 4
+        let numOfSamples = 40
+
+        let imageFormat = PixFileFormat.Exr
+        let imageFormatExt = "ext"
+
+        let createFileName = 
+            let a = renderData.mode |> Mod.force
+            let b = LanguagePrimitives.EnumToValue a
+            let c = enum<RenderMode>(b)
+            sprintf "%s"  ((renderData.mode |> Mod.force).ToString())
+
+
+        let renderIteration = 
+
+            let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps)
+
+            for r in 0 .. numOfRotationSteps - 1 do 
+
+                for i in 1.. (numOfSamples / Config.NUM_SAMPLES) do
+                    scRenderTask.Run(RenderToken.Empty, fbo)
+                    update()
+
+                app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName], imageFormat);
+                    
+
+
         
         let createImageTask = 
             async {
-                    // Create a framebuffer matching signature and capturing the render to texture targets
-                    let fbo = 
-                        app.Runtime.CreateFramebuffer(
-                            scSignature, 
-                            Map.ofList [
-                                DefaultSemantic.Colors, ({ texture = scColor; slice = 0; level = 0 } :> IFramebufferOutput)
-                            ]
-                        )
+                let photometryFiles = 
+                    System.IO.Directory.GetFiles (Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry"])
+                    |> Array.map System.IO.Path.GetFileName 
 
-                    let numOfSamples = 100
+                
+                for f in photometryFiles do
                     
-                    for i in 1.. (numOfSamples / Config.NUM_SAMPLES) do
-                        scRenderTask.Run(RenderToken.Empty, fbo)
-                        update()
+                    let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
+                    System.IO.Directory.CreateDirectory dataPath |> ignore
+                    
+                    updatePhotometryData f
+                    
 
-                    let pix = app.Runtime.Download(scColor)
-                    
-                    pix.SaveAsImage(Path.combine [path;"IMAGE.exr"], PixFileFormat.Exr);
+                ()
                 }
             
         createImageTask
@@ -734,7 +771,7 @@
             transformLight lc lightId t |> ignore
         | None -> ()
         
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"photometry";"ARC3_60712332_(STD).ldt"]
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"ARC3_60712332_(STD).ldt"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         
         let photometryData = Some(IntensityProfileSampler(lightData))    
