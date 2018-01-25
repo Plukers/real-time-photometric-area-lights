@@ -79,33 +79,19 @@ module Rendering =
 
             let signature = signature data.runtime
 
-            let groundTruthFb       = groundTruthFb data gtData signature sceneSg       |> applyTonemappingOnFb data signature
-            let centerPointApproxFb = centerPointApproxFb data signature sceneSg        |> applyTonemappingOnFb data signature
-            let mrpApproxFb         = mrpApproxFb data mrpData signature sceneSg        |> applyTonemappingOnFb data signature
-            let baumFFApproxFb      = baumFFApproxFb data signature sceneSg             |> applyTonemappingOnFb data signature
-            let ssIrrApproxFb       = ssIrrApproxFb data ssData signature sceneSg       |> applyTonemappingOnFb data signature
-            let ssApproxFb          = ssApproxFb data ssData signature sceneSg          |> applyTonemappingOnFb data signature
-            let ssCombinedApproxFb  = ssCombinedApproxFb data ssData signature sceneSg  |> applyTonemappingOnFb data signature
-
-            let formFactorFb        = formFactorFb data signature sceneSg           
-            let solidAngleFb        = solidAngleFb data signature sceneSg
-                  
             let effectFbs = 
                 Map.empty
-                |> Map.add RenderMode.GroundTruth                   groundTruthFb
-                |> Map.add RenderMode.CenterPointApprox             centerPointApproxFb
-                |> Map.add RenderMode.MRPApprox                     mrpApproxFb
-                |> Map.add RenderMode.BaumFFApprox                  baumFFApproxFb
-                |> Map.add RenderMode.StructuredIrrSampling         ssIrrApproxFb
-                |> Map.add RenderMode.StructuredSampling            ssApproxFb
-                |> Map.add RenderMode.CombinedStructuredSampling    ssCombinedApproxFb
+                |> Map.add RenderMode.GroundTruth                   (groundTruthFb data gtData signature sceneSg        |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.CenterPointApprox             (centerPointApproxFb data signature sceneSg         |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.MRPApprox                     (mrpApproxFb data mrpData signature sceneSg         |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.BaumFFApprox                  (baumFFApproxFb data signature sceneSg              |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.StructuredIrrSampling         (ssIrrApproxFb data ssData signature sceneSg        |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.StructuredSampling            (ssApproxFb data ssData signature sceneSg           |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.CombinedStructuredSampling    (ssCombinedApproxFb data ssData signature sceneSg   |> applyTonemappingOnFb data signature)
+                                                                    
+                |> Map.add RenderMode.FormFactor                    (formFactorFb data signature sceneSg)
+                |> Map.add RenderMode.SolidAngle                    (solidAngleFb data signature sceneSg)
 
-                |> Map.add RenderMode.FormFactor                    formFactorFb
-                |> Map.add RenderMode.SolidAngle                    solidAngleFb
-
-
-
-                
             let diffFrameBuffer = diffFb data effectFbs
             
             let tasks = 
@@ -117,21 +103,7 @@ module Rendering =
                     map <- map |> Map.add (kv.Key) (kv.Value |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
 
                 map
-
-(*
-            let tasks = 
-                Map.empty
-                |> Map.add RenderMode.GroundTruth                   (groundTruthFb       |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.CenterPointApprox             (centerPointApproxFb |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.MRPApprox                     (mrpApproxFb         |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.BaumFFApprox                  (baumFFApproxFb      |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.StructuredIrrSampling         (ssIrrApproxFb       |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.StructuredSampling            (ssApproxFb          |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.CombinedStructuredSampling    (ssCombinedApproxFb  |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
-                |> Map.add RenderMode.FormFactor                    (formFactorFb        |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
-
-                |> Map.add RenderMode.Compare (compareSg data gtData signature sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
-    *)            
+         
             tasks |> Map.iter (fun _ t -> t.Update(AdaptiveToken.Top, RenderToken.Empty)) // iterate over tasks initially one time to create them
 
             let renderTask = 
