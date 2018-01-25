@@ -45,7 +45,7 @@
 
     let setupOfflineRendering (app : OpenGlApplication) (m : MRenderState) (sceneSg : ISg) = 
 
-        let viewportSize = V2i(1024, 1024)
+        let viewportSize = V2i(4096, 4096)
 
         let view = CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO |> Mod.init
 
@@ -122,11 +122,13 @@
 
         let scSignature =
             app.Runtime.CreateFramebufferSignature [
-                DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba8; samples = 1 }
+                DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
             ]
 
-        let scColor = app.Runtime.CreateTexture(viewportSize, TextureFormat.Rgba8, 1, 1, 1)
+        let scColor = app.Runtime.CreateTexture(viewportSize, TextureFormat.Rgba32f, 1, 1, 1)
 
+
+        let path = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
         
         let createImageTask = 
             async {
@@ -139,17 +141,15 @@
                             ]
                         )
 
-                    let numOfSamples = 60000
+                    let numOfSamples = 100
                     
                     for i in 1.. (numOfSamples / Config.NUM_SAMPLES) do
                         scRenderTask.Run(RenderToken.Empty, fbo)
                         update()
 
                     let pix = app.Runtime.Download(scColor)
-
-
-                    pix.SaveAsImage("IMAGE.png")
-
+                    
+                    pix.SaveAsImage(Path.combine [path;"IMAGE.exr"], PixFileFormat.Exr);
                 }
             
         createImageTask

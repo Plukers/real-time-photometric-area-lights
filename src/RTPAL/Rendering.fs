@@ -41,6 +41,9 @@ module Rendering =
         open EffectApStructuredSampling.Rendering
         open EffectCompare.Rendering
 
+        open EffectFormFactor.Rendering
+        open EffectSolidAngle.Rendering
+
         let fpsUpdate (feedback : RenderFeedback) =
 
             let mutable dTSum = 0.0 // in seconds
@@ -83,6 +86,9 @@ module Rendering =
             let ssIrrApproxFb       = ssIrrApproxFb data ssData signature sceneSg       |> applyTonemappingOnFb data signature
             let ssApproxFb          = ssApproxFb data ssData signature sceneSg          |> applyTonemappingOnFb data signature
             let ssCombinedApproxFb  = ssCombinedApproxFb data ssData signature sceneSg  |> applyTonemappingOnFb data signature
+
+            let formFactorFb        = formFactorFb data signature sceneSg           
+            let solidAngleFb        = solidAngleFb data signature sceneSg
                   
             let effectFbs = 
                 Map.empty
@@ -93,10 +99,26 @@ module Rendering =
                 |> Map.add RenderMode.StructuredIrrSampling         ssIrrApproxFb
                 |> Map.add RenderMode.StructuredSampling            ssApproxFb
                 |> Map.add RenderMode.CombinedStructuredSampling    ssCombinedApproxFb
+
+                |> Map.add RenderMode.FormFactor                    formFactorFb
+                |> Map.add RenderMode.SolidAngle                    solidAngleFb
+
+
+
                 
             let diffFrameBuffer = diffFb data effectFbs
             
+            let tasks = 
+                let mutable map = 
+                    Map.empty
+                    |> Map.add RenderMode.Compare (compareSg data gtData signature sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
 
+                for kv in effectFbs do
+                    map <- map |> Map.add (kv.Key) (kv.Value |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
+
+                map
+
+(*
             let tasks = 
                 Map.empty
                 |> Map.add RenderMode.GroundTruth                   (groundTruthFb       |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
@@ -106,9 +128,10 @@ module Rendering =
                 |> Map.add RenderMode.StructuredIrrSampling         (ssIrrApproxFb       |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
                 |> Map.add RenderMode.StructuredSampling            (ssApproxFb          |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
                 |> Map.add RenderMode.CombinedStructuredSampling    (ssCombinedApproxFb  |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
+                |> Map.add RenderMode.FormFactor                    (formFactorFb        |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)
 
                 |> Map.add RenderMode.Compare (compareSg data gtData signature sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
-                
+    *)            
             tasks |> Map.iter (fun _ t -> t.Update(AdaptiveToken.Top, RenderToken.Empty)) // iterate over tasks initially one time to create them
 
             let renderTask = 

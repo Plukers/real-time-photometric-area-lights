@@ -17,7 +17,9 @@ type RenderMode =
     | StructuredIrrSampling = 4
     | StructuredSampling = 5
     | CombinedStructuredSampling = 6
-    | Compare = 7
+    | SolidAngle = 7
+    | FormFactor = 8
+    | Compare = 9
 
 type LightTransformMode =
     | Translate
