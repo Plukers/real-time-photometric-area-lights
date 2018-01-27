@@ -40,12 +40,12 @@
     open EffectApStructuredSampling.Rendering
     open EffectCompare.Rendering
 
-    open Rendering.RealTime
+    open Rendering.Render
 
 
     let setupOfflineRendering (app : OpenGlApplication) (m : MRenderState) (sceneSg : ISg) = 
 
-        let viewportSize = V2i(4096, 4096)
+        let viewportSize = V2i(2048, 2048)
 
         let view = CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO |> Mod.init
 
@@ -119,7 +119,7 @@
         let mrpData = initMRPData m
         let ssData = initSSData m
 
-        let (scRenderTask, _) = Rendering.RealTime.CreateAndLinkRenderTask renderData gtData mrpData ssData
+        let (scRenderTask, _) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData
 
         let update = groundTruthRenderUpdate renderData gtData
 
@@ -139,52 +139,102 @@
                 ]
             )
 
-
-        let resultPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
+            
 
         let activeTrafoLightId = 0        
         let numOfRotationSteps = 4
-        let numOfSamples = 40
+        let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps)
+        let mutable numOfSamples = 30000
+
+
 
         let imageFormat = PixFileFormat.Exr
-        let imageFormatExt = "ext"
 
-        let createFileName = 
-            let a = renderData.mode |> Mod.force
-            let b = LanguagePrimitives.EnumToValue a
-            let c = enum<RenderMode>(b)
-            sprintf "%s"  ((renderData.mode |> Mod.force).ToString())
+        let createFileName step = 
+            sprintf "%s_%i"  ((renderData.mode |> Mod.force).ToString()) step
 
 
-        let renderIteration = 
 
-            let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps)
+        let doRotationIteration action =
 
-            for r in 0 .. numOfRotationSteps - 1 do 
+            let mutable rotation = Trafo3d.Identity
+            let rotationStep = Trafo3d.Rotation(V3d(0.0, angle, 0.0));
+        
+            for r in 0 .. numOfRotationSteps do 
+                action r
+                
+                transformLight renderData.lights activeTrafoLightId (rotationStep)
+                rotation <- rotation * rotationStep
+            
+            transformLight renderData.lights activeTrafoLightId (rotation.Inverse)
+        
+        let renderEffects path = 
 
-                for i in 1.. (numOfSamples / Config.NUM_SAMPLES) do
+            fun step -> 
+                // Ground Truth
+                updateRenderMode RenderMode.GroundTruth
+                update true
+
+                
+                for i in 1 .. (numOfSamples / Config.NUM_SAMPLES) do
                     scRenderTask.Run(RenderToken.Empty, fbo)
-                    update()
-
-                app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName], imageFormat);
+                    update false
                     
+                let filename = (createFileName step)
+
+                app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;String.concat "_" [(createFileName step); numOfSamples.ToString()]], imageFormat);
+                (*
+                // Structured Irradiance Sampling
+                updateRenderMode RenderMode.StructuredIrrSampling
+                scRenderTask.Run(RenderToken.Empty, fbo)
+                app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;createFileName step], imageFormat);
+                *)
 
 
+
+            
+            
         
         let createImageTask = 
             async {
+
+                let resultPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
+                
+                let renderReferenceData = 
+                    fun step ->
+                        updateRenderMode RenderMode.FormFactor
+                        scRenderTask.Run(RenderToken.Empty, fbo)
+                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName step], imageFormat);
+                        
+                        updateRenderMode RenderMode.SolidAngle
+                        scRenderTask.Run(RenderToken.Empty, fbo)
+                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName step], imageFormat);
+                 
+                //doRotationIteration renderReferenceData
+
+
                 let photometryFiles = 
                     System.IO.Directory.GetFiles (Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry"])
                     |> Array.map System.IO.Path.GetFileName 
 
-                
+                let mutable oneIter = true
                 for f in photometryFiles do
+
+                    if oneIter then 
                     
-                    let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
-                    System.IO.Directory.CreateDirectory dataPath |> ignore
+                        let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
+                        System.IO.Directory.CreateDirectory dataPath |> ignore
                     
-                    updatePhotometryData f
+                        updatePhotometryData f
+                        
+                        doRotationIteration (renderEffects dataPath)
+                        
+                        
+
+                        oneIter <- false
                     
+
+
 
                 ()
                 }
@@ -231,7 +281,7 @@
         let mrpData = initMRPData m
         let ssData = initSSData m
 
-        let (renderTask, renderFeedback) = Rendering.RealTime.CreateAndLinkRenderTask renderData gtData mrpData ssData
+        let (renderTask, renderFeedback) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData
         
 
         win.RenderTask <- renderTask
@@ -240,7 +290,7 @@
             let updateRT = groundTruthRenderUpdate renderData gtData
 
             let update (args : OpenTK.FrameEventArgs) =
-                updateRT()
+                updateRT false
 
             update
         

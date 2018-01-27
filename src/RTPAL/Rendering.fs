@@ -29,7 +29,7 @@ module Rendering =
         ]
 
  
-    module RealTime = 
+    module Render = 
 
         open Aardvark.Application.WinForms
         
@@ -132,3 +132,6 @@ module Rendering =
                 }
 
             (renderTask, renderFeedback)
+
+
+    

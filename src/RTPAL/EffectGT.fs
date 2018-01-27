@@ -211,7 +211,7 @@ module EffectGT =
                 data.lights.Trafos |> Mod.map (
                     fun trafos -> 
                         let clear = Array.forall2 (fun elem1 elem2 -> elem1 <> elem2) trafos prevLightTrafos
-                        prevLightTrafos <- trafos        
+                        prevLightTrafos <- trafos   
                         clear
                     )
 
@@ -245,11 +245,11 @@ module EffectGT =
                     ) gtData.updateGroundTruth data.mode
 
 
-            let update() = 
+            let update (forceClear : bool) = 
                 transact (fun _ -> 
                     if executeUpdate |> Mod.force then
-                    
-                        let clear = clearRequired |> Mod.force 
+                                        
+                        let clear = (clearRequired |> Mod.force) || forceClear
                                         
                         if clear then
                             if not gtData.clear.Value then 
