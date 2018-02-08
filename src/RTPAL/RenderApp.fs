@@ -180,8 +180,6 @@
                     scRenderTask.Run(RenderToken.Empty, fbo)
                     update false
                     
-                let filename = (createFileName step)
-
                 app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;String.concat "_" [(createFileName step); numOfSamples.ToString()]], imageFormat);
                 (*
                 // Structured Irradiance Sampling
