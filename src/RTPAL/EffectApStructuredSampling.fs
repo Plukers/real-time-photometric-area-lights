@@ -34,43 +34,22 @@ module EffectApStructuredSampling =
     let MAX_SAMPLE_NUM_WO_RANDOM = 9
 
     [<ReflectedDefinition>]
-    let checkAndAddSample (samples : Arr<N<9>, V3d>) (sampleIdx : int) (sampleCandidate : V3d) =
-        
+    let sampleAlreadyExisting (samples : Arr<N<9>, V3d>) (sampleIdx : int) (sampleCandidate : V3d) =
+    
         if sampleIdx > 0 then 
-            let mutable maxDist = 0.0
+            let mutable minDist = 1e16
             for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                 if i < sampleIdx then
                     let dist = Vec.length (sampleCandidate - samples.[i])
-                    if dist > maxDist then maxDist <- dist
+                    if dist < minDist then minDist <- dist
 
-            if maxDist > 1e-5 then
-                samples.[sampleIdx] <- sampleCandidate
-                (samples, sampleIdx + 1)
+            if minDist > 1e-9 then
+                false
             else
-                (samples, sampleIdx)
+                true
         else 
-            samples.[sampleIdx] <- sampleCandidate
-            (samples, sampleIdx + 1)
-        
-        (*
-        if sampleIdx > 0 then
-                                        
-            let mutable maxDot = 0.0
-            for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                if i < sampleIdx then
-                    let dot = Vec.dot (sampleCandidate |> Vec.normalize) (samples.[i] |> Vec.normalize)
-                    if dot > maxDot then maxDot <- dot
-
-            if maxDot < 0.99999 then
-                samples.[sampleIdx] <- sampleCandidate
-                (samples, sampleIdx + 1)
-            else
-                (samples, sampleIdx)
-        else 
-            samples.[sampleIdx] <- sampleCandidate
-            (samples, sampleIdx + 1)
-        *)
-
+            false
+            
     // solid angle https://en.wikipedia.org/wiki/Solid_angle#Cone,_spherical_cap,_hemisphere
     [<ReflectedDefinition>]
     let private computeApproximateSolidAnglePerSample (t2w : M33d) (sampleCount : int) (thetaScale : float) (addr : int) (p : V3d) = 
@@ -171,8 +150,9 @@ module EffectApStructuredSampling =
 
 
                                 let mutable barycenter = V3d.Zero
-                                for l in 0 .. clippedVc - 1 do
-                                    barycenter <- barycenter + clippedVa.[l]
+                                for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                    if l < clippedVc then
+                                        barycenter <- barycenter + clippedVa.[l]
                                     
                                 let barycenter = barycenter / (float clippedVc)
                
@@ -219,35 +199,36 @@ module EffectApStructuredSampling =
 
                                     let mutable sampleCount = 0
                                     let mutable sampleIdx = 0
-                                    let mutable samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
-
-
+                                    let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
+                                    
                                     if uniform.sampleCorners then   
-                                        for l in 0 .. clippedVc - 1 do
-                                            let (updatetSamples, updatetSampleCount) = checkAndAddSample samples sampleCount clippedVa.[l]
-                                            samples <- updatetSamples
-                                            sampleCount <- updatetSampleCount  
-                                            sampleIdx <- updatetSampleCount
-                                    if uniform.sampleBarycenter then    
-                                        let (updatetSamples, updatetSampleCount) = checkAndAddSample samples sampleCount barycenter
-                                        samples <- updatetSamples
-                                        sampleCount <- updatetSampleCount 
-                                        sampleIdx <- updatetSampleCount
-                                    if uniform.sampleNorm then     
-                                        let (updatetSamples, updatetSampleCount) = checkAndAddSample samples sampleCount normPlanePoint
-                                        samples <- updatetSamples
-                                        sampleCount <- updatetSampleCount   
-                                        sampleIdx <- updatetSampleCount
-                                    if uniform.sampleMRP then  
-                                        let (updatetSamples, updatetSampleCount) = checkAndAddSample samples sampleCount mrp
-                                        samples <- updatetSamples
-                                        sampleCount <- updatetSampleCount     
-                                        sampleIdx <- updatetSampleCount
-                                    if uniform.sampleClosest then    
-                                        let (updatetSamples, updatetSampleCount) = checkAndAddSample samples sampleCount closestPoint
-                                        samples <- updatetSamples
-                                        sampleCount <- updatetSampleCount   
-                                        sampleIdx <- updatetSampleCount
+                                        for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                            if l < clippedVc then
+                                                if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
+                                                    samples.[sampleIdx] <- V3d(clippedVa.[l])
+                                                    sampleIdx <- sampleIdx + 1
+                                                    sampleCount <- sampleIdx
+                                            
+                                    if uniform.sampleBarycenter && not (sampleAlreadyExisting samples sampleIdx barycenter) then
+                                            samples.[sampleIdx] <- V3d(barycenter)
+                                            sampleIdx <- sampleIdx + 1
+                                            sampleCount <- sampleIdx
+
+                                    if uniform.sampleNorm && not (sampleAlreadyExisting samples sampleIdx normPlanePoint) then
+                                            samples.[sampleIdx] <- V3d(normPlanePoint)
+                                            sampleIdx <- sampleIdx + 1
+                                            sampleCount <- sampleIdx
+
+                                    if uniform.sampleMRP && not (sampleAlreadyExisting samples sampleIdx mrp) then
+                                            samples.[sampleIdx] <- V3d(mrp)
+                                            sampleIdx <- sampleIdx + 1
+                                            sampleCount <- sampleIdx
+
+                                    if uniform.sampleClosest && not (sampleAlreadyExisting samples sampleIdx closestPoint) then
+                                            samples.[sampleIdx] <- closestPoint
+                                            sampleIdx <- sampleIdx + 1
+                                            sampleCount <- sampleIdx
+
                                     if uniform.sampleRandom then        
                                         sampleCount <- sampleCount + uniform.numSRSamples
                                                                                                                           
@@ -282,6 +263,10 @@ module EffectApStructuredSampling =
                                             0.0
 
                                     
+                                    for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                            if l < clippedVc then
+                                                // Project polygon light onto sphere
+                                                clippedVa.[l] <- Vec.normalize clippedVa.[l]
 
                                     for l in 0 .. clippedVc - 1 do
                                         // Project polygon light onto sphere
@@ -293,15 +278,24 @@ module EffectApStructuredSampling =
                                     //let scale = clampedDist * 1.0 + (1.0 - clampedDist) * uniform.weightScaleSRSamplesIrr
 
                                     illumination <- illumination + L * brdf * I //* scale // * i.Z  
+                                    
                                     (*
-                                    let expectesSampleCount = 5
-                                    if sampleCount = expectesSampleCount then
-                                        illumination <- V4d(0.0, 1.0, 0.0, 1.0) 
-                                    elif sampleCount < expectesSampleCount then
+                                    if sampleCount < 5 then
+                                        illumination <- V4d(0.0, 0.0, 0.0, 1.0) 
+                                    if sampleCount = 5 then
                                         illumination <- V4d(1.0, 0.0, 0.0, 1.0) 
-                                    else 
+                                    elif sampleCount = 6 then
+                                        illumination <- V4d(0.5, 0.5, 0.0, 1.0) 
+                                    elif sampleCount = 7 then
+                                        illumination <- V4d(0.0, 1.0, 0.0, 1.0) 
+                                    elif sampleCount = 8 then
+                                        illumination <- V4d(0.0, 0.5, 0.5, 1.0) 
+                                    elif sampleCount = 9 then
                                         illumination <- V4d(0.0, 0.0, 1.0, 1.0) 
+                                    else 
+                                        illumination <- V4d(1.0, 1.0, 1.0, 1.0) 
                                     *)
+                                    
                                 ()
                                                                 
                             ////////////////////////////////////////////////////////
@@ -750,7 +744,7 @@ module EffectApStructuredSampling =
             }
         
         let private pointSg color trafo = 
-            IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 1.0)) 6 color
+            IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 0.04)) 6 color
             |> Sg.ofIndexedGeometry
             |> Sg.trafo trafo
             |> Sg.effect [
@@ -758,8 +752,8 @@ module EffectApStructuredSampling =
                     DefaultSurfaces.vertexColor |> toEffect
                 ]
 
-        // closestPointTrafo, clampedClosestPointTrafo, normPlanePointTrafo, clampedNormPlanePointTrafo, MRPTrafo
-        let private createTrafos (lc : Light.LightCollection) (point : V3d * V3d) = 
+        // closestPointTrafo, normPlanePointTrafo, mrpTrafo
+        let private getSamplePointSg (lc : Light.LightCollection) (point : V3d * V3d) = 
 
             let M33dFromCols (c1 : V3d) (c2 : V3d) (c3 : V3d) =
                 M33d(c1.X, c2.X, c3.X, c1.Y, c2.Y, c3.Y, c1.Z, c2.Z, c3.Z)
@@ -786,7 +780,7 @@ module EffectApStructuredSampling =
             let t2w = n |> Vec.normalize |> basisFrisvad 
             let w2t = t2w |> Mat.transpose
 
-            let trafos = // closestPoint, clampedClosestPoint, normPlanePoint, clampedNormPlanePoint, MRP
+            let samplePointPositions =
                 adaptive {
 
                     let! lights = lc.Lights
@@ -883,57 +877,144 @@ module EffectApStructuredSampling =
                                 let mrpDir = ((closestPoint |> Vec.normalize) + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
                                 let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
-                                (t2w * closestPoint, t2w * normPlanePoint, t2w * mrp)
+                                let mutable sampleCount = 0
+                                let mutable sampleIdx = 0
+                                let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
+
+                                let minRequiredDistance = 1e-5
+
+                                // corners
+                                if true then   
+                                    for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                        if l < clippedVc then
+
+                                            let mutable minDist = 1e16
+                                            for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                if i < sampleIdx then
+                                                    let dist = Vec.length (clippedVa.[l] - samples.[i])
+                                                    if dist < minDist then minDist <- dist
+
+                                            let alreadyExisting =
+                                                if minDist > minRequiredDistance || sampleIdx = 0 then
+                                                    false
+                                                else
+                                                    true
+                                                
+                                            if not alreadyExisting then // (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
+                                                samples.[sampleIdx] <- V3d(clippedVa.[l])
+                                                sampleIdx <- sampleIdx + 1
+                                                sampleCount <- sampleIdx
+                                            
+                                // barycenter
+                                if false then   
+                                    let mutable minDist = 1e16
+                                    for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                        if i < sampleIdx then
+                                            let dist = Vec.length (barycenter - samples.[i])
+                                            if dist < minDist then minDist <- dist
+
+                                    let alreadyExisting =
+                                        if minDist > minRequiredDistance || sampleIdx = 0 then
+                                            false
+                                        else
+                                            true
+                                                
+                                    if not alreadyExisting then // not (sampleAlreadyExisting samples sampleIdx barycenter) then
+                                        samples.[sampleIdx] <- V3d(barycenter)
+                                        sampleIdx <- sampleIdx + 1
+                                        sampleCount <- sampleIdx
+
+                                // norm
+                                if true then  
+                                    let mutable minDist = 1e16
+                                    for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                        if i < sampleIdx then
+                                            let dist = Vec.length (normPlanePoint - samples.[i])
+                                            if dist < minDist then minDist <- dist
+
+                                    let alreadyExisting =
+                                        if minDist > minRequiredDistance || sampleIdx = 0 then
+                                            false
+                                        else
+                                            true
+                                                
+                                    if not alreadyExisting then // not (sampleAlreadyExisting samples sampleIdx normPlanePoint) then
+                                        samples.[sampleIdx] <- V3d(normPlanePoint)
+                                        sampleIdx <- sampleIdx + 1
+                                        sampleCount <- sampleIdx
+                                    
+                                // mrp
+                                if true then  
+                                    let mutable minDist = 1e16
+                                    for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                        if i < sampleIdx then
+                                            let dist = Vec.length (mrp - samples.[i])
+                                            if dist < minDist then minDist <- dist
+
+                                    let alreadyExisting =
+                                        if minDist > minRequiredDistance || sampleIdx = 0 then
+                                            false
+                                        else
+                                            true
+                                                
+                                    if not alreadyExisting then // not (sampleAlreadyExisting samples sampleIdx mrp) then
+                                        samples.[sampleIdx] <- V3d(mrp)
+                                        sampleIdx <- sampleIdx + 1
+                                        sampleCount <- sampleIdx
+                                    
+                                // closest
+                                if true then  
+                                    let mutable minDist = 1e16
+                                    for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                        if i < sampleIdx then
+                                            let dist = Vec.length (closestPoint - samples.[i])
+                                            if dist < minDist then minDist <- dist
+
+                                    let alreadyExisting =
+                                        if minDist > minRequiredDistance || sampleIdx = 0 then
+                                            false
+                                        else
+                                            true
+
+                                    if not alreadyExisting then // not (sampleAlreadyExisting samples sampleIdx closestPoint) then
+                                        samples.[sampleIdx] <- closestPoint
+                                        sampleIdx <- sampleIdx + 1
+                                        sampleCount <- sampleIdx
+
+                                let samples = samples |> Arr.map (fun s -> t2w * s + P)
+
+                                (samples, sampleCount)
 
                             else
-                                (t2w * closestPoint, t2w * closestPoint, t2w * closestPoint)
+                                (Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>([t2w * closestPoint + P]), 1)
 
                         else
-
-                            (V3d.Zero, V3d.Zero, V3d.Zero)
+                            (Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>(), 0)
 
                     return computeLightData 0
                 
                 }
         
+            let getTrafo idx = 
+                samplePointPositions  |>
+                Mod.map(fun (positions, c) -> 
+                    printfn "Sample %i; Count: %i" idx c
+                    if idx < c then Trafo3d.Translation positions.[idx] else Trafo3d.Identity
+                    )
+           
+                    
+            let mutable sg = Sg.empty
+            
+            for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do           
+                sg <- Sg.group' [sg; pointSg C4b.Red (getTrafo i)]
 
-            let closestPointTrafo = 
-                trafos 
-                |> Mod.map (fun trafos ->
-                        let ( closestPoint, _, _) =  trafos
-
-                        let t = Trafo3d.Translation closestPoint
-                        printfn "Closest Trafo : %A" t
-                        t
-                        )
+            sg
+            
                         
-
-            let normPlanePointTrafo = 
-                trafos 
-                |> Mod.map (fun trafos ->
-                        let ( _, normPlanePoint, _) =  trafos
-                        
-                        let t = Trafo3d.Translation normPlanePoint
-                        printfn "Norm Trafo : %A" t
-                        t
-                        )
-
-            let mrpTrafo = 
-                trafos 
-                |> Mod.map (fun trafos ->
-                        let ( _, _, mrp) = trafos
-                        
-                        let t = Trafo3d.Translation mrp
-                        printfn "MRP Trafo : %A" t
-                        t
-                        )
-
-
-            (closestPointTrafo, normPlanePointTrafo, mrpTrafo)
 
         let private setupSS_RenderTask (data : RenderData) (ssData : SSData) (signature : IFramebufferSignature) (sceneSg : ISg) (ssEffect : FShade.Effect)= 
 
-            
+            (*
             let pointSg color trafo = 
                  IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, 0.01)) 6 color
                 |> Sg.ofIndexedGeometry
@@ -963,26 +1044,30 @@ module EffectApStructuredSampling =
 
                     sg
 
-                ) |> Sg.dynamic
-            
-            let sceneSg = Sg.group' [sceneSg; pointSg]
-            
-
-            //let (closestPointTrafo, normPlanePointTrafo, mrpTrafo) = createTrafos data.lights (V3d.Zero, V3d.OOI)
-            //
-            //let measurePointTrafo       = Trafo3d.Identity |> Mod.constant
-            //let measurePoint            = pointSg C4b.VRVisGreen measurePointTrafo
-            //
-            //let closestPoint            = pointSg C4b.Red closestPointTrafo
-            //let normPlanePoint          = pointSg C4b.Blue normPlanePointTrafo
-            //let mpr                     = pointSg C4b.Green mrpTrafo
-            
+                |> Sg.dynamic
+             *)
+            let measurePointPos     = V3d(-14.0, 0.0, 0.0)
+            let measurePointTrafo   = measurePointPos |> Trafo3d.Translation |> Mod.constant
+            let measurePoint        = pointSg C4b.VRVisGreen measurePointTrafo
+            (*
+            let sceneSg = 
+                [
+                    sceneSg
+                    //pointSg
+                    //measurePoint
+                    //getSamplePointSg data.lights (measurePointPos, V3d.OOI)
+                ]
+                |> Sg.group'
+            *)
 
             sceneSg 
                 |> setupFbEffects [ 
                         ssEffect
                         EffectUtils.effectClearNaN |> toEffect
                     ]
+                |> Light.Sg.setLightCollectionUniforms data.lights
+                |> setupPhotometricData data.photometricData
+                |> setupCamera data.view data.projTrafo data.viewportSize 
                 |> Sg.uniform "sampleCorners"           ssData.sampleCorners
                 |> Sg.uniform "sampleBarycenter"        ssData.sampleBarycenter
                 |> Sg.uniform "sampleClosest"           ssData.sampleClosest
@@ -996,19 +1081,7 @@ module EffectApStructuredSampling =
                 |> Sg.uniform "tangentApproxDistIrr"    ssData.TangentApproxDistIrr
                 |> Sg.uniform "combinedLerpValue"       ssData.CombinedLerpValue
                 |> Sg.compile data.runtime signature
-
-             (*
-            [
-                sceneSg
-                pointSg
-                //measurePoint
-                //closestPoint
-                //normPlanePoint
-                //mpr
-            ]
-            |> Sg.group'
-            |> Sg.compile data.runtime signature
-            *)
+                
 
         let private setupSS_Fb (data : RenderData) (ssData : SSData) (signature : IFramebufferSignature)  (sceneSg : ISg) (ssEffect : FShade.Effect) = 
             setupSS_RenderTask data ssData signature sceneSg ssEffect

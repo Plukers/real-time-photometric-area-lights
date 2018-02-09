@@ -315,9 +315,10 @@ module EffectUtils =
 
             let mutable v2d = Arr<N<Config.MAX_PATCH_SIZE_PLUS_ONE>, V2d>()
 
-            for i in 0 .. vc - 1 do
-                let tmp = tps * (v.[i] - v.[0])
-                v2d.[i] <- V2d(tmp.X, tmp.Y)
+            for i in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                if i < vc then
+                    let tmp = tps * (v.[i] - v.[0])
+                    v2d.[i] <- V2d(tmp.X, tmp.Y)
 
             let p2d = 
                 let v = tps * (p - v.[0])
@@ -330,16 +331,17 @@ module EffectUtils =
                         
             let eps = 1e-9
 
-            for i in 0 .. vc - 1 do
+            for i in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                if i < vc then
 
-                let d = linePointDistance v2d.[i] v2d.[(i + 1) % vc] p2d
+                    let d = linePointDistance v2d.[i] v2d.[(i + 1) % vc] p2d
 
-                if d > eps then
-                    lines.[linesPositiveDistanceIndex]     <- v.[i]
-                    lines.[linesPositiveDistanceIndex + 1] <- v.[(i + 1) % vc]
+                    if d > eps then
+                        lines.[linesPositiveDistanceIndex]     <- v.[i]
+                        lines.[linesPositiveDistanceIndex + 1] <- v.[(i + 1) % vc]
                     
-                    linesPositiveDistanceIndex                  <- linesPositiveDistanceIndex + 2
-                    linesPositiveDistanceCount                  <- linesPositiveDistanceCount + 1
+                        linesPositiveDistanceIndex                  <- linesPositiveDistanceIndex + 2
+                        linesPositiveDistanceCount                  <- linesPositiveDistanceCount + 1
                     
             if linesPositiveDistanceCount = 0 then
                 p
@@ -474,8 +476,11 @@ module EffectUtils =
 
         let mutable sum = 0.0
 
-        for vi in 0 .. vc - 2 do
-            sum <- sum + integrateSegment(va.[vi], va.[vi + 1])
+        //for vi in 0 .. vc - 2 do
+
+        for vi in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE do
+            if vi < vc - 1 then
+                sum <- sum + integrateSegment(va.[vi], va.[vi + 1])
 
         sum <- sum + integrateSegment(va.[vc - 1], va.[0])
 

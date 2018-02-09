@@ -188,6 +188,9 @@ module EffectGT =
                             groundTruthLighting |> toEffect 
                             EffectUtils.effectClearNaN |> toEffect
                         ]
+                    |> Light.Sg.setLightCollectionUniforms data.lights
+                    |> setupPhotometricData data.photometricData
+                    |> setupCamera data.view data.projTrafo data.viewportSize 
                     |> Sg.uniform "HaltonSamples" gtData.haltonSequence
                     |> Sg.uniform "FrameCount" gtData.frameCount
                     |> Sg.compile data.runtime signature

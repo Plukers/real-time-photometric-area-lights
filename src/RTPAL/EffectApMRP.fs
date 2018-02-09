@@ -169,6 +169,9 @@ module EffectApMRP =
                         mostRepresentativePointApprox |> toEffect
                         EffectUtils.effectClearNaN |> toEffect
                     ]
+                |> Light.Sg.setLightCollectionUniforms data.lights
+                |> setupPhotometricData data.photometricData
+                |> setupCamera data.view data.projTrafo data.viewportSize 
                 |> Sg.uniform "mrpWeights" mrpData.mrpWeights
                 |> Sg.compile data.runtime signature
 

@@ -829,7 +829,7 @@
             lights = lc
             renderMode = RenderMode.GroundTruth
             updateGroundTruth = true
-            compare = RenderMode.BaumFFApprox 
+            compare = RenderMode.StructuredIrrSampling 
             error = 0.0
             brightError = 0.0
             darkError = 0.0
@@ -838,12 +838,12 @@
             photometryData = photometryData
             lightTransformMode = Translate
             mrpWeights    = V3d(1.0/3.0, 1.0/3.0, 1.0/3.0)
-            sampleCorners    = false
+            sampleCorners    = true
             sampleBarycenter = false
-            sampleClosest    = false
-            sampleNorm       = false
-            sampleMRP        = false
-            sampleRandom     = true
+            sampleClosest    = true
+            sampleNorm       = true
+            sampleMRP        = true
+            sampleRandom     = false
             numOfSRSamples   = {
                                 value   = 8.0
                                 min     = 0.0

@@ -73,26 +73,24 @@ module Rendering =
 
             let sceneSg = 
                 data.sceneSg 
-                    |> Light.Sg.setLightCollectionUniforms data.lights
-                    |> setupPhotometricData data.photometricData
-
-            let setupCamera sg = 
-                setupCamera data.view data.projTrafo data.viewportSize sg
-
+                    //|> Light.Sg.setLightCollectionUniforms data.lights
+                    //|> setupPhotometricData data.photometricData
+                    //|> setupCamera data.view data.projTrafo data.viewportSize 
+                    
             let signature = signature data.runtime
 
             let effectFbs = 
                 Map.empty
-                |> Map.add RenderMode.GroundTruth                   (groundTruthFb          data gtData     signature (sceneSg |> setupCamera) |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.CenterPointApprox             (centerPointApproxFb    data            signature (sceneSg |> setupCamera) |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.MRPApprox                     (mrpApproxFb            data mrpData    signature (sceneSg |> setupCamera) |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.BaumFFApprox                  (baumFFApproxFb         data            signature (sceneSg |> setupCamera) |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.StructuredIrrSampling         (ssIrrApproxFb          data ssData     signature (sceneSg |> setupCamera) |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.StructuredSampling            (ssApproxFb             data ssData     signature (sceneSg |> setupCamera) |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.CombinedStructuredSampling    (ssCombinedApproxFb     data ssData     signature (sceneSg |> setupCamera) |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.GroundTruth                   (groundTruthFb          data gtData     signature sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.CenterPointApprox             (centerPointApproxFb    data            signature sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.MRPApprox                     (mrpApproxFb            data mrpData    signature sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.BaumFFApprox                  (baumFFApproxFb         data            signature sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.StructuredIrrSampling         (ssIrrApproxFb          data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.StructuredSampling            (ssApproxFb             data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.CombinedStructuredSampling    (ssCombinedApproxFb     data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
                                                                     
-                |> Map.add RenderMode.FormFactor                    (formFactorFb           data            signature (sceneSg |> setupCamera))
-                |> Map.add RenderMode.SolidAngle                    (solidAngleFb           data            signature (sceneSg |> setupCamera))
+                |> Map.add RenderMode.FormFactor                    (formFactorFb           data            signature sceneSg)
+                |> Map.add RenderMode.SolidAngle                    (solidAngleFb           data            signature sceneSg)
 
             let diffFrameBuffer = diffFb data effectFbs
             

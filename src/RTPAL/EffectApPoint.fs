@@ -90,6 +90,9 @@ module EffectApPoint =
                         centerPointApprox |> toEffect  
                         EffectUtils.effectClearNaN |> toEffect
                     ]
+                |> Light.Sg.setLightCollectionUniforms data.lights
+                |> setupPhotometricData data.photometricData
+                |> setupCamera data.view data.projTrafo data.viewportSize 
                 |> Sg.compile data.runtime signature
 
         let centerPointApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
