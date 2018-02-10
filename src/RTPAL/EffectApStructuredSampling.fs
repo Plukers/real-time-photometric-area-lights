@@ -33,6 +33,9 @@ module EffectApStructuredSampling =
     [<Literal>]
     let MAX_SAMPLE_NUM_WO_RANDOM = 9
 
+    [<Literal>]
+    let MIN_WEIGHT_SCALE_FACTOR = 0.7230200263994838 // = (1/7)^(1/6)
+
     [<ReflectedDefinition>]
     let sampleAlreadyExisting (samples : Arr<N<9>, V3d>) (sampleIdx : int) (sampleCandidate : V3d) =
     
@@ -43,7 +46,7 @@ module EffectApStructuredSampling =
                     let dist = Vec.length (sampleCandidate - samples.[i])
                     if dist < minDist then minDist <- dist
 
-            if minDist > 1e-9 then
+            if minDist > 1e-16 then
                 false
             else
                 true
@@ -421,45 +424,52 @@ module EffectApStructuredSampling =
                                     let mrpDir = ((closestPoint |> Vec.normalize) + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
                                     let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
-
-
                                     
+
                                     let mutable sampleCount = 0
-                                    if uniform.sampleCorners then       sampleCount <- sampleCount + clippedVc
-                                    if uniform.sampleBarycenter then    sampleCount <- sampleCount + 1
-                                    if uniform.sampleNorm then          sampleCount <- sampleCount + 1
-                                    if uniform.sampleMRP then           sampleCount <- sampleCount + 1
-                                    if uniform.sampleClosest then       sampleCount <- sampleCount + 1
-                                    if uniform.sampleRandom then        sampleCount <- sampleCount + uniform.numSRSamples
+                                    let mutable sampleIdx = 0
+                                    let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
                                     
-                                    
+                                    if uniform.sampleCorners then   
+                                        for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                            if l < clippedVc then
+                                                if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
+                                                    samples.[sampleIdx] <- V3d(clippedVa.[l])
+                                                    sampleIdx <- sampleIdx + 1
+                                                    sampleCount <- sampleIdx
+                                            
+                                    if uniform.sampleBarycenter && not (sampleAlreadyExisting samples sampleIdx barycenter) then
+                                            samples.[sampleIdx] <- V3d(barycenter)
+                                            sampleIdx <- sampleIdx + 1
+                                            sampleCount <- sampleIdx
+
+                                    if uniform.sampleNorm && not (sampleAlreadyExisting samples sampleIdx normPlanePoint) then
+                                            samples.[sampleIdx] <- V3d(normPlanePoint)
+                                            sampleIdx <- sampleIdx + 1
+                                            sampleCount <- sampleIdx
+
+                                    if uniform.sampleMRP && not (sampleAlreadyExisting samples sampleIdx mrp) then
+                                            samples.[sampleIdx] <- V3d(mrp)
+                                            sampleIdx <- sampleIdx + 1
+                                            sampleCount <- sampleIdx
+
+                                    if uniform.sampleClosest && not (sampleAlreadyExisting samples sampleIdx closestPoint) then
+                                            samples.[sampleIdx] <- closestPoint
+                                            sampleIdx <- sampleIdx + 1
+                                            sampleCount <- sampleIdx
+
+                                    if uniform.sampleRandom then        
+                                        sampleCount <- sampleCount + uniform.numSRSamples
+                                                                                                                          
+
                                     let mutable patchIllumination = 0.0
-                                                                        
-                                    if uniform.sampleCorners then
-                                        for l in 0 .. clippedVc - 1 do
-                                            let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr clippedVa.[l]
-                                            let irr = sample t2w scale addr clippedVa.[l]
-                                            patchIllumination <- patchIllumination + irr
 
-                                    if uniform.sampleBarycenter then
-                                        let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr barycenter
-                                        let irr = sample t2w scale addr barycenter
-                                        patchIllumination <- patchIllumination + irr
-
-                                    if uniform.sampleNorm then 
-                                        let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr normPlanePoint
-                                        let irr = sample t2w scale addr normPlanePoint
-                                        patchIllumination <- patchIllumination + irr
-
-                                    if uniform.sampleMRP then
-                                        let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr mrp
-                                        let irr = sample t2w scale addr mrp
-                                        patchIllumination <- patchIllumination + irr
-
-                                    if uniform.sampleClosest then 
-                                        let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr closestPoint
-                                        let irr = sample t2w scale addr closestPoint
-                                        patchIllumination <- patchIllumination + irr
+                                    if sampleIdx > 0 then
+                                        for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                            if l < sampleIdx then 
+                                                let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samples.[l]
+                                                let irr = sample t2w scale addr samples.[l]
+                                                patchIllumination <- patchIllumination + irr
 
                                     if uniform.sampleRandom && uniform.numSRSamples > 0 then
                                         for l in 0 .. uniform.numSRSamples - 1 do
