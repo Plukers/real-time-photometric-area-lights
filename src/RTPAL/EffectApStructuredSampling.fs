@@ -52,6 +52,14 @@ module EffectApStructuredSampling =
                 true
         else 
             false
+
+    [<ReflectedDefinition>]
+    let computeSampleScale dist =
+        if 0.25 < dist then
+            1.0
+        else
+            let dist = dist / 0.25
+            (1.0 - dist) * MIN_WEIGHT_SCALE_FACTOR + dist * 1.0
             
     // solid angle https://en.wikipedia.org/wiki/Solid_angle#Cone,_spherical_cap,_hemisphere
     [<ReflectedDefinition>]
@@ -84,7 +92,7 @@ module EffectApStructuredSampling =
         //let dist = Vec.length p
         //let qdd = quadraticDistanceDerivative (uniform.LAreas.[addr] * dotOut * i.Z) (max 1e-9 scale) uniform.tangentApproxDistIrr dist
 
-        let weight = i.Z / (Vec.lengthSquared p + (max 1e-9 scale)) // add i.Z for a better weight
+        let weight = scale *  i.Z / (Vec.lengthSquared p + 1e-9) // add i.Z for a better weight
         
         let sampledIrr = weight * irr
         (*
@@ -207,44 +215,62 @@ module EffectApStructuredSampling =
                                     if uniform.sampleCorners then   
                                         for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                             if l < clippedVc then
-                                                if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
-                                                    samples.[sampleIdx] <- V3d(clippedVa.[l])
-                                                    sampleIdx <- sampleIdx + 1
-                                                    sampleCount <- sampleIdx
+                                                // if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
+                                                samples.[sampleIdx] <- V3d(clippedVa.[l])
+                                                sampleIdx <- sampleIdx + 1
+                                                sampleCount <- sampleIdx
                                             
-                                    if uniform.sampleBarycenter && not (sampleAlreadyExisting samples sampleIdx barycenter) then
+                                    if uniform.sampleBarycenter (* && not (sampleAlreadyExisting samples sampleIdx barycenter)      *)  then
                                             samples.[sampleIdx] <- V3d(barycenter)
                                             sampleIdx <- sampleIdx + 1
                                             sampleCount <- sampleIdx
 
-                                    if uniform.sampleNorm && not (sampleAlreadyExisting samples sampleIdx normPlanePoint) then
+                                    if uniform.sampleNorm       (* && not (sampleAlreadyExisting samples sampleIdx normPlanePoint)  *)  then
                                             samples.[sampleIdx] <- V3d(normPlanePoint)
                                             sampleIdx <- sampleIdx + 1
                                             sampleCount <- sampleIdx
 
-                                    if uniform.sampleMRP && not (sampleAlreadyExisting samples sampleIdx mrp) then
+                                    if uniform.sampleMRP        (* && not (sampleAlreadyExisting samples sampleIdx mrp)             *)  then
                                             samples.[sampleIdx] <- V3d(mrp)
                                             sampleIdx <- sampleIdx + 1
                                             sampleCount <- sampleIdx
 
-                                    if uniform.sampleClosest && not (sampleAlreadyExisting samples sampleIdx closestPoint) then
+                                    if uniform.sampleClosest    (* && not (sampleAlreadyExisting samples sampleIdx closestPoint)    *)  then
                                             samples.[sampleIdx] <- closestPoint
                                             sampleIdx <- sampleIdx + 1
                                             sampleCount <- sampleIdx
 
                                     if uniform.sampleRandom then        
                                         sampleCount <- sampleCount + uniform.numSRSamples
-                                                                                                                          
 
+
+                                    
+                                    let samplesWeightScale = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, float>()
+                                                     
                                     let mutable patchIllumination = 0.0
                                     let mutable weightSum = 0.0
 
                                     if sampleIdx > 0 then
+                                        for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                            if r < sampleIdx then 
+                                                samplesWeightScale.[r] <- 1.0
+
+                                        for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                            if r < sampleIdx then 
+
+                                                for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                    if r < o && o < sampleIdx then
+
+                                                        let dist  = Vec.length (samples.[r] - samples.[o])
+                                                        let scale = computeSampleScale dist
+                                                        samplesWeightScale.[r] <- scale * samplesWeightScale.[r]
+                                                        samplesWeightScale.[o] <- scale * samplesWeightScale.[o]
+
                                         for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                             if l < sampleIdx then 
-                                                let scale = uniform.weightScaleSRSamplesIrr * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDistIrr addr samples.[l]
+                                                //let scale = uniform.weightScaleSRSamplesIrr * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDistIrr addr samples.[l]
 
-                                                let (irr, weight) = sampleIrr t2w scale addr samples.[l]
+                                                let (irr, weight) = sampleIrr t2w samplesWeightScale.[l] addr samples.[l]
                                                 patchIllumination <- patchIllumination + irr
                                                 weightSum <- weightSum + weight
                                                        
@@ -253,9 +279,9 @@ module EffectApStructuredSampling =
                                             let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
 
                                             if samplePoint.Z >= eps then
-                                                let scale = uniform.weightScaleSRSamplesIrr * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDistIrr addr samplePoint
+                                                // let scale = uniform.weightScaleSRSamplesIrr * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDistIrr addr samplePoint
 
-                                                let (irr, weight) = sampleIrr t2w scale addr samplePoint
+                                                let (irr, weight) = sampleIrr t2w 1.0 addr samplePoint
                                                 patchIllumination <- patchIllumination + irr
                                                 weightSum <- weightSum + weight
                                                 
