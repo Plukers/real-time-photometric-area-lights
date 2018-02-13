@@ -29,7 +29,6 @@
     open Aardvark.Rendering.GL
     open Aardvark.UI.Chromium
     
-    
 
     open Utils
     open Light
@@ -99,19 +98,19 @@
         updatePhotometryData "ARC3_60712332_(STD).ldt"
         
         let renderData = 
-                            {
-                                runtime = app.Runtime
-                                sceneSg = sceneSg
-                                view = view
-                                projTrafo = projTrafo 
-                                viewportSize = viewportSize |> Mod.init
-                                lights = m.lights |> Mod.force // mod force necessary ? 
-                                photometricData = photometryData
-                                mode = renderMode
-                                compare = compareMode
-                                toneMap = toneMap
-                                toneMapScale = toneMapScale
-                            }
+            {
+                runtime = app.Runtime
+                sceneSg = sceneSg
+                view = view
+                projTrafo = projTrafo 
+                viewportSize = viewportSize |> Mod.init
+                lights = m.lights |> Mod.force // mod force necessary ? 
+                photometricData = photometryData
+                mode = renderMode
+                compare = compareMode
+                toneMap = toneMap
+                toneMapScale = toneMapScale
+            }
             
             
 
@@ -144,16 +143,17 @@
         let activeTrafoLightId = 0        
         let numOfRotationSteps = 4
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps)
-        let mutable numOfSamples = 30000
+        let numOfSamples = 3750
 
 
 
-        let imageFormat = PixFileFormat.Exr
+        let imageFormat = PixFileFormat.Exr //PixFileFormat.Exr
 
         let createFileName step = 
             sprintf "%s_%i"  ((renderData.mode |> Mod.force).ToString()) step
 
-
+        let saveImage path step=
+            app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;String.concat "_" [(createFileName step); numOfSamples.ToString()]], imageFormat);
 
         let doRotationIteration action =
 
@@ -167,75 +167,86 @@
                 rotation <- rotation * rotationStep
             
             transformLight renderData.lights activeTrafoLightId (rotation.Inverse)
-        
-        let renderEffects path = 
-
-            fun step -> 
-                // Ground Truth
-                updateRenderMode RenderMode.GroundTruth
-                update true
-
-                
-                for i in 1 .. (numOfSamples / Config.NUM_SAMPLES) do
-                    scRenderTask.Run(RenderToken.Empty, fbo)
-                    update false
-                    
-                app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;String.concat "_" [(createFileName step); numOfSamples.ToString()]], imageFormat);
-                (*
-                // Structured Irradiance Sampling
-                updateRenderMode RenderMode.StructuredIrrSampling
-                scRenderTask.Run(RenderToken.Empty, fbo)
-                app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;createFileName step], imageFormat);
-                *)
-
-
-
-            
             
         
-        let createImageTask = 
+        let resultPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
+        let photometryFiles = 
+            System.IO.Directory.GetFiles (Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry"])
+            |> Array.map System.IO.Path.GetFileName 
+
+        
+        let abstractDataAsyncRender = 
             async {
-
-                let resultPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
-                
                 let renderReferenceData = 
                     fun step ->
                         updateRenderMode RenderMode.FormFactor
                         scRenderTask.Run(RenderToken.Empty, fbo)
                         app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName step], imageFormat);
-                        
+                                                    
                         updateRenderMode RenderMode.SolidAngle
                         scRenderTask.Run(RenderToken.Empty, fbo)
                         app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName step], imageFormat);
-                 
-                //doRotationIteration renderReferenceData
 
+                doRotationIteration renderReferenceData
+            }
 
-                let photometryFiles = 
-                    System.IO.Directory.GetFiles (Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry"])
-                    |> Array.map System.IO.Path.GetFileName 
+        let groundTruthAsyncRender = 
+            async {
+                let GTRender path = 
+                    fun step -> 
+                        // Ground Truth
+                        updateRenderMode RenderMode.GroundTruth
+                        
+                        update true
 
-                let mutable oneIter = true
-                for f in photometryFiles do
-
-                    if oneIter then 
+                        for i in 1 .. (numOfSamples / Config.NUM_SAMPLES) do
+                            scRenderTask.Run(RenderToken.Empty, fbo)
+                            update false
                     
-                        let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
+                        saveImage path step
+                            
+
+                //for f in photometryFiles do
+                let f = photometryFiles.[0]
+
+                let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
+                if not (System.IO.Directory.Exists dataPath) then
+                    System.IO.Directory.CreateDirectory dataPath |> ignore
+                    
+                updatePhotometryData f
+
+                doRotationIteration (GTRender dataPath)
+            }
+
+        let approxAsyncRender =
+            async {
+
+                let render path = 
+                    fun step -> 
+                        // Structured Irradiance Sampling
+                        updateRenderMode RenderMode.StructuredIrrSampling
+                        scRenderTask.Run(RenderToken.Empty, fbo)
+                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;createFileName step], imageFormat);                            
+
+                for f in photometryFiles do
+                        
+                    let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
+                    if not (System.IO.Directory.Exists dataPath) then
                         System.IO.Directory.CreateDirectory dataPath |> ignore
                     
-                        updatePhotometryData f
+                    updatePhotometryData f
                         
-                        doRotationIteration (renderEffects dataPath)
-                        
-                        
+                    doRotationIteration (render dataPath)
+            }
 
-                        oneIter <- false
+        let createImageTask = 
+            m.offlineRenderMode |> Mod.map (fun mode ->
+                match mode with
+                | OfflineRenderMode.AbstractData    -> abstractDataAsyncRender
+                | OfflineRenderMode.GroundTruth     -> groundTruthAsyncRender
+                | _ (* Approximations *)            -> approxAsyncRender 
                     
-
-
-
-                ()
-                }
+            )
             
         createImageTask
 
@@ -318,7 +329,8 @@
                     | None -> s
                 else 
                     s
-            | CHANGE_RENDER_MODE mode -> { s with renderMode = mode }                
+            | CHANGE_RENDER_MODE mode -> { s with renderMode = mode }    
+            | CHANGE_OFFLINE_RENDER_MODE mode -> { s with offlineRenderMode = mode }
             | CHANGE_COMPARE mode -> { s with compare = mode }
             | COMPUTED_ERROR (error, brightError, darkError) -> { s with error = error; brightError = brightError; darkError = darkError }
             | OPENED_WINDOW -> s
@@ -395,7 +407,7 @@
             | CHANGE_TONEMAP_SCALE tms -> { s with toneMapScale = Numeric.update s.toneMapScale tms}
 
             | RENDER_IMAGES createImageTask ->    
-                createImageTask |> Async.Start
+                createImageTask |> Mod.force |> Async.Start
                 s
 
     let openFileDialog (form : System.Windows.Forms.Form) =
@@ -507,9 +519,7 @@
                                                 IMPORT_PHOTOMETRY (openFileDialog form)
                                             )] [text "Load Photometric Data"]        
 
-                                        button [ clazz "ui button" ; onClick (fun () -> 
-                                                RENDER_IMAGES (offlineRenderTask)
-                                            )] [text "Render Light Profiles"]    
+
                                                 
                                     ]
                             ]
@@ -613,7 +623,25 @@
                                             br[]
                                               
                                         ]
+
+                                        div [ clazz "ui segment" ] [
+
+                                            p [style "font-weight: bold;"] [ 
+                                                text ("Offline Rendering")
+                                            ]         
+                                        
+                                            p [] [
+                                                dropDown m.offlineRenderMode (fun mode -> CHANGE_OFFLINE_RENDER_MODE mode)
+                                            ]
+
+                                            button [ clazz "ui button" ; onClick (fun () -> 
+                                                RENDER_IMAGES (offlineRenderTask)
+                                            )] [text "Render Offline"]    
+
+                                            // m.boxScale |> Mod.map string |> Incremental.text
+                                        ] 
                                     ]  
+
                                     div [ clazz "column" ] [ 
 
                                         div [ clazz "ui segment" ] [
@@ -829,6 +857,7 @@
             lights = lc
             renderMode = RenderMode.GroundTruth
             updateGroundTruth = true
+            offlineRenderMode = OfflineRenderMode.Approximations
             compare = RenderMode.StructuredIrrSampling 
             error = 0.0
             brightError = 0.0

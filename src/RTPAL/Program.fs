@@ -25,7 +25,7 @@ let main argv =
     
     let runtime = app.Runtime
     
-    use form = new Form(Width = 408, Height = 630)
+    use form = new Form(Width = 800, Height = 600)
     let a = RenderApp.app app form |> App.start
 
     WebPart.startServer 4321 [ 

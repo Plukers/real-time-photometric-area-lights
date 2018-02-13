@@ -21,6 +21,11 @@ type RenderMode =
     | FormFactor = 8
     | Compare = 9
 
+type OfflineRenderMode =
+    | AbstractData = 0
+    | GroundTruth = 1
+    | Approximations = 2
+
 type LightTransformMode =
     | Translate
     | Rotate
@@ -36,6 +41,8 @@ type Action =
     | CHANGE_LIGHT_TRANSFORM_MODE of LightTransformMode
     | TRANSLATE_LIGHT of int * V3d // lightID, direction
     | ROTATE_LIGHT of int * V3d // lightID, euler angles
+
+    | CHANGE_OFFLINE_RENDER_MODE of OfflineRenderMode
 
     | SET_MRP_CLOSEST_WEIGHT of string
     | SET_MRP_NORMAL_WEIGHT of string
@@ -56,7 +63,7 @@ type Action =
 
     | TOGGLE_TONEMAPPING
     | CHANGE_TONEMAP_SCALE of Numeric.Action
-    | RENDER_IMAGES of Async<unit>
+    | RENDER_IMAGES of IMod<Async<unit>>
 
 [<DomainType>]
 type RenderState =
@@ -65,6 +72,8 @@ type RenderState =
 
         renderMode         : RenderMode
         updateGroundTruth  : bool
+
+        offlineRenderMode  : OfflineRenderMode
 
         mrpWeights         : V3d // closest, normal, barycenter
 

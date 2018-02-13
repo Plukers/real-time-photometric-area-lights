@@ -34,7 +34,16 @@ module EffectApStructuredSampling =
     let MAX_SAMPLE_NUM_WO_RANDOM = 9
 
     [<Literal>]
-    let MIN_WEIGHT_SCALE_FACTOR = 0.7230200263994838 // = (1/7)^(1/6)
+    let NEIGHBORHOOD_SIZE = 0.4
+
+    [<Literal>]
+    let MIN_WEIGHT_SCALE_FACTOR_3 = 0.6299605249474366 // = (1/4)^(1/3)
+
+    [<Literal>]
+    let MIN_WEIGHT_SCALE_FACTOR_2 = 0.5773502691896257 // = (1/3)^(1/2)
+
+    [<Literal>]
+    let MIN_WEIGHT_SCALE_FACTOR_1 = 0.5 // = (1/2)^(1/1)
 
     [<ReflectedDefinition>]
     let sampleAlreadyExisting (samples : Arr<N<9>, V3d>) (sampleIdx : int) (sampleCandidate : V3d) =
@@ -54,14 +63,12 @@ module EffectApStructuredSampling =
             false
 
     [<ReflectedDefinition>]
-    let computeSampleScale dist =
-        let t = 0.5
-
-        if t < dist then
+    let computeSampleScale dist scale =
+        if NEIGHBORHOOD_SIZE < dist then
             1.0
         else
-            let dist = dist / t
-            (1.0 - dist) * MIN_WEIGHT_SCALE_FACTOR + dist * 1.0
+            let dist = dist / NEIGHBORHOOD_SIZE
+            (1.0 - dist) * scale + dist * 1.0
             
     // solid angle https://en.wikipedia.org/wiki/Solid_angle#Cone,_spherical_cap,_hemisphere
     [<ReflectedDefinition>]
@@ -248,6 +255,7 @@ module EffectApStructuredSampling =
 
                                     
                                     let samplesWeightScale = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, float>()
+                                    let neighborhoodSize = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, int>() 
                                                      
                                     let mutable patchIllumination = 0.0
                                     let mutable weightSum = 0.0
@@ -257,6 +265,7 @@ module EffectApStructuredSampling =
                                             if r < sampleIdx then 
                                                 samplesWeightScale.[r] <- 1.0
 
+
                                         for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                             if r < sampleIdx then 
 
@@ -264,9 +273,26 @@ module EffectApStructuredSampling =
                                                     if r < o && o < sampleIdx then
 
                                                         let dist  = Vec.length (samples.[r] - samples.[o])
-                                                        let scale = computeSampleScale dist
-                                                        samplesWeightScale.[r] <- scale * samplesWeightScale.[r]
-                                                        samplesWeightScale.[o] <- scale * samplesWeightScale.[o]
+
+                                                        if dist < NEIGHBORHOOD_SIZE then
+                                                            neighborhoodSize.[r] <- neighborhoodSize.[r] + 1
+                                                            neighborhoodSize.[o] <- neighborhoodSize.[o] + 1
+
+
+                                                let scale = 
+                                                    if neighborhoodSize.[r] = 0 then
+                                                        1.0
+                                                    elif neighborhoodSize.[r] = 1 then
+                                                        MIN_WEIGHT_SCALE_FACTOR_1
+                                                    elif neighborhoodSize.[r] = 2 then 
+                                                        MIN_WEIGHT_SCALE_FACTOR_2
+                                                    else
+                                                        MIN_WEIGHT_SCALE_FACTOR_3
+
+                                                for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                    if o < sampleIdx then
+                                                        let dist  = Vec.length (samples.[r] - samples.[o])
+                                                        samplesWeightScale.[r] <- (computeSampleScale dist scale) * samplesWeightScale.[r]
 
                                         for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                             if l < sampleIdx then 
