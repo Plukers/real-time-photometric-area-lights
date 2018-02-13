@@ -16,6 +16,7 @@ module EffectApStructuredSampling =
         member uniform.sampleNorm               : bool  = uniform?sampleNorm 
         member uniform.sampleMRP                : bool  = uniform?sampleMRP 
         member uniform.sampleRandom             : bool  = uniform?sampleRandom
+        member uniform.blendSamples             : bool  = uniform?blendSamples
         member uniform.numSRSamples             : int   = uniform?numSRSamples
         member uniform.weightScaleSRSamples     : float = uniform?weightScaleSRSamples
         member uniform.tangentApproxDist        : float = uniform?tangentApproxDist
@@ -265,34 +266,35 @@ module EffectApStructuredSampling =
                                             if r < sampleIdx then 
                                                 samplesWeightScale.[r] <- 1.0
 
+                                        if uniform.blendSamples then 
 
-                                        for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                            if r < sampleIdx then 
+                                            for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                if r < sampleIdx then 
 
-                                                for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                                    if r < o && o < sampleIdx then
+                                                    for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                        if r < o && o < sampleIdx then
 
-                                                        let dist  = Vec.length (samples.[r] - samples.[o])
+                                                            let dist  = Vec.length (samples.[r] - samples.[o])
 
-                                                        if dist < NEIGHBORHOOD_SIZE then
-                                                            neighborhoodSize.[r] <- neighborhoodSize.[r] + 1
-                                                            neighborhoodSize.[o] <- neighborhoodSize.[o] + 1
+                                                            if dist < NEIGHBORHOOD_SIZE then
+                                                                neighborhoodSize.[r] <- neighborhoodSize.[r] + 1
+                                                                neighborhoodSize.[o] <- neighborhoodSize.[o] + 1
 
 
-                                                let scale = 
-                                                    if neighborhoodSize.[r] = 0 then
-                                                        1.0
-                                                    elif neighborhoodSize.[r] = 1 then
-                                                        MIN_WEIGHT_SCALE_FACTOR_1
-                                                    elif neighborhoodSize.[r] = 2 then 
-                                                        MIN_WEIGHT_SCALE_FACTOR_2
-                                                    else
-                                                        MIN_WEIGHT_SCALE_FACTOR_3
+                                                    let scale = 
+                                                        if neighborhoodSize.[r] = 0 then
+                                                            1.0
+                                                        elif neighborhoodSize.[r] = 1 then
+                                                            MIN_WEIGHT_SCALE_FACTOR_1
+                                                        elif neighborhoodSize.[r] = 2 then 
+                                                            MIN_WEIGHT_SCALE_FACTOR_2
+                                                        else
+                                                            MIN_WEIGHT_SCALE_FACTOR_3
 
-                                                for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                                    if o < sampleIdx then
-                                                        let dist  = Vec.length (samples.[r] - samples.[o])
-                                                        samplesWeightScale.[r] <- (computeSampleScale dist scale) * samplesWeightScale.[r]
+                                                    for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                        if o < sampleIdx && o <> r then
+                                                            let dist  = Vec.length (samples.[r] - samples.[o])
+                                                            samplesWeightScale.[r] <- (computeSampleScale dist scale) * samplesWeightScale.[r]
 
                                         for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                             if l < sampleIdx then 
@@ -783,6 +785,7 @@ module EffectApStructuredSampling =
             sampleNorm           : IMod<bool>
             sampleMRP            : IMod<bool>
             sampleRandom         : IMod<bool>
+            blendSamples         : IMod<bool>
             numSRSamples         : IMod<int>
             SRSWeightScale       : IMod<float>
             TangentApproxDist    : IMod<float>
@@ -799,6 +802,7 @@ module EffectApStructuredSampling =
                 sampleNorm           = m.sampleNorm
                 sampleMRP            = m.sampleMRP
                 sampleRandom         = m.sampleRandom
+                blendSamples         = m.blendSamples
                 numSRSamples         = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
                 SRSWeightScale       = m.SRSWeightScale.value
                 TangentApproxDist    = m.TangentApproxDist.value
@@ -1138,6 +1142,7 @@ module EffectApStructuredSampling =
                 |> Sg.uniform "sampleNorm"              ssData.sampleNorm
                 |> Sg.uniform "sampleMRP"               ssData.sampleMRP
                 |> Sg.uniform "sampleRandom"            ssData.sampleRandom
+                |> Sg.uniform "blendSamples"            ssData.blendSamples
                 |> Sg.uniform "numSRSamples"            ssData.numSRSamples
                 |> Sg.uniform "weightScaleSRSamples"    ssData.SRSWeightScale
                 |> Sg.uniform "tangentApproxDist"       ssData.TangentApproxDist
