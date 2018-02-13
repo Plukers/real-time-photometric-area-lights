@@ -55,10 +55,12 @@ module EffectApStructuredSampling =
 
     [<ReflectedDefinition>]
     let computeSampleScale dist =
-        if 0.25 < dist then
+        let t = 0.5
+
+        if t < dist then
             1.0
         else
-            let dist = dist / 0.25
+            let dist = dist / t
             (1.0 - dist) * MIN_WEIGHT_SCALE_FACTOR + dist * 1.0
             
     // solid angle https://en.wikipedia.org/wiki/Solid_angle#Cone,_spherical_cap,_hemisphere
