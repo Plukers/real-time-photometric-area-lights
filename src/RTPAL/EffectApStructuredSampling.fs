@@ -17,6 +17,7 @@ module EffectApStructuredSampling =
         member uniform.sampleMRP                : bool  = uniform?sampleMRP 
         member uniform.sampleRandom             : bool  = uniform?sampleRandom
         member uniform.blendSamples             : bool  = uniform?blendSamples
+        member uniform.blendDistance            : float = uniform?blendDistance
         member uniform.numSRSamples             : int   = uniform?numSRSamples
         member uniform.weightScaleSRSamples     : float = uniform?weightScaleSRSamples
         member uniform.tangentApproxDist        : float = uniform?tangentApproxDist
@@ -33,10 +34,7 @@ module EffectApStructuredSampling =
                           
     [<Literal>]
     let MAX_SAMPLE_NUM_WO_RANDOM = 9
-
-    [<Literal>]
-    let NEIGHBORHOOD_SIZE = 0.4
-
+    
     [<Literal>]
     let MIN_WEIGHT_SCALE_FACTOR_3 = 0.6299605249474366 // = (1/4)^(1/3)
 
@@ -64,11 +62,11 @@ module EffectApStructuredSampling =
             false
 
     [<ReflectedDefinition>]
-    let computeSampleScale dist scale =
-        if NEIGHBORHOOD_SIZE < dist then
+    let computeSampleScale neigborhoodSize dist scale =
+        if neigborhoodSize < dist then
             1.0
         else
-            let dist = dist / NEIGHBORHOOD_SIZE
+            let dist = dist / neigborhoodSize
             (1.0 - dist) * scale + dist * 1.0
             
     // solid angle https://en.wikipedia.org/wiki/Solid_angle#Cone,_spherical_cap,_hemisphere
@@ -103,6 +101,7 @@ module EffectApStructuredSampling =
         //let qdd = quadraticDistanceDerivative (uniform.LAreas.[addr] * dotOut * i.Z) (max 1e-9 scale) uniform.tangentApproxDistIrr dist
 
         let weight = scale *  i.Z / (Vec.lengthSquared p + 1e-9) // add i.Z for a better weight
+        let weight = scale * 1.0
         
         let sampledIrr = weight * irr
         (*
@@ -113,7 +112,7 @@ module EffectApStructuredSampling =
             else
                 (uniform.LAreas.[addr] * dotOut) * weight
         *)
-        let weight = (uniform.LAreas.[addr] * dotOut) * weight
+        //let weight = (uniform.LAreas.[addr] * dotOut) * weight
 
         (sampledIrr, weight)
         
@@ -276,7 +275,7 @@ module EffectApStructuredSampling =
 
                                                             let dist  = Vec.length (samples.[r] - samples.[o])
 
-                                                            if dist < NEIGHBORHOOD_SIZE then
+                                                            if dist < uniform.blendDistance then
                                                                 neighborhoodSize.[r] <- neighborhoodSize.[r] + 1
                                                                 neighborhoodSize.[o] <- neighborhoodSize.[o] + 1
 
@@ -294,7 +293,7 @@ module EffectApStructuredSampling =
                                                     for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                                         if o < sampleIdx && o <> r then
                                                             let dist  = Vec.length (samples.[r] - samples.[o])
-                                                            samplesWeightScale.[r] <- (computeSampleScale dist scale) * samplesWeightScale.[r]
+                                                            samplesWeightScale.[r] <- (computeSampleScale (uniform.blendDistance) dist scale) * samplesWeightScale.[r]
 
                                         for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                             if l < sampleIdx then 
@@ -373,7 +372,7 @@ module EffectApStructuredSampling =
         //let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
         
-        let weight = (* uniform.LAreas.[addr] * dotOut *) 1.0 / (Vec.lengthSquared p + (max 1e-9 scale))
+        let weight = scale * (* uniform.LAreas.[addr] * dotOut *) 1.0 / (Vec.lengthSquared p + 1e-9)
         (*
         let dist = Vec.length p
         let weight = 
@@ -489,42 +488,81 @@ module EffectApStructuredSampling =
                                     if uniform.sampleCorners then   
                                         for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                             if l < clippedVc then
-                                                if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
-                                                    samples.[sampleIdx] <- V3d(clippedVa.[l])
-                                                    sampleIdx <- sampleIdx + 1
-                                                    sampleCount <- sampleIdx
+                                                //if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
+                                                samples.[sampleIdx] <- V3d(clippedVa.[l])
+                                                sampleIdx <- sampleIdx + 1
+                                                sampleCount <- sampleIdx
                                             
-                                    if uniform.sampleBarycenter && not (sampleAlreadyExisting samples sampleIdx barycenter) then
-                                            samples.[sampleIdx] <- V3d(barycenter)
-                                            sampleIdx <- sampleIdx + 1
-                                            sampleCount <- sampleIdx
+                                    if uniform.sampleBarycenter (* && not (sampleAlreadyExisting samples sampleIdx barycenter)      *) then
+                                        samples.[sampleIdx] <- V3d(barycenter)
+                                        sampleIdx <- sampleIdx + 1
+                                        sampleCount <- sampleIdx
 
-                                    if uniform.sampleNorm && not (sampleAlreadyExisting samples sampleIdx normPlanePoint) then
-                                            samples.[sampleIdx] <- V3d(normPlanePoint)
-                                            sampleIdx <- sampleIdx + 1
-                                            sampleCount <- sampleIdx
+                                    if uniform.sampleNorm       (* && not (sampleAlreadyExisting samples sampleIdx normPlanePoint)  *) then
+                                        samples.[sampleIdx] <- V3d(normPlanePoint)
+                                        sampleIdx <- sampleIdx + 1
+                                        sampleCount <- sampleIdx
 
-                                    if uniform.sampleMRP && not (sampleAlreadyExisting samples sampleIdx mrp) then
-                                            samples.[sampleIdx] <- V3d(mrp)
-                                            sampleIdx <- sampleIdx + 1
-                                            sampleCount <- sampleIdx
+                                    if uniform.sampleMRP        (* && not (sampleAlreadyExisting samples sampleIdx mrp)             *) then
+                                        samples.[sampleIdx] <- V3d(mrp)
+                                        sampleIdx <- sampleIdx + 1
+                                        sampleCount <- sampleIdx
 
-                                    if uniform.sampleClosest && not (sampleAlreadyExisting samples sampleIdx closestPoint) then
-                                            samples.[sampleIdx] <- closestPoint
-                                            sampleIdx <- sampleIdx + 1
-                                            sampleCount <- sampleIdx
+                                    if uniform.sampleClosest    (* && not (sampleAlreadyExisting samples sampleIdx closestPoint)    *) then
+                                        samples.[sampleIdx] <- closestPoint
+                                        sampleIdx <- sampleIdx + 1
+                                        sampleCount <- sampleIdx
 
                                     if uniform.sampleRandom then        
                                         sampleCount <- sampleCount + uniform.numSRSamples
                                                                                                                           
 
+                                    let samplesWeightScale = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, float>()
+                                    let neighborhoodSize = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, int>() 
+                                                     
                                     let mutable patchIllumination = 0.0
 
                                     if sampleIdx > 0 then
+                                        for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                            if r < sampleIdx then 
+                                                samplesWeightScale.[r] <- 1.0
+
+                                        if uniform.blendSamples then 
+
+                                            for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                if r < sampleIdx then 
+
+                                                    for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                        if r < o && o < sampleIdx then
+
+                                                            let dist  = Vec.length (samples.[r] - samples.[o])
+
+                                                            if dist < uniform.blendDistance then
+                                                                neighborhoodSize.[r] <- neighborhoodSize.[r] + 1
+                                                                neighborhoodSize.[o] <- neighborhoodSize.[o] + 1
+
+
+                                                    let scale = 
+                                                        if neighborhoodSize.[r] = 0 then
+                                                            1.0
+                                                        elif neighborhoodSize.[r] = 1 then
+                                                            MIN_WEIGHT_SCALE_FACTOR_1
+                                                        elif neighborhoodSize.[r] = 2 then 
+                                                            MIN_WEIGHT_SCALE_FACTOR_2
+                                                        else
+                                                            MIN_WEIGHT_SCALE_FACTOR_3
+
+                                                    for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                        if o < sampleIdx && o <> r then
+                                                            let dist  = Vec.length (samples.[r] - samples.[o])
+                                                            samplesWeightScale.[r] <- (computeSampleScale (uniform.blendDistance) dist scale) * samplesWeightScale.[r]
+                                                            
+
                                         for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                             if l < sampleIdx then 
-                                                let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samples.[l]
-                                                let irr = sample t2w scale addr samples.[l]
+                                                // let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samples.[l]
+                                                
+                                                let irr = sample t2w samplesWeightScale.[l] addr samples.[l]
                                                 patchIllumination <- patchIllumination + irr
 
                                     if uniform.sampleRandom && uniform.numSRSamples > 0 then
@@ -786,6 +824,7 @@ module EffectApStructuredSampling =
             sampleMRP            : IMod<bool>
             sampleRandom         : IMod<bool>
             blendSamples         : IMod<bool>
+            blendDistance        : IMod<float>
             numSRSamples         : IMod<int>
             SRSWeightScale       : IMod<float>
             TangentApproxDist    : IMod<float>
@@ -803,6 +842,7 @@ module EffectApStructuredSampling =
                 sampleMRP            = m.sampleMRP
                 sampleRandom         = m.sampleRandom
                 blendSamples         = m.blendSamples
+                blendDistance        = m.blendDistance.value
                 numSRSamples         = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
                 SRSWeightScale       = m.SRSWeightScale.value
                 TangentApproxDist    = m.TangentApproxDist.value
@@ -1117,16 +1157,15 @@ module EffectApStructuredSampling =
             let measurePointPos     = V3d(-14.0, 0.0, 0.0)
             let measurePointTrafo   = measurePointPos |> Trafo3d.Translation |> Mod.constant
             let measurePoint        = pointSg C4b.VRVisGreen measurePointTrafo
-            (*
+            
             let sceneSg = 
                 [
                     sceneSg
-                    //pointSg
-                    //measurePoint
-                    //getSamplePointSg data.lights (measurePointPos, V3d.OOI)
+                    measurePoint
+                    getSamplePointSg data.lights (measurePointPos, V3d.OOI)
                 ]
                 |> Sg.group'
-            *)
+            
 
             sceneSg 
                 |> setupFbEffects [ 
@@ -1144,6 +1183,7 @@ module EffectApStructuredSampling =
                 |> Sg.uniform "sampleRandom"            ssData.sampleRandom
                 |> Sg.uniform "blendSamples"            ssData.blendSamples
                 |> Sg.uniform "numSRSamples"            ssData.numSRSamples
+                |> Sg.uniform "blendDistance"           ssData.blendDistance
                 |> Sg.uniform "weightScaleSRSamples"    ssData.SRSWeightScale
                 |> Sg.uniform "tangentApproxDist"       ssData.TangentApproxDist
                 |> Sg.uniform "weightScaleSRSamplesIrr" ssData.SRSWeightScaleIrr

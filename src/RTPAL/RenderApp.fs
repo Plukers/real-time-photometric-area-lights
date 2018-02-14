@@ -397,6 +397,7 @@
             | TOGGLE_SAMPLE_MRP -> { s with sampleMRP = (not s.sampleMRP) }
             | TOGGLE_SAMPLE_RND -> { s with sampleRandom = (not s.sampleRandom) }
             | TOGGLE_BLEND_SAMPLES -> {s with blendSamples = (not s.blendSamples) }
+            | CHANGE_BLEND_DIST bd -> { s with blendDistance = Numeric.update s.blendDistance bd}
             | CHANGE_SRS_SAMPLE_NUM nss -> { s with numOfSRSamples = Numeric.update s.numOfSRSamples nss}
             | CHANGE_SRS_WEIGHT_SCALE srss -> { s with SRSWeightScale = Numeric.update s.SRSWeightScale srss }
             | CHANGE_TANGENT_APPROX_DIST tad -> { s with TangentApproxDist = Numeric.update s.TangentApproxDist tad }
@@ -749,10 +750,18 @@
                                                                 yield br[] 
                                                             ]
 
+                                                        let! blendSamples = m.blendSamples
+
                                                         yield p[] [
                                                             yield toggleBox m.blendSamples TOGGLE_BLEND_SAMPLES      
                                                             yield text "Blend Samples"                                                    
                                                             yield br[]  
+
+
+                                                            if blendSamples  then
+                                                                yield text "Blend Distance"
+                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.blendDistance |> UI.map CHANGE_BLEND_DIST ]
+                                                                
                                                         ]
                                                         
                                                         if mode = RenderMode.StructuredSampling || mode = RenderMode.CombinedStructuredSampling || c = RenderMode.StructuredSampling || c = RenderMode.CombinedStructuredSampling then
@@ -881,6 +890,13 @@
             sampleMRP        = true
             sampleRandom     = false
             blendSamples     = true
+            blendDistance = {
+                                value   = 0.65
+                                min     = 0.0
+                                max     = 2.0
+                                step    = 0.05
+                                format  = "{0:F3}"
+                                }
             numOfSRSamples   = {
                                 value   = 8.0
                                 min     = 0.0

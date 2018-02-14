@@ -55,6 +55,7 @@ type Action =
     | TOGGLE_SAMPLE_MRP
     | TOGGLE_SAMPLE_RND
     | TOGGLE_BLEND_SAMPLES
+    | CHANGE_BLEND_DIST of Numeric.Action
     | CHANGE_SRS_SAMPLE_NUM of Numeric.Action
     | CHANGE_SRS_WEIGHT_SCALE of Numeric.Action
     | CHANGE_TANGENT_APPROX_DIST of Numeric.Action
@@ -85,6 +86,7 @@ type RenderState =
         sampleMRP            : bool
         sampleRandom         : bool
         blendSamples         : bool
+        blendDistance        : NumericInput
         numOfSRSamples       : NumericInput
         SRSWeightScale       : NumericInput
         TangentApproxDist    : NumericInput
