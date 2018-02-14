@@ -709,8 +709,8 @@
                                                     let! mode = m.renderMode
                                                     let! c = m.compare
 
-                                                    let ssActive = mode = RenderMode.StructuredSampling || mode = RenderMode.StructuredIrrSampling || mode = RenderMode.CombinedStructuredSampling
-                                                    let ssCompActive = c = RenderMode.StructuredSampling || c = RenderMode.StructuredIrrSampling || c = RenderMode.CombinedStructuredSampling
+                                                    let ssActive = mode = RenderMode.StructuredSampling || mode = RenderMode.StructuredIrrSampling
+                                                    let ssCompActive = c = RenderMode.StructuredSampling || c = RenderMode.StructuredIrrSampling
 
                                                     if ssActive || (mode = RenderMode.Compare && ssCompActive) then    
                                                                                                                 
@@ -764,7 +764,7 @@
                                                                 
                                                         ]
                                                         
-                                                        if mode = RenderMode.StructuredSampling || mode = RenderMode.CombinedStructuredSampling || c = RenderMode.StructuredSampling || c = RenderMode.CombinedStructuredSampling then
+                                                        if mode = RenderMode.StructuredSampling || c = RenderMode.StructuredSampling then
                                                             yield p [] [   
                                                                 yield p [style "font-weight: bold;"] [ 
                                                                     text ("Structured Sampling")
@@ -779,7 +779,7 @@
                                                                 yield br[] 
                                                             ]
 
-                                                        if mode = RenderMode.StructuredIrrSampling || mode = RenderMode.CombinedStructuredSampling || c = RenderMode.StructuredIrrSampling || c = RenderMode.CombinedStructuredSampling then
+                                                        if mode = RenderMode.StructuredIrrSampling || c = RenderMode.StructuredIrrSampling then
                                                             yield p [] [   
                                                                 yield p [style "font-weight: bold;"] [ 
                                                                     text ("Structured Irradiance Sampling")
@@ -793,17 +793,7 @@
                                                                 yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDistIrr |> UI.map CHANGE_TANGENT_APPROX_DIST_IRR ]
                                                                 yield br[] 
                                                             ]
-
-                                                        if mode = RenderMode.CombinedStructuredSampling || c = RenderMode.CombinedStructuredSampling then
-                                                            yield p [] [   
-                                                                yield p [style "font-weight: bold;"] [ 
-                                                                    text ("Combined Structured Sampling")
-                                                                ]
-                                                                
-                                                                yield text "Lerp Value: 1.0 = Structured Sampling  - 0.0 = Irr Sampling"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.CombinedSSWeight |> UI.map CHANGE_COMBINED_WEIGHT ]
-                                                                yield br[]  
-                                                            ]
+                                                            
                                                         
                                                 }
                                             )

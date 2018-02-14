@@ -16,10 +16,9 @@ type RenderMode =
     | BaumFFApprox = 3
     | StructuredIrrSampling = 4
     | StructuredSampling = 5
-    | CombinedStructuredSampling = 6
-    | SolidAngle = 7
-    | FormFactor = 8
-    | Compare = 9
+    | SolidAngle = 6
+    | FormFactor = 7
+    | Compare = 8
 
 type OfflineRenderMode =
     | AbstractData = 0
