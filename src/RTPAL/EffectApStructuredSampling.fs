@@ -642,7 +642,7 @@ module EffectApStructuredSampling =
                 ]
 
         // closestPointTrafo, normPlanePointTrafo, mrpTrafo
-        let private getSamplePointSg (lc : Light.LightCollection) (point : V3d * V3d) = 
+        let private getSamplePointSg (lc : Light.LightCollection) (ssData : SSData) (point : V3d * V3d) = 
 
             let M33dFromCols (c1 : V3d) (c2 : V3d) (c3 : V3d) =
                 M33d(c1.X, c2.X, c3.X, c1.Y, c2.Y, c3.Y, c1.Z, c2.Z, c3.Z)
@@ -699,7 +699,8 @@ module EffectApStructuredSampling =
                 
                     let! lBaseComponents = lc.BaseComponents
                     let! lForwards = lc.Forwards
-               
+                                   
+                    let! blendDistance = ssData.blendDistance
                 
                     let computeLightData iIdx = 
                             
@@ -769,110 +770,106 @@ module EffectApStructuredSampling =
                                 let mutable sampleCount = 0
                                 let mutable sampleIdx = 0
                                 let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
-
-                                let minRequiredDistance = 1e-5
+                                
+                                let names = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, string>()
 
                                 // corners
                                 if true then   
                                     for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
-                                        if l < clippedVc then
-
-                                            let mutable minDist = 1e16
-                                            for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                                if i < sampleIdx then
-                                                    let dist = Vec.length (clippedVa.[l] - samples.[i])
-                                                    if dist < minDist then minDist <- dist
-
-                                            let alreadyExisting =
-                                                if minDist > minRequiredDistance || sampleIdx = 0 then
-                                                    false
-                                                else
-                                                    true
-                                                
-                                            if not alreadyExisting then // (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
+                                        if l < clippedVc then                                                
+                                            // if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
                                                 samples.[sampleIdx] <- V3d(clippedVa.[l])
+                                                
+                                                names.[sampleIdx] <- "Corner" + string(l)
                                                 sampleIdx <- sampleIdx + 1
                                                 sampleCount <- sampleIdx
+                                                
                                             
                                 // barycenter
-                                if false then   
-                                    let mutable minDist = 1e16
-                                    for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                        if i < sampleIdx then
-                                            let dist = Vec.length (barycenter - samples.[i])
-                                            if dist < minDist then minDist <- dist
-
-                                    let alreadyExisting =
-                                        if minDist > minRequiredDistance || sampleIdx = 0 then
-                                            false
-                                        else
-                                            true
-                                                
-                                    if not alreadyExisting then // not (sampleAlreadyExisting samples sampleIdx barycenter) then
+                                if false then                                                   
+                                    // if not (sampleAlreadyExisting samples sampleIdx barycenter) then
                                         samples.[sampleIdx] <- V3d(barycenter)
+                                        
+                                        names.[sampleIdx] <- "Barycenter"
                                         sampleIdx <- sampleIdx + 1
                                         sampleCount <- sampleIdx
+
 
                                 // norm
-                                if true then  
-                                    let mutable minDist = 1e16
-                                    for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                        if i < sampleIdx then
-                                            let dist = Vec.length (normPlanePoint - samples.[i])
-                                            if dist < minDist then minDist <- dist
-
-                                    let alreadyExisting =
-                                        if minDist > minRequiredDistance || sampleIdx = 0 then
-                                            false
-                                        else
-                                            true
-                                                
-                                    if not alreadyExisting then // not (sampleAlreadyExisting samples sampleIdx normPlanePoint) then
+                                if true then                                                  
+                                    // if not (sampleAlreadyExisting samples sampleIdx normPlanePoint) then
                                         samples.[sampleIdx] <- V3d(normPlanePoint)
+                                        
+                                        names.[sampleIdx] <- "Norm"
                                         sampleIdx <- sampleIdx + 1
                                         sampleCount <- sampleIdx
+
                                     
                                 // mrp
-                                if true then  
-                                    let mutable minDist = 1e16
-                                    for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                        if i < sampleIdx then
-                                            let dist = Vec.length (mrp - samples.[i])
-                                            if dist < minDist then minDist <- dist
-
-                                    let alreadyExisting =
-                                        if minDist > minRequiredDistance || sampleIdx = 0 then
-                                            false
-                                        else
-                                            true
-                                                
-                                    if not alreadyExisting then // not (sampleAlreadyExisting samples sampleIdx mrp) then
+                                if true then                                                  
+                                    // if not (sampleAlreadyExisting samples sampleIdx mrp) then
                                         samples.[sampleIdx] <- V3d(mrp)
+                                        
+                                        names.[sampleIdx] <- "MRP"
                                         sampleIdx <- sampleIdx + 1
                                         sampleCount <- sampleIdx
+
                                     
                                 // closest
                                 if true then  
-                                    let mutable minDist = 1e16
-                                    for i in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                        if i < sampleIdx then
-                                            let dist = Vec.length (closestPoint - samples.[i])
-                                            if dist < minDist then minDist <- dist
-
-                                    let alreadyExisting =
-                                        if minDist > minRequiredDistance || sampleIdx = 0 then
-                                            false
-                                        else
-                                            true
-
-                                    if not alreadyExisting then // not (sampleAlreadyExisting samples sampleIdx closestPoint) then
+                                    // if not (sampleAlreadyExisting samples sampleIdx closestPoint) then
                                         samples.[sampleIdx] <- closestPoint
+                                        
+                                        names.[sampleIdx] <- "Closest"
                                         sampleIdx <- sampleIdx + 1
                                         sampleCount <- sampleIdx
 
-                                let samples = samples |> Arr.map (fun s -> t2w * s + P)
 
-                                (samples, sampleCount)
+
+                                let samplesWeightScale = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, float>()
+                                let neighborhoodSize = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, int>() 
+                                                     
+                                if sampleIdx > 0 then
+                                    for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                        if r < sampleIdx then 
+                                            samplesWeightScale.[r] <- 1.0
+                                            
+                                    for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                        if r < sampleIdx then 
+
+                                            for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                if r < o && o < sampleIdx then
+
+                                                    let dist  = Vec.length (samples.[r] - samples.[o])
+
+                                                    if dist < blendDistance then
+                                                        neighborhoodSize.[r] <- neighborhoodSize.[r] + 1
+                                                        neighborhoodSize.[o] <- neighborhoodSize.[o] + 1
+                                                        
+                                            let scale = 
+                                                if neighborhoodSize.[r] = 0 then
+                                                    1.0
+                                                elif neighborhoodSize.[r] = 1 then
+                                                    MIN_WEIGHT_SCALE_FACTOR_1
+                                                elif neighborhoodSize.[r] = 2 then 
+                                                    MIN_WEIGHT_SCALE_FACTOR_2
+                                                else
+                                                    MIN_WEIGHT_SCALE_FACTOR_3
+
+                                            for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                                if o < sampleIdx && o <> r then
+                                                    let dist  = Vec.length (samples.[r] - samples.[o])
+                                                    samplesWeightScale.[r] <- (computeSampleScale (blendDistance) dist scale) * samplesWeightScale.[r]
+
+
+                                    printfn "%s" (sprintf "Sample     | N | WeightScale ")
+
+                                    for i in 0 .. sampleIdx - 1 do
+                                        printfn "%s" (sprintf "%10s | %1i | %.10f " (names.[i]) (neighborhoodSize.[i]) (samplesWeightScale.[i]))
+
+
+
+                                (samples |> Arr.map (fun s -> t2w * s + P), sampleCount)
 
                             else
                                 (Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>([t2w * closestPoint + P]), 1)
@@ -884,12 +881,7 @@ module EffectApStructuredSampling =
                 
                 }
         
-            let getTrafo idx = 
-                samplePointPositions  |>
-                Mod.map(fun (positions, c) -> 
-                    printfn "Sample %i; Count: %i" idx c
-                    if idx < c then Trafo3d.Translation positions.[idx] else Trafo3d.Identity
-                    )
+            let getTrafo idx = samplePointPositions |> Mod.map( fun (positions, c) ->  if idx < c then Trafo3d.Translation positions.[idx] else Trafo3d.Identity )
            
                     
             let mutable sg = Sg.empty
@@ -943,7 +935,7 @@ module EffectApStructuredSampling =
                 [
                     sceneSg
                     measurePoint
-                    getSamplePointSg data.lights (measurePointPos, V3d.OOI)
+                    getSamplePointSg data.lights ssData (measurePointPos, V3d.OOI)
                 ]
                 |> Sg.group'
             
