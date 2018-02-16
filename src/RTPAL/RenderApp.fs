@@ -143,11 +143,11 @@
         let activeTrafoLightId = 0        
         let numOfRotationSteps = 4
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps)
-        let numOfSamples = 3750
+        let numOfSamples = 3000
 
 
 
-        let imageFormat = PixFileFormat.Exr //PixFileFormat.Exr
+        let imageFormat = PixFileFormat.Tiff //PixFileFormat.Exr
 
         let createFileName step = 
             sprintf "%s_%i"  ((renderData.mode |> Mod.force).ToString()) step
@@ -202,8 +202,10 @@
                         for i in 1 .. (numOfSamples / Config.NUM_SAMPLES) do
                             scRenderTask.Run(RenderToken.Empty, fbo)
                             update false
-                    
+                            
                         saveImage path step
+
+                        
                             
 
                 //for f in photometryFiles do
@@ -881,7 +883,7 @@
             sampleRandom     = false
             blendSamples     = true
             blendDistance = {
-                                value   = 0.65
+                                value   = 1.0
                                 min     = 0.0
                                 max     = 2.0
                                 step    = 0.05

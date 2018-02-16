@@ -62,11 +62,28 @@ module EffectApStructuredSampling =
             false
 
     [<ReflectedDefinition>]
+    let easeInOutQuartic t =
+        let b = 0.0
+        let c = 1.0
+        let d = 1.0
+        
+
+        let t = t / (d / 2.0)
+        
+        if t < 1.0 then
+            c / 2.0 *t*t*t*t + b
+        else
+            let t = t - 2.0;
+            -c/2.0 * (t*t*t*t - 2.0) + b
+
+ 
+
+    [<ReflectedDefinition>]
     let computeSampleScale neigborhoodSize dist scale =
         if neigborhoodSize < dist then
             1.0
         else
-            let dist = dist / neigborhoodSize
+            let dist = easeInOutQuartic(dist / neigborhoodSize)
             (1.0 - dist) * scale + dist * 1.0
             
     // solid angle https://en.wikipedia.org/wiki/Solid_angle#Cone,_spherical_cap,_hemisphere
