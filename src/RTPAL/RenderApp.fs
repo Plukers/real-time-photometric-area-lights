@@ -841,7 +841,7 @@
 
         // Load geometry
         // let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
-        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.obj"]
+        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.dae"]
 
         // Setup Lights
         let lc = emptyLightCollection

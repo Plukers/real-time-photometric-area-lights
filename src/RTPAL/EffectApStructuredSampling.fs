@@ -587,8 +587,8 @@ module EffectApStructuredSampling =
                                             let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
 
                                             if samplePoint.Z >= eps then
-                                                let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samplePoint
-                                                let irr = sample t2w scale addr samplePoint
+                                                // let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samplePoint
+                                                let irr = sample t2w 1.0 addr samplePoint
                                                 patchIllumination <- patchIllumination + irr
 
                                     if sampleCount > 0 then
@@ -947,7 +947,7 @@ module EffectApStructuredSampling =
             let measurePointPos     = V3d(-14.0, 0.0, 0.0)
             let measurePointTrafo   = measurePointPos |> Trafo3d.Translation |> Mod.constant
             let measurePoint        = pointSg C4b.VRVisGreen measurePointTrafo
-            
+            (*
             let sceneSg = 
                 [
                     sceneSg
@@ -955,7 +955,7 @@ module EffectApStructuredSampling =
                     getSamplePointSg data.lights ssData (measurePointPos, V3d.OOI)
                 ]
                 |> Sg.group'
-            
+            *)
 
             sceneSg 
                 |> setupFbEffects [ 

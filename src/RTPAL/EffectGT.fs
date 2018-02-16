@@ -24,8 +24,36 @@ module EffectGT =
         [<Normal>]          n       : V3d
         [<Color>]           c       : V4d
         [<FragCoord>]       fc      : V4d
-    }        
+    }       
     
+    [<ReflectedDefinition>]
+    let private to2d (w2t : M33d) (o : V3d) (p : V3d) = 
+        let v = w2t * (p - o)
+        V2d(v.X, v.Y)
+
+    [<ReflectedDefinition>]
+    let private computePointLineDistance2D (t1 : V2d) (t2 : V2d) (p : V2d) =         
+        let n = (t2.Y - t1.Y) * p.X - (t2.X - t1.X) * p.Y + t2.X * t1.Y - t2.Y * t1.X
+        let d = sqrt((t2.Y - t1.Y) * (t2.Y - t1.Y) + (t2.X - t1.X) * (t2.X - t1.X))
+        n / d     
+        
+    [<ReflectedDefinition>]
+    let private sampleLightSurface (t2w : M33d) (addr : int) (p : V3d) = 
+
+        let i = p |> Vec.normalize  
+        let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]      
+        let weight = 1.0 / (Vec.lengthSquared p + 1e-9)
+        weight * irr * i.Z
+
+    [<ReflectedDefinition>]
+    let private signF (v : float) =
+        if v > 0.0 then
+            1
+        elif v < 0.0 then
+            -1
+        else
+            0
+  
     let groundTruthLighting (v : GTVertex) = 
         fragment {
 
@@ -54,7 +82,9 @@ module EffectGT =
                 // let i = sampleHemisphere u1 u2
                 let i = cosineSampleHemisphere u1 u2   
 
-                //let pdf = i.Z / PI  
+                
+                let brdf = v.c / PI 
+                //let pdf = i.Z / PI 
 
                 for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
                     match uniform.Lights.[addr] with
@@ -72,18 +102,45 @@ module EffectGT =
                                 vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
      
                             ////////////////////////////////////////////////////////
+
+                            let mutable hitLight = false
+                            let mutable samplePoint = vt.[0]
                             
-                            let hitLight = 
-                                match uniform.LBaseComponents.[addr] with
-                                | bt when bt = Light.LIGHT_BASE_TYPE_TRIANGLE ->                                 
-                                    let t = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
-                                    t > 1e-8
-                                | bt when bt = Light.LIGHT_BASE_TYPE_SQUARE -> 
-                                    let t1 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
-                                    let t2 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[2] vt.[3]
-                                    t1 > 1e-8 || t2 > 1e-8
-                                | _ -> false         
-                                    
+                            match uniform.LBaseComponents.[addr] with
+                            | bt when bt = Light.LIGHT_BASE_TYPE_TRIANGLE ->                                 
+                                let t = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
+                                hitLight <- t > 1e-8
+
+
+                                let vt02d = vt.[0] |> to2d w2t vt.[0]
+                                let vt12d = vt.[1] |> to2d w2t vt.[0]
+                                let vt22d = vt.[2] |> to2d w2t vt.[0]
+
+                                let u = vt.[1] - vt.[0]
+                                let v = vt.[2] - vt.[0]
+
+                                let s = vt.[0] + u1 * u + u2 * v
+                                
+                                let rSign = vt02d |> computePointLineDistance2D vt12d vt22d |> signF
+                                let sSign = s |> to2d w2t vt.[0] |> computePointLineDistance2D vt12d vt22d |> signF
+
+                                if rSign * sSign > 0 then
+                                    samplePoint <- s
+                                else
+                                    samplePoint <- vt.[0] - (s - (vt.[0] + u + v))
+
+                            | bt when bt = Light.LIGHT_BASE_TYPE_SQUARE -> 
+                                let t1 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
+                                let t2 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[2] vt.[3]
+                                hitLight <- t1 > 1e-8 || t2 > 1e-8
+
+
+                                samplePoint <- vt.[0] + u1 * (vt.[1] - vt.[0]) + u2 * (vt.[3] - vt.[0])
+                            | _ -> ()  
+                            
+
+                            illumination <- illumination + brdf * sampleLightSurface t2w addr samplePoint
+                            
                             if hitLight then
                                 
                                 let worldI = t2w * -i
@@ -94,16 +151,14 @@ module EffectGT =
 
                                 if irr > 0.0 then 
 
-                                    illumination <-
-                                        //let brdf = v.c / PI 
-                                        illumination + irr * v.c//(brdf / pdf) * i.Z                            
+                                    illumination <- illumination + irr * v.c//(brdf / pdf) * i.Z                            
                                     ()                            
-                             
+                            
                             ////////////////////////////////////////////////////////
                         ()       
                 ()
 
-            illumination <- illumination / V4d(Config.NUM_SAMPLES);
+            illumination <- illumination / V4d(2 * Config.NUM_SAMPLES)
 
             let alpha = 1.0 / (float)(uniform.FrameCount)
 
