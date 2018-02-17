@@ -139,7 +139,7 @@ module EffectGT =
                             | _ -> ()  
                             
 
-                            illumination <- illumination + brdf * sampleLightSurface t2w addr samplePoint
+                            // illumination <- illumination + brdf * sampleLightSurface t2w addr samplePoint
                             
                             if hitLight then
                                 
@@ -158,7 +158,7 @@ module EffectGT =
                         ()       
                 ()
 
-            illumination <- illumination / V4d(2 * Config.NUM_SAMPLES)
+            illumination <- illumination / V4d(Config.NUM_SAMPLES)
 
             let alpha = 1.0 / (float)(uniform.FrameCount)
 

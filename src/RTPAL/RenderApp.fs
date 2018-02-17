@@ -143,11 +143,11 @@
         let activeTrafoLightId = 0        
         let numOfRotationSteps = 4
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps)
-        let numOfSamples = 3000
+        let numOfSamples = 6008
 
 
 
-        let imageFormat = PixFileFormat.Tiff //PixFileFormat.Exr
+        let imageFormat = PixFileFormat.Exr //PixFileFormat.Exr
 
         let createFileName step = 
             sprintf "%s_%i"  ((renderData.mode |> Mod.force).ToString()) step
@@ -199,7 +199,7 @@
                         
                         update true
 
-                        for i in 1 .. (numOfSamples / Config.NUM_SAMPLES) do
+                        for _ in 1 .. (numOfSamples / Config.NUM_SAMPLES) do
                             scRenderTask.Run(RenderToken.Empty, fbo)
                             update false
                             
@@ -230,15 +230,16 @@
                         scRenderTask.Run(RenderToken.Empty, fbo)
                         app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;createFileName step], imageFormat);                            
 
-                for f in photometryFiles do
+                //for f in photometryFiles do
+                let f = photometryFiles.[0]
                         
-                    let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
-                    if not (System.IO.Directory.Exists dataPath) then
-                        System.IO.Directory.CreateDirectory dataPath |> ignore
+                let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
+                if not (System.IO.Directory.Exists dataPath) then
+                    System.IO.Directory.CreateDirectory dataPath |> ignore
                     
-                    updatePhotometryData f
+                updatePhotometryData f
                         
-                    doRotationIteration (render dataPath)
+                doRotationIteration (render dataPath)
             }
 
         let createImageTask = 
