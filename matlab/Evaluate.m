@@ -1,5 +1,5 @@
 %%% Evaluate the Results
-function [] = Evaluate(light, approximations, formFactor, solidAngle, numSteps, numGTSamples)
+function [] = Evaluate(light, approximations, formFactor, solidAngle, numSteps, numGTSamples, errorReport)
 
 LightPath = strcat('results/', light, '/');
 
@@ -8,6 +8,8 @@ if exist(EvalPath, 'dir')
     cmd_rmdir(EvalPath);
 end
 mkdir(EvalPath);
+
+errorReportEntry = light;
 
 ResultFile = fopen(strcat(EvalPath, '/data.csv'), 'w');
 fprintf(ResultFile, 'Approximation;Mean Squared Error; Max Error; Correlation FF; Correlation SA\n');
@@ -22,7 +24,6 @@ end
 imwrite(ReinhardTMO(GroundTruth, 0.0001), strcat(EvalPath, '/', 'GroundTruth.png'));
 GroundTruth = GroundTruth (:,:,1);
 %imshow(ReinhardTMO(GroundTruth, 0.0001));
-
 
 %% Load Approximations
 
@@ -50,6 +51,7 @@ for apmtn = approximations
     fprintf(ResultFile, strcat(apmtn{:}, ';', num2str(msError), ';', num2str(maxError), ';', num2str(corrFF), ';', num2str(corrSA), '\n'));
     imwrite(errorImg, strcat(EvalPath, '/', apmtn{:}, '_error.png'));
 
+    errorReportEntry = strcat(errorReportEntry, ';', msError);
 
     % numOfElements = size(formFactor, 1) * size(formFactor, 2);
     % 
@@ -74,6 +76,9 @@ for apmtn = approximations
 
 end
 
-fclose('all');
+errorReportEntry = strcat(errorReportEntry, '\n');
+fprintf(errorReport, errorReportEntry);
+
+fclose(ResultFile);
 
 end

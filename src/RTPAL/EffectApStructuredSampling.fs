@@ -17,6 +17,7 @@ module EffectApStructuredSampling =
         member uniform.sampleMRP                : bool  = uniform?sampleMRP 
         member uniform.sampleRandom             : bool  = uniform?sampleRandom
         member uniform.blendSamples             : bool  = uniform?blendSamples
+        member uniform.blendEasing              : bool  = uniform?blendEasing
         member uniform.blendDistance            : float = uniform?blendDistance
         member uniform.numSRSamples             : int   = uniform?numSRSamples
         member uniform.weightScaleSRSamples     : float = uniform?weightScaleSRSamples
@@ -60,30 +61,19 @@ module EffectApStructuredSampling =
                 true
         else 
             false
-
-    [<ReflectedDefinition>]
-    let easeInOutQuartic t =
-        let b = 0.0
-        let c = 1.0
-        let d = 1.0
-        
-
-        let t = t / (d / 2.0)
-        
-        if t < 1.0 then
-            c / 2.0 *t*t*t*t + b
-        else
-            let t = t - 2.0;
-            -c/2.0 * (t*t*t*t - 2.0) + b
-
- 
+             
 
     [<ReflectedDefinition>]
     let computeSampleScale neigborhoodSize dist scale =
         if neigborhoodSize < dist then
             1.0
         else
-            let dist = easeInOutQuartic(dist / neigborhoodSize)
+            let dist = 
+                if uniform.blendEasing then
+                    Easing.cubicEaseIn(dist / neigborhoodSize)
+                else
+                    Easing.linearEase(dist / neigborhoodSize)
+
             (1.0 - dist) * scale + dist * 1.0
             
     // solid angle https://en.wikipedia.org/wiki/Solid_angle#Cone,_spherical_cap,_hemisphere
@@ -622,6 +612,7 @@ module EffectApStructuredSampling =
             sampleMRP            : IMod<bool>
             sampleRandom         : IMod<bool>
             blendSamples         : IMod<bool>
+            blendEasing         : IMod<bool>
             blendDistance        : IMod<float>
             numSRSamples         : IMod<int>
             SRSWeightScale       : IMod<float>
@@ -640,6 +631,7 @@ module EffectApStructuredSampling =
                 sampleMRP            = m.sampleMRP
                 sampleRandom         = m.sampleRandom
                 blendSamples         = m.blendSamples
+                blendEasing         = m.blendEasing
                 blendDistance        = m.blendDistance.value
                 numSRSamples         = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
                 SRSWeightScale       = m.SRSWeightScale.value
@@ -972,6 +964,7 @@ module EffectApStructuredSampling =
                 |> Sg.uniform "sampleMRP"               ssData.sampleMRP
                 |> Sg.uniform "sampleRandom"            ssData.sampleRandom
                 |> Sg.uniform "blendSamples"            ssData.blendSamples
+                |> Sg.uniform "blendEasing"             ssData.blendEasing
                 |> Sg.uniform "numSRSamples"            ssData.numSRSamples
                 |> Sg.uniform "blendDistance"           ssData.blendDistance
                 |> Sg.uniform "weightScaleSRSamples"    ssData.SRSWeightScale
@@ -992,6 +985,16 @@ module EffectApStructuredSampling =
 
         let ssIrrApproxFb (data : RenderData) (ssData : SSData) (signature : IFramebufferSignature)  (sceneSg : ISg) =
             structuredIrradianceSampling |> toEffect |> setupSS_Fb data ssData signature sceneSg
+
+        
+        // sampleCorners sampleBarycenter sampleClosest sampleNorm sampleMRP sampleRandom numSRSamples blendSamples blendEasing blendDistance
+        let encodeSettingsForName (ssData : SSData) = 
+            
+            let bTi b = if (b |> Mod.force) then 0 else 1
+            
+            sprintf "%i_%i_%i_%i_%i_%i_%i_%i_%i_%f" (bTi ssData.sampleCorners) (bTi ssData.sampleBarycenter) (bTi ssData.sampleClosest) (bTi ssData.sampleNorm) (bTi ssData.sampleMRP) (bTi ssData.sampleRandom) (ssData.numSRSamples |> Mod.force) (bTi ssData.blendSamples) (bTi ssData.blendEasing) (ssData.blendDistance |> Mod.force)
+
+
             
 
 

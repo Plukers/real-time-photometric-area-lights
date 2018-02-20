@@ -138,29 +138,43 @@
                 ]
             )
 
-            
-
+        
         let activeTrafoLightId = 0        
-        let numOfRotationSteps = 4
-        let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps)
-        let numOfSamples = 50000
+        
+        let numOfRotationSteps = 5
+        let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
 
+        let numOfSamples = 50000
+        
 
 
         let imageFormat = PixFileFormat.Exr //PixFileFormat.Exr
 
-        let createFileName step = 
-            sprintf "%s_%i"  ((renderData.mode |> Mod.force).ToString()) step
+        let createFileName step renderModeData =
+            
+            let mode = renderData.mode |> Mod.force
 
-        let saveImage path step=
-            app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;String.concat "_" [(createFileName step); numOfSamples.ToString()]], imageFormat);
+            let renderModeData = 
+                match renderModeData with
+                | Some rmd -> rmd
+                | None ->
+                    match mode with
+                    | RenderMode.GroundTruth -> sprintf "_%i" numOfSamples
+                    | RenderMode.StructuredIrrSampling -> sprintf "_%s" (EffectApStructuredSampling.Rendering.encodeSettingsForName ssData)
+                    | RenderMode.StructuredSampling -> sprintf "_%s" (EffectApStructuredSampling.Rendering.encodeSettingsForName ssData)
+                    | _ -> ""
+
+                    
+            match step with
+            | Some step -> sprintf "%s%s_%i"  (mode.ToString()) renderModeData step
+            | None -> sprintf "%s%s"  (mode.ToString()) renderModeData
 
         let doRotationIteration action =
 
             let mutable rotation = Trafo3d.Identity
             let rotationStep = Trafo3d.Rotation(V3d(0.0, angle, 0.0));
         
-            for r in 0 .. numOfRotationSteps do 
+            for r in 0 .. numOfRotationSteps - 1 do 
                 action r
                 
                 transformLight renderData.lights activeTrafoLightId (rotationStep)
@@ -174,6 +188,9 @@
             System.IO.Directory.GetFiles (Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry"])
             |> Array.map System.IO.Path.GetFileName 
 
+        let nl = System.Environment.NewLine
+        let writeMetaData name data = File.writeAllText (Path.combine[resultPath;name]) data 
+
         
         let abstractDataAsyncRender = 
             async {
@@ -181,17 +198,18 @@
                     fun step ->
                         updateRenderMode RenderMode.FormFactor
                         scRenderTask.Run(RenderToken.Empty, fbo)
-                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName step], imageFormat);
+                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName (Some step) None], imageFormat);
                                                     
                         updateRenderMode RenderMode.SolidAngle
                         scRenderTask.Run(RenderToken.Empty, fbo)
-                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName step], imageFormat);
+                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName (Some step) None], imageFormat);
 
                 doRotationIteration renderReferenceData
             }
 
         let groundTruthAsyncRender = 
             async {
+                
                 let GTRender path = 
                     fun step -> 
                         // Ground Truth
@@ -203,10 +221,11 @@
                             scRenderTask.Run(RenderToken.Empty, fbo)
                             update false
                             
-                        saveImage path step
+                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;(createFileName (Some step) None)], imageFormat);
 
+                
+                let mutable photometryList = ""
                         
-
                 for f in photometryFiles do
                         let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
                         if not (System.IO.Directory.Exists dataPath) then
@@ -215,6 +234,11 @@
                         updatePhotometryData f
 
                         doRotationIteration (GTRender dataPath)
+
+                        photometryList <- sprintf "%s%s" (System.IO.Path.GetFileNameWithoutExtension f) nl
+
+                writeMetaData "GTData.txt" (sprintf "%i"  numOfSamples)
+                writeMetaData "PhotometryData.txt" photometryList
             }
 
         let approxAsyncRender =
@@ -223,28 +247,44 @@
                 let renderApprox path step renderMode = 
                     updateRenderMode renderMode
                     scRenderTask.Run(RenderToken.Empty, fbo)
-                    app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;createFileName step], imageFormat);   
+                    app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;createFileName (Some step) None], imageFormat);   
 
+
+                let approximations = 
+                     [
+                        RenderMode.CenterPointApprox 
+                        RenderMode.BaumFFApprox 
+                        RenderMode.MRPApprox 
+                        RenderMode.StructuredIrrSampling
+                        RenderMode.StructuredSampling 
+                     ]
                 
                 let render path = 
                     fun step -> 
-                        // Structured Irradiance Sampling
-                        
-                        RenderMode.CenterPointApprox |> renderApprox path step
-                        RenderMode.BaumFFApprox |> renderApprox path step
-                        RenderMode.MRPApprox |> renderApprox path step
-                        RenderMode.StructuredIrrSampling |> renderApprox path step
-                        RenderMode.StructuredSampling |> renderApprox path step
-                        
+                        for mode in approximations do mode |> renderApprox path step
+                  
+                let mutable photometryList = ""
                         
                 for f in photometryFiles do
-                        let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
-                        if not (System.IO.Directory.Exists dataPath) then
-                            System.IO.Directory.CreateDirectory dataPath |> ignore
+                    let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
+                    if not (System.IO.Directory.Exists dataPath) then
+                        System.IO.Directory.CreateDirectory dataPath |> ignore
                     
-                        updatePhotometryData f
+                    updatePhotometryData f
                         
-                        doRotationIteration (render dataPath)
+                    doRotationIteration (render dataPath)
+
+                    photometryList <- sprintf "%s%s" (System.IO.Path.GetFileNameWithoutExtension f) nl
+
+                writeMetaData "PhotometryData.txt" photometryList
+                
+                let approximationDataStr = 
+                    let mutable s = ""
+                    for mode in approximations do
+                        s <- createFileName None None
+                    s
+                    
+                writeMetaData "ApproximationData.txt" approximationDataStr
             }
 
         let createImageTask = 
@@ -262,6 +302,7 @@
     let setupRendering (app : OpenGlApplication) (viewportSize : V2i) (m : MRenderState) =
         
         let win = app.CreateGameWindow()
+        
         win.Title <- "Render"
         
         win.Height <- viewportSize.Y
@@ -404,7 +445,8 @@
             | TOGGLE_SAMPLE_NORM -> { s with sampleNorm = (not s.sampleNorm) }
             | TOGGLE_SAMPLE_MRP -> { s with sampleMRP = (not s.sampleMRP) }
             | TOGGLE_SAMPLE_RND -> { s with sampleRandom = (not s.sampleRandom) }
-            | TOGGLE_BLEND_SAMPLES -> {s with blendSamples = (not s.blendSamples) }
+            | TOGGLE_BLEND_SAMPLES -> { s with blendSamples = (not s.blendSamples) }
+            | TOGGLE_BLEND_EASING -> { s with blendEasing = (not s.blendEasing) }
             | CHANGE_BLEND_DIST bd -> { s with blendDistance = Numeric.update s.blendDistance bd}
             | CHANGE_SRS_SAMPLE_NUM nss -> { s with numOfSRSamples = Numeric.update s.numOfSRSamples nss}
             | CHANGE_SRS_WEIGHT_SCALE srss -> { s with SRSWeightScale = Numeric.update s.SRSWeightScale srss }
@@ -765,8 +807,13 @@
                                                             yield text "Blend Samples"                                                    
                                                             yield br[]  
 
+                                                            
 
                                                             if blendSamples  then
+                                                                yield toggleBox m.blendEasing TOGGLE_BLEND_EASING      
+                                                                yield text "Eased Blending"                                                    
+                                                                yield br[]  
+
                                                                 yield text "Blend Distance"
                                                                 yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.blendDistance |> UI.map CHANGE_BLEND_DIST ]
                                                                 
@@ -861,7 +908,7 @@
             transformLight lc lightId t |> ignore
         | None -> ()
         
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"ARC3_60712332_(STD).ldt"]
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"IYON_M_60714889_(STD_LEO).LDT"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         
         let photometryData = Some(IntensityProfileSampler(lightData))    
@@ -888,6 +935,7 @@
             sampleMRP        = true
             sampleRandom     = false
             blendSamples     = true
+            blendEasing      = true
             blendDistance = {
                                 value   = 1.0
                                 min     = 0.0

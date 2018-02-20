@@ -6,7 +6,7 @@ numGTSamples = 50000
 
 %% Setup Reference Data
 FormFactor = exrread('results/FormFactor_0.exr');
-for i = 1:(numSteps - 1)
+for i = l:(numSteps - 1)
     FormFactor = cat(2, FormFactor, exrread(strcat('results/FormFactor_', int2str(i), '.exr')));
 end
 FormFactor = FormFactor(:,:,1);
@@ -35,11 +35,19 @@ clear i
 %% Evaluate
 
 Lights = {'ARC3_60712332_(STD)','INT_60714483_(STD_LEO)','IYON_M_60714889_(STD_LEO)','MIRL_NIV_42925637_(STD_LEO)','PANOS_INF_60813864_(STD_LEO)','PERLUCE_42181512_(STD)-0-90','SLOIN_A_SL_42184612_(STD_LEO)','TECTON_C_42927033_(STD_LEO)','TECTON_C_42927238_(STD_LEO)','TECTON_MIREL_42185315_(STD_LEO)','THOR36L50AS3KA_DC'};
-
-
 Approximations = {'CenterPointApprox', 'BaumFFApprox', 'MRPApprox', 'StructuredIrrSampling', 'StructuredSampling'};
 
-for l = Lights
-Evaluate(l{:}, Approximations, FormFactor, SolidAngle, numSteps, numGTSamples);
+ErrorReport = fopen('results/data.csv', 'w');
+ErrorReportHeader = 'Light';
+for approx = Approximations
+   ErrorReportHeader = strcat(ErrorReportHeader, ';', approx{:}); 
 end
+ErrorReportHeader = strcat(ErrorReportHeader, '\n'); 
+fprintf(ErrorReport, ErrorReportHeader);
+
+for l = Lights
+Evaluate(l{:}, Approximations, FormFactor, SolidAngle, numSteps, numGTSamples, ErrorReport);
+end
+
+fclose(ErrorReport);
 
