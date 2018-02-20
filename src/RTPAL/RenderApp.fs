@@ -143,7 +143,7 @@
         let activeTrafoLightId = 0        
         let numOfRotationSteps = 4
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps)
-        let numOfSamples = 6008
+        let numOfSamples = 50000
 
 
 
@@ -206,40 +206,45 @@
                         saveImage path step
 
                         
-                            
 
-                //for f in photometryFiles do
-                let f = photometryFiles.[0]
-
-                let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
-                if not (System.IO.Directory.Exists dataPath) then
-                    System.IO.Directory.CreateDirectory dataPath |> ignore
+                for f in photometryFiles do
+                        let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
+                        if not (System.IO.Directory.Exists dataPath) then
+                            System.IO.Directory.CreateDirectory dataPath |> ignore
                     
-                updatePhotometryData f
+                        updatePhotometryData f
 
-                doRotationIteration (GTRender dataPath)
+                        doRotationIteration (GTRender dataPath)
             }
 
         let approxAsyncRender =
             async {
 
+                let renderApprox path step renderMode = 
+                    updateRenderMode renderMode
+                    scRenderTask.Run(RenderToken.Empty, fbo)
+                    app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;createFileName step], imageFormat);   
+
+                
                 let render path = 
                     fun step -> 
                         // Structured Irradiance Sampling
-                        updateRenderMode RenderMode.StructuredIrrSampling
-                        scRenderTask.Run(RenderToken.Empty, fbo)
-                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;createFileName step], imageFormat);                            
-
-                //for f in photometryFiles do
-                let f = photometryFiles.[0]
                         
-                let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
-                if not (System.IO.Directory.Exists dataPath) then
-                    System.IO.Directory.CreateDirectory dataPath |> ignore
+                        RenderMode.CenterPointApprox |> renderApprox path step
+                        RenderMode.BaumFFApprox |> renderApprox path step
+                        RenderMode.MRPApprox |> renderApprox path step
+                        RenderMode.StructuredIrrSampling |> renderApprox path step
+                        RenderMode.StructuredSampling |> renderApprox path step
+                        
+                        
+                for f in photometryFiles do
+                        let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
+                        if not (System.IO.Directory.Exists dataPath) then
+                            System.IO.Directory.CreateDirectory dataPath |> ignore
                     
-                updatePhotometryData f
+                        updatePhotometryData f
                         
-                doRotationIteration (render dataPath)
+                        doRotationIteration (render dataPath)
             }
 
         let createImageTask = 
@@ -842,7 +847,7 @@
 
         // Load geometry
         // let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
-        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.dae"]
+        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.obj"]
 
         // Setup Lights
         let lc = emptyLightCollection
