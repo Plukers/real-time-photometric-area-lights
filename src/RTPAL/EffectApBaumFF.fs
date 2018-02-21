@@ -27,7 +27,7 @@ module EffectApBaumFF =
 
             let brdf = v.c / PI 
 
-            let mutable illumination = V4d.Zero
+            let mutable illumination = V4d.Zero * (uniform.dT * 1e-256 * 0.0)
 
             ////////////////////////////////////////////////////////
             
@@ -101,6 +101,7 @@ module EffectApBaumFF =
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
+                |> setupUniformDt data.dt
                 |> Sg.compile data.runtime signature
 
         let baumFFApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 

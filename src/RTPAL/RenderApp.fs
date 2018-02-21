@@ -100,6 +100,7 @@
         let renderData = 
             {
                 runtime = app.Runtime
+                dt = 0.0 |> Mod.init
                 sceneSg = sceneSg
                 view = view
                 projTrafo = projTrafo 
@@ -150,9 +151,7 @@
 
         let imageFormat = PixFileFormat.Exr //PixFileFormat.Exr
 
-        let createFileName step renderModeData =
-            
-            let mode = renderData.mode |> Mod.force
+        let createFileName step renderModeData mode =
 
             let renderModeData = 
                 match renderModeData with
@@ -198,11 +197,11 @@
                     fun step ->
                         updateRenderMode RenderMode.FormFactor
                         scRenderTask.Run(RenderToken.Empty, fbo)
-                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName (Some step) None], imageFormat);
+                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath; renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
                                                     
                         updateRenderMode RenderMode.SolidAngle
                         scRenderTask.Run(RenderToken.Empty, fbo)
-                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;createFileName (Some step) None], imageFormat);
+                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;  renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
 
                 doRotationIteration renderReferenceData
             }
@@ -221,10 +220,10 @@
                             scRenderTask.Run(RenderToken.Empty, fbo)
                             update false
                             
-                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;(createFileName (Some step) None)], imageFormat);
+                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;(renderData.mode |> Mod.force |> createFileName (Some step) None)], imageFormat);
 
                 
-                let mutable photometryList = ""
+                let mutable photometryList = sprintf "%i" (photometryFiles.Length)
                         
                 for f in photometryFiles do
                         let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
@@ -235,7 +234,7 @@
 
                         doRotationIteration (GTRender dataPath)
 
-                        photometryList <- sprintf "%s%s" (System.IO.Path.GetFileNameWithoutExtension f) nl
+                        photometryList <- String.concat nl [ photometryList; (System.IO.Path.GetFileNameWithoutExtension f) ]
 
                 writeMetaData "GTData.txt" (sprintf "%i"  numOfSamples)
                 writeMetaData "PhotometryData.txt" photometryList
@@ -247,7 +246,7 @@
                 let renderApprox path step renderMode = 
                     updateRenderMode renderMode
                     scRenderTask.Run(RenderToken.Empty, fbo)
-                    app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;createFileName (Some step) None], imageFormat);   
+                    app.Runtime.Download(scColor).SaveAsImage(Path.combine [path; renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);   
 
 
                 let approximations = 
@@ -259,11 +258,25 @@
                         RenderMode.StructuredSampling 
                      ]
                 
+                let mutable approxList = ""
+                let mutable writeApproxList = true
+                let mutable approxCounter = 0
+
                 let render path = 
                     fun step -> 
-                        for mode in approximations do mode |> renderApprox path step
+                        for mode in approximations do 
+                            mode |> renderApprox path step
+
+                            if writeApproxList then
+                                let sep = if approxCounter = 0 then "" else nl
+                                
+                                approxList <- String.concat sep [approxList; mode |> createFileName None None ]
+                                approxCounter <- approxCounter + 1 
+
+                        writeApproxList <- false
+                                
                   
-                let mutable photometryList = ""
+                let mutable photometryList = sprintf "%i" (photometryFiles.Length)
                         
                 for f in photometryFiles do
                     let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
@@ -274,17 +287,13 @@
                         
                     doRotationIteration (render dataPath)
 
-                    photometryList <- sprintf "%s%s" (System.IO.Path.GetFileNameWithoutExtension f) nl
+                    photometryList <- String.concat nl [ photometryList; (System.IO.Path.GetFileNameWithoutExtension f) ]
 
                 writeMetaData "PhotometryData.txt" photometryList
-                
-                let approximationDataStr = 
-                    let mutable s = ""
-                    for mode in approximations do
-                        s <- createFileName None None
-                    s
+
                     
-                writeMetaData "ApproximationData.txt" approximationDataStr
+                approxList <- String.concat nl [sprintf "%i" approxCounter; approxList]
+                writeMetaData "ApproximationData.txt" approxList
             }
 
         let createImageTask = 
@@ -331,8 +340,13 @@
         
         
         let sceneSg = sceneSg |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
+        
+        let dt = 0.0 |> Mod.init
 
-        let renderData = initialRenderData app view projTrafo viewportSize m sceneSg
+        win.UpdateFrame.Add(fun args -> transact (fun _ -> dt.Value <- args.Time) )
+            
+        
+        let renderData = initialRenderData app view projTrafo viewportSize m dt sceneSg
 
         
         let gtData = initGTData m 
@@ -354,6 +368,7 @@
         
         win.UpdateFrame.Add(rtGroundTruthRenderUpdate)
         win.UpdateFrame.Add(fpsUpdate renderFeedback)
+
 
         (win, renderFeedback, offlineRenderTask)
         

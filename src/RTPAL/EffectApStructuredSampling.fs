@@ -136,7 +136,7 @@ module EffectApStructuredSampling =
 
             let brdf = v.c / PI 
 
-            let mutable illumination = V4d.Zero
+            let mutable illumination = V4d.Zero * (uniform.dT * 1e-256 * 0.0)
             
             ////////////////////////////////////////////////////////
 
@@ -400,7 +400,7 @@ module EffectApStructuredSampling =
             let t2w = v.n |> Vec.normalize |> basisFrisvad 
             let w2t = t2w |> Mat.transpose
             
-            let mutable illumination = V4d.Zero
+            let mutable illumination = V4d.Zero * (uniform.dT * 1e-256 * 0.0)
             
             ////////////////////////////////////////////////////////
 
@@ -957,6 +957,7 @@ module EffectApStructuredSampling =
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
+                |> setupUniformDt data.dt
                 |> Sg.uniform "sampleCorners"           ssData.sampleCorners
                 |> Sg.uniform "sampleBarycenter"        ssData.sampleBarycenter
                 |> Sg.uniform "sampleClosest"           ssData.sampleClosest
@@ -990,9 +991,26 @@ module EffectApStructuredSampling =
         // sampleCorners sampleBarycenter sampleClosest sampleNorm sampleMRP sampleRandom numSRSamples blendSamples blendEasing blendDistance
         let encodeSettingsForName (ssData : SSData) = 
             
-            let bTi b = if (b |> Mod.force) then 0 else 1
-            
-            sprintf "%i_%i_%i_%i_%i_%i_%i_%i_%i_%f" (bTi ssData.sampleCorners) (bTi ssData.sampleBarycenter) (bTi ssData.sampleClosest) (bTi ssData.sampleNorm) (bTi ssData.sampleMRP) (bTi ssData.sampleRandom) (ssData.numSRSamples |> Mod.force) (bTi ssData.blendSamples) (bTi ssData.blendEasing) (ssData.blendDistance |> Mod.force)
+            let mTb m = m |> Mod.force
+
+            let mutable settings = ""
+
+            if mTb ssData.sampleCorners then settings <- String.concat "_" [ settings; "sCorners" ]
+            if mTb ssData.sampleBarycenter then settings <- String.concat "_" [ settings; "sBarycenter"] 
+            if mTb ssData.sampleClosest then settings <- String.concat "_" [ settings; "sClosest" ]
+            if mTb ssData.sampleNorm then settings <- String.concat "_" [ settings; "sNorm" ]
+            if mTb ssData.sampleMRP then settings <- String.concat "_" [ settings; "sMRP" ]
+            if mTb ssData.sampleRandom then settings <- String.concat "_" [ settings; (sprintf "sRandom-%i" (ssData.numSRSamples |> Mod.force)) ]
+
+            if mTb ssData.blendSamples then
+                let mutable s = sprintf "blend-%f" (ssData.blendDistance |> Mod.force)
+
+                if mTb ssData.blendEasing then
+                    s <- String.concat "-" [s; "ease"]
+                    
+                settings <- String.concat "_" [ settings; s]
+
+            settings
 
 
             

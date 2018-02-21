@@ -17,6 +17,8 @@ module RenderInterop =
     type RenderData = {
             runtime : Aardvark.Rendering.GL.Runtime
 
+            dt : IMod<float>
+
             sceneSg : ISg
 
             view         : IMod<CameraView>
@@ -43,9 +45,10 @@ module RenderInterop =
             compareTexture : IOutputMod<ITexture>
         }
 
-    let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (projTrafo : IMod<Trafo3d>) (viewportSize : V2i) (m : MRenderState) (sceneSg : ISg) =
+    let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (projTrafo : IMod<Trafo3d>) (viewportSize : V2i) (m : MRenderState) (dt : IMod<float>) (sceneSg : ISg)=
         {
             runtime = app.Runtime
+            dt = dt
             sceneSg = sceneSg
             view = view
             projTrafo = projTrafo 

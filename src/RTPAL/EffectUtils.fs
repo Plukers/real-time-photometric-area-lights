@@ -14,7 +14,10 @@ module EffectUtils =
     
 
     type UniformScope with
-        member uniform.FrameCount : int = uniform?FrameCount
+        member uniform.FrameCount   : int   = uniform?FrameCount
+        member uniform.dT           : float = uniform?dT
+
+    let setupUniformDt dt sg = sg |> Aardvark.SceneGraph.SgFSharp.Sg.uniform "dT" dt
 
     [<ReflectedDefinition>]
     let PI = Math.PI

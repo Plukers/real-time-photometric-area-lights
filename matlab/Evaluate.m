@@ -1,5 +1,5 @@
 %%% Evaluate the Results
-function [] = Evaluate(light, approximations, formFactor, solidAngle, numSteps, numGTSamples, errorReport)
+function errorReportEntry = Evaluate(light, approximations, formFactor, solidAngle, numSteps, numGTSamples)
 
 LightPath = strcat('results/', light, '/');
 
@@ -9,75 +9,62 @@ if exist(EvalPath, 'dir')
 end
 mkdir(EvalPath);
 
-errorReportEntry = light;
+errorReportEntry = cell(size(approximations,1) + 1, 1);
+eri = 1;
+errorReportEntry(eri) = {light};
+eri = eri + 1;
 
 ResultFile = fopen(strcat(EvalPath, '/data.csv'), 'w');
 fprintf(ResultFile, 'Approximation;Mean Squared Error; Max Error; Correlation FF; Correlation SA\n');
 
 %% Load Ground Truth
 
-createGTFilePath = @(iter) strcat(LightPath, 'GroundTruth_', int2str(iter), '_', int2str(numGTSamples), '.exr');
+createGTFilePath = @(iter) strcat(LightPath, 'GroundTruth_', int2str(numGTSamples), '_', int2str(iter), '.exr');
 GroundTruth = exrread(createGTFilePath(0));
+GroundTruthTone = ReinhardTMO(GroundTruth, 0.0001);
 for i = 1:(numSteps - 1)
-    GroundTruth = cat(2, GroundTruth, exrread(createGTFilePath(i)));
+    GT = exrread(createGTFilePath(i));
+    GroundTruth = cat(2, GroundTruth, GT);
+    GroundTruthTone = cat(2, GroundTruthTone, ReinhardTMO(GT, 0.0001));
 end
-imwrite(ReinhardTMO(GroundTruth, 0.0001), strcat(EvalPath, '/', 'GroundTruth.png'));
-GroundTruth = GroundTruth (:,:,1);
-%imshow(ReinhardTMO(GroundTruth, 0.0001));
+imwrite(ReinhardTMO(GroundTruthTone, 0.0001), strcat(EvalPath, '/', 'GroundTruth.png'));
+GroundTruth = double(GroundTruth (:,:,1));
+
 
 %% Load Approximations
 
-for apmtn = approximations
+for a = 1:size(approximations,1)
 
-    createApproxFilePath = @(iter) strcat(LightPath, apmtn{:}, '_', int2str(iter), '.exr');
+    createApproxFilePath = @(iter) strcat(LightPath, approximations{a}, '_', int2str(iter), '.exr');
     Approx = (exrread(createApproxFilePath(0)));
+    ApproxTone = ReinhardTMO(Approx, 0.0001);
     for i = 1:(numSteps - 1)
-        Approx = cat(2, Approx, exrread(createApproxFilePath(i)));
+        A = exrread(createApproxFilePath(i));
+        Approx = cat(2, Approx, A);
+        ApproxTone = cat(2, ApproxTone, ReinhardTMO(A, 0.0001));
     end
-    imwrite(ReinhardTMO(Approx, 0.0001), strcat(EvalPath, '/', apmtn{:}, '.png'));
-    Approx = Approx(:,:,1);
+    imwrite(ReinhardTMO(ApproxTone, 0.0001), strcat(EvalPath, '/', approximations{a}, '.png'));
+    Approx = double(Approx(:,:,1));
     
 
     %% Compute Error
 
-    errorImage = (Approx - GroundTruth).^2;
+    errorImage = abs(Approx - GroundTruth);
 
     msError = immse(GroundTruth, Approx); %% USE    
-    maxError = max(max(abs(errorImage))); %% USE
+    maxError = max(max(errorImage)); %% USE
     corrFF = corr2(errorImage, formFactor); %% USE
     corrSA = corr2(errorImage, solidAngle); %% USE
     errorImg = ones(size(errorImage)) - (errorImage ./ maxError); %% USE
     
-    fprintf(ResultFile, strcat(apmtn{:}, ';', num2str(msError), ';', num2str(maxError), ';', num2str(corrFF), ';', num2str(corrSA), '\n'));
-    imwrite(errorImg, strcat(EvalPath, '/', apmtn{:}, '_error.png'));
-
-    errorReportEntry = strcat(errorReportEntry, ';', msError);
-
-    % numOfElements = size(formFactor, 1) * size(formFactor, 2);
-    % 
-    % errorFFx = zeros(numOfElements, 1);
-    % errorFFy = zeros(numOfElements, 1);
-    % for i = 1:numOfElements
-    %     errorFFx(i) = formFactor(i);
-    %     errorFFy(i) = errorSign(i) * errorImage(i);
-    % end
-    % [errorFFx, errorFFxI] = sort(errorFFx);
-    % errorFFy = errorFFy(errorFFxI);
-    % 
-    % errorFFp = polyfit(errorFFx,errorFFy,6);
-    % 
-    % x1 = linspace(0,max(errorFFx) + 0.01);
-    % y1 = polyval(errorFFp,x1);
-    % figure
-    % plot(errorFFx, errorFFy, 'g');
-    % hold on
-    % plot(x1,y1, 'b');
-    % hold off
+    fprintf(ResultFile, strcat(approximations{a}, ';', num2str(msError), ';', num2str(maxError), ';', num2str(corrFF), ';', num2str(corrSA), '\n'));
+    imwrite(errorImg, strcat(EvalPath, '/', approximations{a}, '_error.png'));
+    
+    errorReportEntry(eri) = {num2str(msError)};
+    eri = eri + 1;
 
 end
 
-errorReportEntry = strcat(errorReportEntry, '\n');
-fprintf(errorReport, errorReportEntry);
 
 fclose(ResultFile);
 
