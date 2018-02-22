@@ -81,19 +81,41 @@ numOfPix = size(solidAngle, 1) * size(solidAngle, 2);
 for a = 1:size(approximations,1)
 	errorLayer = errorImage(:,:,a);
     
-    for saIdx = 1:numOfPix
-                        
-        saBucket = round(solidAngle(saIdx) * 1000) + 1;
-        error = errorLayer(saIdx);
+    for saIdx = 1:(size(solidAngle, 1) * size(solidAngle, 2))
         
-        solidAngleError(saBucket, 1, a) = solidAngleError(saBucket, 1, a) + 1;
-        solidAngleError(saBucket, 2, a) = solidAngleError(saBucket, 1, a) + error;    
-
-        globalSolidAngleError(saBucket, 1, a) = globalSolidAngleError(saBucket, 1, a) + 1;
-        globalSolidAngleError(saBucket, 2, a) = globalSolidAngleError(saBucket, 1, a) + error;     
+        
+        
+        
     end
     
+        
+    
+
 end
+
+
+for saIdx = 1:(size(solidAngle, 1) * size(solidAngle, 2))
+    
+    
+    if mod(saIdx, 10000) == 0 
+       disp(strcat(num2str(round(saIdx / numOfPix * 10000) / 100), '%')); 
+    end
+    
+    saBucket = round(solidAngle(saIdx) * 1000) + 1;
+    
+    error = errorLayer(saIdx);
+    
+    for a = 1:size(approximations,1)
+%         error = errorImage(:,:,a);
+        
+    
+        solidAngleError(saBucket, 1, a) = solidAngleError(saBucket, 1, a) + 1;
+        solidAngleError(saBucket, 2, a) = solidAngleError(saBucket, 1, a) + error;    
+        
+        globalSolidAngleError(saBucket, 1, a) = globalSolidAngleError(saBucket, 1, a) + 1;
+        globalSolidAngleError(saBucket, 2, a) = globalSolidAngleError(saBucket, 1, a) + error;
+    end
+end 
 
 for row = 1:size(solidAngleError, 1)
     for a = 1:size(approximations,1)
