@@ -145,7 +145,7 @@
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
 
-        let numOfSamples = 50000
+        let numOfSamples = 16//50000
         
 
 
@@ -909,7 +909,7 @@
 
         // Load geometry
         // let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"crytek-sponza";"sponza.obj"]
-        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.obj"]
+        let geometryFile = Path.combine [__SOURCE_DIRECTORY__;"meshes";"plane.dae"]
 
         // Setup Lights
         let lc = emptyLightCollection

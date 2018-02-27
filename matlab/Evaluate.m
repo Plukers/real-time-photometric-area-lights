@@ -1,15 +1,11 @@
 %%% Evaluate the Results
-function errorReportEntry = Evaluate(light, approximations, formFactor, solidAngle, numSteps, numGTSamples, evalPath, globalSolidAngleError)
+function [errorReportEntry, errorPerSolidAngle] = Evaluate(light, approximations, formFactor, solidAngle, numSteps, numGTSamples, evalPath)
 
 toneMapScale = 1.0;
 
-solidAngleError = zeros(round(max(max(solidAngle)) * 1000 + 1), 2, size(approximations,1));
-solidAngleScale = 0 : 0.001 : ((size(solidAngleError, 1) - 1) / 1000);
-
-
 LightPath = strcat('results/', light, '/');
 
-EvalPath = strcat(evalPath, '/', light); 
+EvalPath = strcat(evalPath, light); 
 if exist(EvalPath, 'dir')
     cmd_rmdir(EvalPath);
 end
@@ -41,6 +37,11 @@ GroundTruth = double(GroundTruth (:,:,1));
 
 errorImage = zeros(size(GroundTruth,1), size(GroundTruth,2), size(approximations,1));
 
+s = solidAngle(:);
+
+errorPerSolidAngle = zeros(size(s, 1), size(approximations,1) + 1);
+errorPerSolidAngle(:, 1) = s;
+
 for a = 1:size(approximations,1)
 
     createApproxFilePath = @(iter) strcat(LightPath, approximations{a}, '_', int2str(iter), '.exr');
@@ -59,7 +60,8 @@ for a = 1:size(approximations,1)
     eimg = abs(Approx - GroundTruth);
     errorImage(:,:, a) = eimg;
     
-
+    errorPerSolidAngle(:, a + 1) = eimg(:);
+    
     msError = immse(GroundTruth, Approx); %% USE    
     maxError = max(max(eimg)); %% USE
     corrFF = corr2(eimg, formFactor); %% USE
@@ -74,34 +76,21 @@ for a = 1:size(approximations,1)
 
 end
 
-
-
-numOfPix = size(solidAngle, 1) * size(solidAngle, 2);
-
-for a = 1:size(approximations,1)
-	errorLayer = errorImage(:,:,a);
-    
-    for saIdx = 1:numOfPix
-                        
-        saBucket = round(solidAngle(saIdx) * 1000) + 1;
-        error = errorLayer(saIdx);
-        
-        solidAngleError(saBucket, 1, a) = solidAngleError(saBucket, 1, a) + 1;
-        solidAngleError(saBucket, 2, a) = solidAngleError(saBucket, 1, a) + error;    
-
-        globalSolidAngleError(saBucket, 1, a) = globalSolidAngleError(saBucket, 1, a) + 1;
-        globalSolidAngleError(saBucket, 2, a) = globalSolidAngleError(saBucket, 1, a) + error;     
-    end
-    
-end
-
-for row = 1:size(solidAngleError, 1)
-    for a = 1:size(approximations,1)
-        solidAngleError(row, 2, a) = solidAngleError(row, 2, a) / solidAngleError(row, 1, a);
-    end
-end
-
-
 fclose(ResultFile);
+
+%% Generate Plots
+
+PlotPath = strcat(EvalPath, '/Plots/');
+if exist(PlotPath, 'dir')
+    cmd_rmdir(PlotPath);
+end
+mkdir(PlotPath);
+
+BuildApproximationGraphs(approximations, errorImage, solidAngle, numSteps, PlotPath);
+
+BuildCompareGraph(approximations, errorImage, solidAngle, PlotPath);
+
+
+
 
 end
