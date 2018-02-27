@@ -108,7 +108,6 @@ module EffectApStructuredSampling =
         //let qdd = quadraticDistanceDerivative (uniform.LAreas.[addr] * dotOut * i.Z) (max 1e-9 scale) uniform.tangentApproxDistIrr dist
 
         let weight = scale *  i.Z / (Vec.lengthSquared p + 1e-9) // add i.Z for a better weight
-        let weight = scale * 1.0
         
         let sampledIrr = weight * irr
         (*
@@ -119,7 +118,7 @@ module EffectApStructuredSampling =
             else
                 (uniform.LAreas.[addr] * dotOut) * weight
         *)
-        //let weight = (uniform.LAreas.[addr] * dotOut) * weight
+        let weight = (uniform.LAreas.[addr] * dotOut) * weight
 
         (sampledIrr, weight)
         

@@ -952,7 +952,7 @@
             blendSamples     = true
             blendEasing      = true
             blendDistance = {
-                                value   = 1.0
+                                value   = 0.1
                                 min     = 0.0
                                 max     = 2.0
                                 step    = 0.05
