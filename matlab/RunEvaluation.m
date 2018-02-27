@@ -66,13 +66,16 @@ SolidAngleError = zeros(round(max(max(SolidAngle)) * 1000 + 1), 2, size(Approxim
 SolidAngleScale = 0 : 0.001 : ((size(SolidAngleError, 1) - 1) / 1000);
 
 ErrorReport = cell(size(Approximations,1) + 1, size(Lights,1) + 1);
+ErrorPerSolidAngle = zeros(1, size(Approximations,1) + 1);
 
 for i = 1:size(Approximations,1)
     ErrorReport(i + 1,1) = Approximations(i);
 end
 
 for i = 1:size(Lights,1)
-    ErrorReport(:,i + 1) = Evaluate(Lights{i}, Approximations, FormFactor, SolidAngle, NumSteps, NumGTSamples, EvalPath, SolidAngleError);
+    [errorReportEntry, errorPerSolidAngle] = Evaluate(Lights{i}, Approximations, FormFactor, SolidAngle, NumSteps, NumGTSamples, EvalPath);
+    ErrorReport(:,i + 1) = errorReportEntry;
+    ErrorPerSolidAngle = cat(1, ErrorPerSolidAngle, errorPerSolidAngle);
     disp(strcat('Evaluated ', num2str(i), ' of ', num2str(size(Lights,1)), ' Lights'));
 end
 
@@ -88,6 +91,36 @@ for i = 1:(size(Approximations,1) + 1)
 end
 fclose(fErrorReport);
 
-clear i fErrorReport sep
+
+%% Plot solid angle error
+
+h = figure;
+title('Solid Angle');
+hold on
+
+s = ErrorPerSolidAngle(:, 1);
+
+for a = 1:size(Approximations,1)
+    
+    e = ErrorPerSolidAngle(:,a + 1);
+    
+    p = polyfit(s,e,3);
+    x1 = linspace(0,max(max(solidAngle)));
+    y1 = polyval(p,x1);
+    plot(x1,y1,'LineWidth', 1);
+    
+end
+legend(Approximations);
+
+hold off;
+
+saveas(h,strcat(savePath, 'Solid_Angle.png'))
+close(h);
+
+
+
+
+
+clear i fErrorReport sep h s
 
 disp('Finished');
