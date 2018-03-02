@@ -19,7 +19,7 @@ for a = 1:size(approximations,1)
     plot(x1,y1,'LineWidth', 1);
     
 end
-legend(approximations);
+legend(approximations,'location','southoutside');
 
 hold off;
 

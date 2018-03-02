@@ -16,6 +16,7 @@ module EffectApStructuredSampling =
         member uniform.sampleNorm               : bool  = uniform?sampleNorm 
         member uniform.sampleMRP                : bool  = uniform?sampleMRP 
         member uniform.sampleRandom             : bool  = uniform?sampleRandom
+        member uniform.sampleIrrUniform         : bool  = uniform?sampleIrrUniform
         member uniform.blendSamples             : bool  = uniform?blendSamples
         member uniform.blendEasing              : bool  = uniform?blendEasing
         member uniform.blendDistance            : float = uniform?blendDistance
@@ -98,29 +99,34 @@ module EffectApStructuredSampling =
     
     [<ReflectedDefinition>]
     let private sampleIrr (t2w : M33d) (scale : float) (addr : int) (p : V3d) = 
+    
         let i = p |> Vec.normalize  
  
         let dotOut = max 1e-9 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
+
+        if uniform.sampleIrrUniform then
+            let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+            let weight = scale * 1.0
+
+            (irr, weight)
+        else
+            let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
+
+
+            let weight = scale *  i.Z / (Vec.lengthSquared p + 1e-9) // add i.Z for a better weight
         
-        let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
+            let sampledIrr = weight * irr
+            (*
+            let dist = Vec.length p
+            let weight = 
+                if dist < uniform.tangentApproxDistIrr then
+                    quadraticDistanceDerivative (uniform.LAreas.[addr] * dotOut * i.Z) (max 1e-9 scale) uniform.tangentApproxDistIrr dist
+                else
+                    (uniform.LAreas.[addr] * dotOut) * weight
+            *)
+            let weight = (uniform.LAreas.[addr] * dotOut) * weight
 
-        //let dist = Vec.length p
-        //let qdd = quadraticDistanceDerivative (uniform.LAreas.[addr] * dotOut * i.Z) (max 1e-9 scale) uniform.tangentApproxDistIrr dist
-
-        let weight = scale *  i.Z / (Vec.lengthSquared p + 1e-9) // add i.Z for a better weight
-        
-        let sampledIrr = weight * irr
-        (*
-        let dist = Vec.length p
-        let weight = 
-            if dist < uniform.tangentApproxDistIrr then
-                quadraticDistanceDerivative (uniform.LAreas.[addr] * dotOut * i.Z) (max 1e-9 scale) uniform.tangentApproxDistIrr dist
-            else
-                (uniform.LAreas.[addr] * dotOut) * weight
-        *)
-        let weight = (uniform.LAreas.[addr] * dotOut) * weight
-
-        (sampledIrr, weight)
+            (sampledIrr, weight)
         
 
     let structuredIrradianceSampling (v : Vertex) = 
@@ -610,8 +616,9 @@ module EffectApStructuredSampling =
             sampleNorm           : IMod<bool>
             sampleMRP            : IMod<bool>
             sampleRandom         : IMod<bool>
+            sampleIrrUniform     : IMod<bool>
             blendSamples         : IMod<bool>
-            blendEasing         : IMod<bool>
+            blendEasing          : IMod<bool>
             blendDistance        : IMod<float>
             numSRSamples         : IMod<int>
             SRSWeightScale       : IMod<float>
@@ -629,8 +636,9 @@ module EffectApStructuredSampling =
                 sampleNorm           = m.sampleNorm
                 sampleMRP            = m.sampleMRP
                 sampleRandom         = m.sampleRandom
+                sampleIrrUniform     = m.sampleIrrUniform
                 blendSamples         = m.blendSamples
-                blendEasing         = m.blendEasing
+                blendEasing          = m.blendEasing
                 blendDistance        = m.blendDistance.value
                 numSRSamples         = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
                 SRSWeightScale       = m.SRSWeightScale.value
@@ -963,6 +971,7 @@ module EffectApStructuredSampling =
                 |> Sg.uniform "sampleNorm"              ssData.sampleNorm
                 |> Sg.uniform "sampleMRP"               ssData.sampleMRP
                 |> Sg.uniform "sampleRandom"            ssData.sampleRandom
+                |> Sg.uniform "sampleIrrUniform"        ssData.sampleIrrUniform
                 |> Sg.uniform "blendSamples"            ssData.blendSamples
                 |> Sg.uniform "blendEasing"             ssData.blendEasing
                 |> Sg.uniform "numSRSamples"            ssData.numSRSamples
@@ -1000,6 +1009,7 @@ module EffectApStructuredSampling =
             if mTb ssData.sampleNorm then settings <- String.concat "_" [ settings; "sNorm" ]
             if mTb ssData.sampleMRP then settings <- String.concat "_" [ settings; "sMRP" ]
             if mTb ssData.sampleRandom then settings <- String.concat "_" [ settings; (sprintf "sRandom-%i" (ssData.numSRSamples |> Mod.force)) ]
+            if mTb ssData.sampleIrrUniform then settings <- String.concat "_" [ settings; "sIrrUniform" ]
 
             if mTb ssData.blendSamples then
                 let mutable s = sprintf "blend-%f" (ssData.blendDistance |> Mod.force)

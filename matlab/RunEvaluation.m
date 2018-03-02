@@ -32,15 +32,14 @@ fclose(fLightData);
 % Approximations
 fApproxData = fopen('results/ApproximationData.txt', 'r');
 tline = fgetl(fApproxData);
-Approximations = cell(str2num(tline), 1);
 i = 1;
-tline = fgetl(fApproxData);
 while ischar(tline)
     Approximations(i) = {tline};
     i = i + 1;
     tline = fgetl(fApproxData);
 end
 fclose(fApproxData);
+Approximations = Approximations';
 
 clear fGTData fLightData fApproxData tline i
 
@@ -75,7 +74,7 @@ end
 for i = 1:size(Lights,1)
     [errorReportEntry, errorPerSolidAngle] = Evaluate(Lights{i}, Approximations, FormFactor, SolidAngle, NumSteps, NumGTSamples, EvalPath);
     ErrorReport(:,i + 1) = errorReportEntry;
-    ErrorPerSolidAngle = cat(1, ErrorPerSolidAngle, errorPerSolidAngle);
+%     ErrorPerSolidAngle = cat(1, ErrorPerSolidAngle, errorPerSolidAngle);
     disp(strcat('Evaluated ', num2str(i), ' of ', num2str(size(Lights,1)), ' Lights'));
 end
 
@@ -94,28 +93,28 @@ fclose(fErrorReport);
 
 %% Plot solid angle error
 
-h = figure;
-title('Solid Angle');
-hold on
-
-s = ErrorPerSolidAngle(:, 1);
-
-for a = 1:size(Approximations,1)
-    
-    e = ErrorPerSolidAngle(:,a + 1);
-    
-    p = polyfit(s,e,3);
-    x1 = linspace(0,max(max(solidAngle)));
-    y1 = polyval(p,x1);
-    plot(x1,y1,'LineWidth', 1);
-    
-end
-legend(Approximations);
-
-hold off;
-
-saveas(h,strcat(savePath, 'Solid_Angle.png'))
-close(h);
+% h = figure;
+% title('Solid Angle');
+% hold on
+% 
+% s = ErrorPerSolidAngle(:, 1);
+% 
+% for a = 1:size(Approximations,1)
+%     
+%     e = ErrorPerSolidAngle(:,a + 1);
+%     
+%     p = polyfit(s,e,3);
+%     x1 = linspace(0,max(max(solidAngle)));
+%     y1 = polyval(p,x1);
+%     plot(x1,y1,'LineWidth', 1);
+%     
+% end
+% legend(Approximations);
+% 
+% hold off;
+% 
+% saveas(h,strcat(savePath, 'Solid_Angle.png'))
+% close(h);
 
 
 

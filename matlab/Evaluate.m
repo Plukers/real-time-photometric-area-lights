@@ -36,6 +36,7 @@ GroundTruth = double(GroundTruth (:,:,1));
 %% Load Approximations
 
 errorImage = zeros(size(GroundTruth,1), size(GroundTruth,2), size(approximations,1));
+errorSign = zeros(size(GroundTruth,1), size(GroundTruth,2), size(approximations,1));
 
 s = solidAngle(:);
 
@@ -57,7 +58,9 @@ for a = 1:size(approximations,1)
     
 
     %% Compute Error
-    eimg = abs(Approx - GroundTruth);
+    ediff = Approx - GroundTruth;
+    errorSign(:,:, a) = sign(ediff);
+    eimg = abs(ediff);
     errorImage(:,:, a) = eimg;
     
     errorPerSolidAngle(:, a + 1) = eimg(:);
@@ -86,7 +89,7 @@ if exist(PlotPath, 'dir')
 end
 mkdir(PlotPath);
 
-BuildApproximationGraphs(approximations, errorImage, solidAngle, numSteps, PlotPath);
+BuildApproximationGraphs(approximations, errorImage, errorSign, solidAngle, numSteps, PlotPath);
 
 BuildCompareGraph(approximations, errorImage, solidAngle, PlotPath);
 
