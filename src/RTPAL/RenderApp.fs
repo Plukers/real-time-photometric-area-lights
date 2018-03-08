@@ -817,7 +817,7 @@
 
                                             div [ clazz "ui divider"] []
 
-                                            // toggleBox m.toneMap TOGGLE_TONEMAPPING    
+                                            toggleBox m.toneMap TOGGLE_TONEMAPPING    
                                             text "Tonemapping"
                                             br[]                                                
                                             div [clazz "ui input"] [ Numeric.view' [InputBox] m.toneMapScale |> UI.map CHANGE_TONEMAP_SCALE ]
@@ -914,32 +914,32 @@
                                                     if ssActive || (mode = RenderMode.Compare && ssCompActive) then    
                                                                                                                 
                                                         yield p [] [     
-                                                            //yield toggleBox m.sampleCorners TOGGLE_SAMPLE_CORNERS 
+                                                            yield toggleBox m.sampleCorners TOGGLE_SAMPLE_CORNERS 
                                                             yield text "Sample Corners"                                                                                               
                                                             yield br[]
                                                             
-                                                            //yield toggleBox m.sampleBarycenter TOGGLE_SAMPLE_BARYCENTER  
+                                                            yield toggleBox m.sampleBarycenter TOGGLE_SAMPLE_BARYCENTER  
                                                             yield text "Sample Barycenter"                                                      
                                                             yield br[]
 
-                                                            //yield toggleBox m.sampleClosest TOGGLE_SAMPLE_CLOSEST  
+                                                            yield toggleBox m.sampleClosest TOGGLE_SAMPLE_CLOSEST  
                                                             yield text "Sample Closest"                     
                                                             yield br[]
                                                             
-                                                            //yield toggleBox m.sampleNorm TOGGLE_SAMPLE_NORM        
+                                                            yield toggleBox m.sampleNorm TOGGLE_SAMPLE_NORM        
                                                             yield text "Sample Norm"                                                    
                                                             yield br[]        
                                                             
-                                                            //yield toggleBox m.sampleMRP TOGGLE_SAMPLE_MRP       
+                                                            yield toggleBox m.sampleMRP TOGGLE_SAMPLE_MRP       
                                                             yield text "Sample MRP"                                                    
                                                             yield br[]   
 
-                                                            //yield toggleBox m.sampleRandom TOGGLE_SAMPLE_RND      
+                                                            yield toggleBox m.sampleRandom TOGGLE_SAMPLE_RND      
                                                             yield text "Sample Random"                                                    
                                                             yield br[]  
 
                                                             if mode = RenderMode.StructuredIrrSampling || (mode = RenderMode.Compare && c = RenderMode.StructuredIrrSampling) then
-                                                                //yield toggleBox m.sampleIrrUniform TOGGLE_SAMPLE_IRR_UNIFORM      
+                                                                yield toggleBox m.sampleIrrUniform TOGGLE_SAMPLE_IRR_UNIFORM      
                                                                 yield text "Uniform Sample Weight"                                                    
                                                                 yield br[]  
                                                             
@@ -957,14 +957,14 @@
                                                         let! blendSamples = m.blendSamples
 
                                                         yield p[] [
-                                                            //yield toggleBox m.blendSamples TOGGLE_BLEND_SAMPLES      
+                                                            yield toggleBox m.blendSamples TOGGLE_BLEND_SAMPLES      
                                                             yield text "Blend Samples"                                                    
                                                             yield br[]  
 
                                                             
 
                                                             if blendSamples  then
-                                                                //yield toggleBox m.blendEasing TOGGLE_BLEND_EASING      
+                                                                yield toggleBox m.blendEasing TOGGLE_BLEND_EASING      
                                                                 yield text "Eased Blending"                                                    
                                                                 yield br[]  
 

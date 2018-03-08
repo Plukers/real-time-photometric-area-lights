@@ -144,7 +144,7 @@ module EffectGT =
                                 let ey = vt.[3] - vt.[0]
                                 let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
 
-                                samplePoint <- w2t * (SphericalQuad.sphQuadSample squad u1 u2 - P)
+                                samplePoint <- w2t * ((SphericalQuad.sphQuadSample squad u1 u2) - P)
 
                                 lightPDF <- 1.0 / squad.S
                             | _ -> ()  
