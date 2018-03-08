@@ -10,20 +10,20 @@ nuget Aardvark.Base.Essentials         ~> 3.0.42
 
 nuget FShade.Debug					   ~> 3.3.17
                                        
-nuget Aardvark.Base.Rendering          ~> 3.5.5
-nuget Aardvark.Application.WinForms.GL ~> 3.5.5
-nuget Aardvark.SceneGraph              ~> 3.5.5
-nuget Aardvark.SceneGraph.IO           ~> 3.5.5
-nuget Aardvark.Rendering.NanoVg        ~> 3.5.5
-nuget Aardvark.Rendering.Text          ~> 3.5.5
+nuget Aardvark.Base.Rendering          ~> 3.6.0
+nuget Aardvark.Application.WinForms.GL ~> 3.6.0
+nuget Aardvark.SceneGraph              ~> 3.6.0
+nuget Aardvark.SceneGraph.IO           ~> 3.6.0
+nuget Aardvark.Rendering.NanoVg        ~> 3.6.0
+nuget Aardvark.Rendering.Text          ~> 3.6.0
                                        
 nuget Aardvark.Data.Photometry		   ~> 3.1.11
  
-nuget Aardvark.UI            ~> 3.3.48
-nuget Aardvark.UI.Primitives ~> 3.3.48
-nuget Aardvark.Service       ~> 3.3.48
-nuget Aardvark.Cef.WinForms  ~> 3.3.48
-nuget Aardvark.Cef           ~> 3.3.48
+nuget Aardvark.UI            ~> 3.4.2
+nuget Aardvark.UI.Primitives ~> 3.4.2
+nuget Aardvark.Service       ~> 3.4.2
+nuget Aardvark.Cef.WinForms  ~> 3.4.2
+nuget Aardvark.Cef           ~> 3.4.2
 
 
 
