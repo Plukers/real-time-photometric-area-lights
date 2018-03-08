@@ -25,6 +25,10 @@ nuget Aardvark.Service       ~> 3.4.2
 nuget Aardvark.Cef.WinForms  ~> 3.4.2
 nuget Aardvark.Cef           ~> 3.4.2
 
+nuget Another.Unofficial.Xilium.CefGlue ~> 0.1.0
+nuget Another.Unofficial.Xilium.CefGlue.UnpackNativeDependencies ~> 0.1.0
+nuget Another.Unofficial.Xilium.CefGlue.WindowsForms ~> 0.1.0
+
 
 
 group Build
