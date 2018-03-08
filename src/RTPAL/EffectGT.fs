@@ -43,7 +43,7 @@ module EffectGT =
         let i = p |> Vec.normalize  
         let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]      
         let weight = 1.0 / (Vec.lengthSquared p + 1e-9)
-        weight * irr * i.Z
+        weight * irr
 
     [<ReflectedDefinition>]
     let private signF (v : float) =
@@ -84,7 +84,7 @@ module EffectGT =
 
                 
                 let brdf = v.c / PI 
-                //let pdf = i.Z / PI 
+                let brdfPDF = i.Z / PI // uniform spherical sampling
 
                 for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
                     match uniform.Lights.[addr] with
@@ -105,9 +105,12 @@ module EffectGT =
 
                             let mutable hitLight = false
                             let mutable samplePoint = vt.[0]
+
+                            let mutable lightPDF = 1.0
                             
                             match uniform.LBaseComponents.[addr] with
-                            | bt when bt = Light.LIGHT_BASE_TYPE_TRIANGLE ->                                 
+                            | bt when bt = Light.LIGHT_BASE_TYPE_TRIANGLE ->           
+                                // TODO : Not working with direct light sampling. Fix this by time.
                                 let t = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
                                 hitLight <- t > 1e-8
 
@@ -134,13 +137,22 @@ module EffectGT =
                                 let t2 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[2] vt.[3]
                                 hitLight <- t1 > 1e-8 || t2 > 1e-8
 
+                                for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
+                                    vt.[vtc] <- t2w * vt.[vtc] + P
 
-                                samplePoint <- vt.[0] + u1 * (vt.[1] - vt.[0]) + u2 * (vt.[3] - vt.[0])
+                                let ex = vt.[1] - vt.[0]
+                                let ey = vt.[3] - vt.[0]
+                                let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
+
+                                samplePoint <- w2t * (SphericalQuad.sphQuadSample squad u1 u2 - P)
+
+                                lightPDF <- 1.0 / squad.S
                             | _ -> ()  
                             
 
-                            // illumination <- illumination + brdf * sampleLightSurface t2w addr samplePoint
+                            illumination <- illumination + (brdf / lightPDF) * (sampleLightSurface t2w addr samplePoint) * i.Z 
                             
+                            (*
                             if hitLight then
                                 
                                 let worldI = t2w * -i
@@ -153,7 +165,7 @@ module EffectGT =
 
                                     illumination <- illumination + irr * v.c//(brdf / pdf) * i.Z                            
                                     ()                            
-                            
+                            *)
                             ////////////////////////////////////////////////////////
                         ()       
                 ()

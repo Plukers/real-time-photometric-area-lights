@@ -128,6 +128,7 @@ module Light =
     // Adds a new triangle light to the given light collection
     // Returns the updated light collection and the id of the added light
     // If the light could not be added because there is no space left, no id is returned
+    [<System.Obsolete("Some shaders do not support triangle lights at the moment.")>]
     let addTriangleLight (lc : LightCollection) = 
         match lc.NextFreeAddr.Value  with
         | Some nfa ->
