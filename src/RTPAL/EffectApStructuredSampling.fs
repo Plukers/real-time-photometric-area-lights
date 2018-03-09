@@ -106,16 +106,15 @@ module EffectApStructuredSampling =
 
         if uniform.sampleIrrUniform then
             let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
-            let weight = scale * 1.0
+            let weight = scale * 1.0 
 
             (irr, weight)
         else
-            let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
+            let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr]) // * dotOut
 
-
-            let weight = scale *  i.Z / (Vec.lengthSquared p + 1e-9) // add i.Z for a better weight
+            let weight = scale  * i.Z / (Vec.lengthSquared p + 1e-9) // add i.Z for a better weight
         
-            let sampledIrr = weight * irr
+            //let sampledIrr = weight * irr
             (*
             let dist = Vec.length p
             let weight = 
@@ -124,9 +123,9 @@ module EffectApStructuredSampling =
                 else
                     (uniform.LAreas.[addr] * dotOut) * weight
             *)
-            let weight = (uniform.LAreas.[addr] * dotOut) * weight
+            //let weight = dotOut * weight
 
-            (sampledIrr, weight)
+            (weight * irr, weight)
         
 
     let structuredIrradianceSampling (v : Vertex) = 
@@ -382,9 +381,9 @@ module EffectApStructuredSampling =
         let i = p |> Vec.normalize  
  
         //let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
-        let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] // / (uniform.LAreas.[addr] * dotOut)
+        let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr]) // / (uniform.LAreas.[addr] * dotOut)
         
-        let weight = scale * (* uniform.LAreas.[addr] * dotOut *) 1.0 / (Vec.lengthSquared p + 1e-9)
+        let weight = scale * 1.0 / (Vec.lengthSquared p + 1e-9)
         (*
         let dist = Vec.length p
         let weight = 

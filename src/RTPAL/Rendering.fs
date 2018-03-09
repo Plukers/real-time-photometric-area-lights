@@ -67,7 +67,7 @@ module Rendering =
 
             update
 
-        let CreateAndLinkRenderTask (data : RenderData) (gtData : GroundTruthData) (mrpData : MRPData) (ssData : SSData) =
+        let CreateAndLinkRenderTask (data : RenderData) (gtData : GroundTruthData) (mrpData : MRPData) (ssData : SSData) (saData : SolidAngleData) =
 
 
 
@@ -89,7 +89,7 @@ module Rendering =
                 |> Map.add RenderMode.StructuredSampling            (ssApproxFb             data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
                                                                     
                 |> Map.add RenderMode.FormFactor                    (formFactorFb           data            signature sceneSg)
-                |> Map.add RenderMode.SolidAngle                    (solidAngleFb           data            signature sceneSg)
+                |> Map.add RenderMode.SolidAngle                    (solidAngleFb           data saData     signature sceneSg)
 
             let diffFrameBuffer = diffFb data effectFbs
             

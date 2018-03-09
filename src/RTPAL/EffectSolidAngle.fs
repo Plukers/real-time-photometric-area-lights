@@ -74,24 +74,39 @@ module EffectSolidAngle =
     module Rendering =
 
         open Aardvark.SceneGraph
+        open Aardvark.Base.Incremental
 
         open RenderInterop
         open Utils
         open Utils.Sg
 
-        let solidAngleRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+        type SolidAngleData = {
+            compMethod : IMod<SolidAngleCompMethod>
+        }
+
+        let initSolidAngleData  (m : MRenderState) = {
+            compMethod = m.solidAngleCompMethod
+        }
+
+        let initSolidAngleData' compMethod = {
+            compMethod = compMethod
+        }
+
+
+        let solidAngleRenderTask (data : RenderData) (saData : SolidAngleData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
             sceneSg
                 |> setupFbEffects [ 
                         solidAngle |> toEffect 
                         EffectUtils.effectClearNaN |> toEffect
                     ]
                 |> Light.Sg.setLightCollectionUniforms data.lights
+                |> Sg.uniform "compMethod" (saData.compMethod |> Mod.map (fun cm -> cm |> int))
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
                 |> Sg.compile data.runtime signature
 
-        let solidAngleFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
-            solidAngleRenderTask data signature sceneSg
+        let solidAngleFb (data : RenderData) (saData : SolidAngleData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+            solidAngleRenderTask data saData signature sceneSg
             |> RenderTask.renderToColor data.viewportSize
 
 

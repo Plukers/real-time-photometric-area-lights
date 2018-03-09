@@ -33,6 +33,10 @@ type GTSamplingMode =
     | BRDF = 0
     | Light = 1
 
+type SolidAngleCompMethod = 
+    | Triangle = 0
+    | Square = 1
+
 type Action =
     | IMPORT_PHOTOMETRY of string
     | IMPORT_SCENE of string
@@ -42,6 +46,7 @@ type Action =
     | UPDATE_GROUND_TRUTH of bool
 
     | SET_GT_SAMPLING_MODE of GTSamplingMode
+    | SET_SOLID_ANGLE_COMP_METHOD of SolidAngleCompMethod
 
     | OPENED_WINDOW 
     | CHANGE_LIGHT_TRANSFORM_MODE of LightTransformMode
@@ -83,7 +88,8 @@ type RenderState =
         renderMode         : RenderMode
         updateGroundTruth  : bool
 
-        gtSamplingMode     : GTSamplingMode
+        gtSamplingMode       : GTSamplingMode
+        solidAngleCompMethod : SolidAngleCompMethod 
 
         offlineRenderMode  : OfflineRenderMode
 

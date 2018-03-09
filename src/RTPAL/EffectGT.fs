@@ -159,14 +159,14 @@ module EffectGT =
 
                                     let dotOut = max 1e-9 (abs (Vec.dot worldI uniform.LForwards.[addr]))
                                 
-                                    let irr = (getPhotometricIntensity worldI uniform.LForwards.[addr]  uniform.LUps.[addr]) /  dotOut
+                                    let irr = (getPhotometricIntensity worldI uniform.LForwards.[addr]  uniform.LUps.[addr]) / (uniform.LAreas.[addr] * dotOut)
 
                                     //if irr > 0.0 then 
                                     illumination <- illumination + (brdf * i.Z * irr) / brdfPDF //(brdf / pdf) * i.Z                            
 
                             else 
                                 let i = samplePoint   
-                                let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] 
+                                let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr])
                                 let weight = 1.0 / (Vec.lengthSquared samplePoint + 1e-9)
                                 let irr = weight * irr
 

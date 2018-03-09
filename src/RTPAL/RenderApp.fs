@@ -182,7 +182,9 @@
                 CombinedLerpValue    = m.CombinedSSWeight.value
             }
 
-        let (scRenderTask, _) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData
+        let saData = Render.EffectSolidAngle.Rendering.initSolidAngleData' (SolidAngleCompMethod.Square |> Mod.init) 
+
+        let (scRenderTask, _) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData saData
 
         let update = groundTruthRenderUpdate renderData gtData
 
@@ -476,6 +478,8 @@
         let gtData = initGTData m 
         let mrpData = initMRPData m
         let ssData = initSSData m
+
+        let saData = Render.EffectSolidAngle.Rendering.initSolidAngleData m
         
         let dt = 0.0 |> Mod.init
 
@@ -486,7 +490,7 @@
 
 
 
-        let (renderTask, renderFeedback) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData
+        let (renderTask, renderFeedback) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData saData
         
 
         win.RenderTask <- renderTask
@@ -532,7 +536,8 @@
             | COMPUTED_ERROR (error, brightError, darkError) -> { s with error = error; brightError = brightError; darkError = darkError }
             | OPENED_WINDOW -> s
             | UPDATE_GROUND_TRUTH update -> { s with updateGroundTruth = update }
-            | SET_GT_SAMPLING_MODE samplingMode -> {s with gtSamplingMode = samplingMode }
+            | SET_GT_SAMPLING_MODE samplingMode -> { s with gtSamplingMode = samplingMode }
+            | SET_SOLID_ANGLE_COMP_METHOD sacm -> { s with solidAngleCompMethod = sacm }
             | CHANGE_LIGHT_TRANSFORM_MODE mode -> { s with lightTransformMode = mode }
             | TRANSLATE_LIGHT (lightID, dir) ->             
                 transformLight s.lights lightID (Trafo3d.Translation(dir))
@@ -674,7 +679,7 @@
                 COMPUTED_ERROR (ec, brightEc, darkEc)
                                                     
             )
-            (*
+            
             let toggleBox (state : IMod<bool>) (toggle : 'msg) =
 
                 let attributes = 
@@ -684,11 +689,11 @@
 
                          let! check = state
                          if check then
-                            yield "checked" => ""
+                            yield "checked" => "checked"
                     }
                     
                 Incremental.input (AttributeMap.ofAMap attributes)
-            *)
+            
             // view
             let semui =
                 [ 
@@ -1009,6 +1014,15 @@
                                                                 yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDistIrr |> UI.map CHANGE_TANGENT_APPROX_DIST_IRR ]
                                                                 yield br[] 
                                                             ]
+
+                                                        if mode = RenderMode.SolidAngle then
+                                                            yield p [] [
+                                                                yield text "Solid Angle Compuation Method"
+                                                                yield br[]
+                                                                yield dropDown m.solidAngleCompMethod (fun mode -> SET_SOLID_ANGLE_COMP_METHOD mode)
+                                                            ]
+
+
                                                             
                                                         
                                                 }
@@ -1081,6 +1095,7 @@
             updateGroundTruth = true
             offlineRenderMode = OfflineRenderMode.Approximations
             gtSamplingMode = GTSamplingMode.BRDF
+            solidAngleCompMethod = SolidAngleCompMethod.Square
             compare = RenderMode.StructuredIrrSampling 
             error = 0.0
             brightError = 0.0
