@@ -101,6 +101,7 @@
             {
                 runtime = app.Runtime
                 dt = 0.0 |> Mod.init
+                usePhotometry = true |> Mod.init
                 sceneSg = sceneSg
                 view = view
                 projTrafo = projTrafo 
@@ -539,6 +540,7 @@
             | SET_GT_SAMPLING_MODE samplingMode -> { s with gtSamplingMode = samplingMode }
             | SET_SOLID_ANGLE_COMP_METHOD sacm -> { s with solidAngleCompMethod = sacm }
             | CHANGE_LIGHT_TRANSFORM_MODE mode -> { s with lightTransformMode = mode }
+            | TOGGLE_USE_PHOTOMETRY -> { s with usePhotometry = (not s.usePhotometry) }
             | TRANSLATE_LIGHT (lightID, dir) ->             
                 transformLight s.lights lightID (Trafo3d.Translation(dir))
                 s
@@ -828,6 +830,10 @@
                                             br[]                                                
                                             div [clazz "ui input"] [ Numeric.view' [InputBox] m.toneMapScale |> UI.map CHANGE_TONEMAP_SCALE ]
                                             br[]
+
+                                            toggleBox m.usePhotometry TOGGLE_USE_PHOTOMETRY      
+                                            text "Use Photometry"                                                    
+                                            br[] 
                                               
                                         ]
 
@@ -1093,6 +1099,7 @@
             lights = lc
             renderMode = RenderMode.GroundTruth
             updateGroundTruth = true
+            usePhotometry = true
             offlineRenderMode = OfflineRenderMode.Approximations
             gtSamplingMode = GTSamplingMode.BRDF
             solidAngleCompMethod = SolidAngleCompMethod.Square

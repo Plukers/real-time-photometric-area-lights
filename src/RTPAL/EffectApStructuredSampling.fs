@@ -963,7 +963,8 @@ module EffectApStructuredSampling =
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
-                |> setupUniformDt data.dt
+                |> setUniformDT data.dt
+                |> setUniformUsePhotometry data.usePhotometry
                 |> Sg.uniform "sampleCorners"           ssData.sampleCorners
                 |> Sg.uniform "sampleBarycenter"        ssData.sampleBarycenter
                 |> Sg.uniform "sampleClosest"           ssData.sampleClosest

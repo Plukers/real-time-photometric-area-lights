@@ -98,7 +98,7 @@ module EffectGT =
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
                                 if uniform.samplingMode = GTSamplingMode.BRDF then                                    
                                     vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
-                                else
+                                if uniform.samplingMode = GTSamplingMode.Light then
                                     vt.[vtc] <- uniform.LVertices.[vtcAddr]
      
                             ////////////////////////////////////////////////////////
@@ -115,7 +115,7 @@ module EffectGT =
                                     let t = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
                                     hitLight <- t > 1e-8
 
-                                else
+                                if uniform.samplingMode = GTSamplingMode.Light then
                                     // TODO : Not working with direct light sampling. Fix this by time.
 
                                     let vt02d = vt.[0] |> to2d w2t vt.[0]
@@ -141,7 +141,7 @@ module EffectGT =
                                     let t2 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[2] vt.[3]
                                     hitLight <- t1 > 1e-8 || t2 > 1e-8
 
-                                else
+                                if uniform.samplingMode = GTSamplingMode.Light then
                                     let ex = vt.[1] - vt.[0]
                                     let ey = vt.[3] - vt.[0]
                                     let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
@@ -164,13 +164,15 @@ module EffectGT =
                                     //if irr > 0.0 then 
                                     illumination <- illumination + (brdf * i.Z * irr) / brdfPDF //(brdf / pdf) * i.Z                            
 
-                            else 
-                                let i = samplePoint   
+                            if uniform.samplingMode = GTSamplingMode.Light then
+
+
+                                let i = samplePoint 
                                 let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr])
                                 let weight = 1.0 / (Vec.lengthSquared samplePoint + 1e-9)
                                 let irr = weight * irr
 
-                                illumination <- illumination + (brdf * i.Z * irr) / lightPDF 
+                                illumination <- illumination + (brdf * i.Z * irr) / lightPDF
                             
                             ////////////////////////////////////////////////////////
                         ()       
@@ -267,6 +269,7 @@ module EffectGT =
                     |> Light.Sg.setLightCollectionUniforms data.lights
                     |> setupPhotometricData data.photometricData
                     |> setupCamera data.view data.projTrafo data.viewportSize 
+                    |> setUniformUsePhotometry data.usePhotometry
                     |> Sg.uniform "samplingMode" (gtData.samplingMode |> Mod.map (fun sm -> sm |> int))
                     |> Sg.uniform "HaltonSamples" gtData.haltonSequence
                     |> Sg.uniform "FrameCount" gtData.frameCount
@@ -305,10 +308,19 @@ module EffectGT =
                         clear
                     )
 
+            let mutable prevSamplingMode = gtData.samplingMode |> Mod.force
+            let samplingModeDemandsClear =
+                gtData.samplingMode |> Mod.map (
+                    fun mode ->
+                        let clear = mode <> prevSamplingMode 
+                        prevSamplingMode <- mode
+                        clear
+                    )
+
 
             let clearRequired = 
                 let required = Mod.map2 (fun l c -> l || c) lightDemandsClear camDemandsClear
-
+                let required = Mod.map2 (fun r o -> r || o) required samplingModeDemandsClear
                 required
 
             // only update if the render mode is GroundTruth or Compare
@@ -354,6 +366,7 @@ module EffectGT =
                         if clear then
                             lightDemandsClear.MarkOutdated()
                             camDemandsClear.MarkOutdated()
+                            samplingModeDemandsClear.MarkOutdated()
                 )
 
             update

@@ -48,6 +48,8 @@ type Action =
     | SET_GT_SAMPLING_MODE of GTSamplingMode
     | SET_SOLID_ANGLE_COMP_METHOD of SolidAngleCompMethod
 
+    | TOGGLE_USE_PHOTOMETRY
+
     | OPENED_WINDOW 
     | CHANGE_LIGHT_TRANSFORM_MODE of LightTransformMode
     | TRANSLATE_LIGHT of int * V3d // lightID, direction
@@ -84,6 +86,8 @@ type Action =
 type RenderState =
     {    
         lights             : LightCollection
+
+        usePhotometry      : bool
 
         renderMode         : RenderMode
         updateGroundTruth  : bool

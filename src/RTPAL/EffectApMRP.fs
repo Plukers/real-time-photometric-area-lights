@@ -172,7 +172,8 @@ module EffectApMRP =
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
-                |> setupUniformDt data.dt
+                |> setUniformDT data.dt
+                |> setUniformUsePhotometry data.usePhotometry
                 |> Sg.uniform "mrpWeights" mrpData.mrpWeights
                 |> Sg.compile data.runtime signature
 

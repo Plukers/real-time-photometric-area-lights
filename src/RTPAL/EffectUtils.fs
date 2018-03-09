@@ -14,10 +14,17 @@ module EffectUtils =
     
 
     type UniformScope with
-        member uniform.FrameCount   : int   = uniform?FrameCount
-        member uniform.dT           : float = uniform?dT
+        member uniform.FrameCount    : int   = uniform?FrameCount
+        member uniform.dT            : float = uniform?dT
+        member uniform.usePhotometry : bool  = uniform?usePhotometry
 
-    let setupUniformDt dt sg = sg |> Aardvark.SceneGraph.SgFSharp.Sg.uniform "dT" dt
+    let setUniformDT dt sg = 
+        sg 
+        |> Aardvark.SceneGraph.SgFSharp.Sg.uniform "dT" dt
+
+    let setUniformUsePhotometry usePhotometry sg =
+        sg
+        |> Aardvark.SceneGraph.SgFSharp.Sg.uniform "usePhotometry" usePhotometry
 
     [<ReflectedDefinition>]
     let PI = Math.PI
@@ -521,28 +528,31 @@ module EffectUtils =
         light space { up X -forward, up, -forward }
     *)
     [<ReflectedDefinition>] 
-    let public getPhotometricIntensity (i : V3d) (forward : V3d) (up : V3d) =    
+    let public getPhotometricIntensity (i : V3d) (forward : V3d) (up : V3d) =   
         
-        let basis = // TODO compute once and pass as uniform
-            M33dFromCols (V3d.Cross(up, -forward)) up -forward
-            |> Mat.transpose
+        if not uniform.usePhotometry then
+            Vec.dot i forward |> abs
+        else
+            let basis = // TODO compute once and pass as uniform
+                M33dFromCols (V3d.Cross(up, -forward)) up -forward
+                |> Mat.transpose
             
-        let i = basis * i |> Vec.normalize
+            let i = basis * i |> Vec.normalize
         
-        let i = new V3d(-i.X, -i.Y, i.Z)
+            let i = new V3d(-i.X, -i.Y, i.Z)
 
-        // Vertical Texture coords
-        let phi = 1.0 - acos(clamp -1.0 1.0 i.Z) * Constant.PiInv // map to 0..1
-        let phi = clamp 0.0 1.0 ((phi + uniform.ProfileAddressing.X) * uniform.ProfileAddressing.Y)
+            // Vertical Texture coords
+            let phi = 1.0 - acos(clamp -1.0 1.0 i.Z) * Constant.PiInv // map to 0..1
+            let phi = clamp 0.0 1.0 ((phi + uniform.ProfileAddressing.X) * uniform.ProfileAddressing.Y)
 
-        // Horizontal Texture coords
-        let theta = (atan2 i.Y i.X) * 0.5 * Constant.PiInv + 0.5 // map to 0..1
-        let theta = 1.0 - abs (1.0 - abs (((theta + uniform.ProfileAddressing.Z) * uniform.ProfileAddressing.W) % 2.0))
+            // Horizontal Texture coords
+            let theta = (atan2 i.Y i.X) * 0.5 * Constant.PiInv + 0.5 // map to 0..1
+            let theta = 1.0 - abs (1.0 - abs (((theta + uniform.ProfileAddressing.Z) * uniform.ProfileAddressing.W) % 2.0))
 
-        let offset = uniform.TextureOffsetScale.XZ  //var Offset = new Float2(0.5, 0.5) / (intensityTexture.Size);
-        let scale = uniform.TextureOffsetScale.YW   //var Scale = (intensityTexture.Size - Float2.II) / intensityTexture.Size;
-        let crd = V2d(phi, theta) * scale + offset
-        intensityProfileSampler.SampleLevel(V2d(crd.X, 1.0 - crd.Y), 0.0).X
+            let offset = uniform.TextureOffsetScale.XZ  //var Offset = new Float2(0.5, 0.5) / (intensityTexture.Size);
+            let scale = uniform.TextureOffsetScale.YW   //var Scale = (intensityTexture.Size - Float2.II) / intensityTexture.Size;
+            let crd = V2d(phi, theta) * scale + offset
+            intensityProfileSampler.SampleLevel(V2d(crd.X, 1.0 - crd.Y), 0.0).X
 
     let effectClearNaN (v : Vertex)= 
         fragment {

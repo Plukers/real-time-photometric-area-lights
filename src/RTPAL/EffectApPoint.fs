@@ -93,7 +93,8 @@ module EffectApPoint =
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
-                |> setupUniformDt data.dt
+                |> setUniformDT data.dt
+                |> setUniformUsePhotometry data.usePhotometry
                 |> Sg.compile data.runtime signature
 
         let centerPointApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 

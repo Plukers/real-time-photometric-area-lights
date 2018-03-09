@@ -19,6 +19,8 @@ module RenderInterop =
 
             dt : IMod<float>
 
+            usePhotometry : IMod<bool>
+
             sceneSg : ISg
 
             view         : IMod<CameraView>
@@ -49,6 +51,7 @@ module RenderInterop =
         {
             runtime = app.Runtime
             dt = dt
+            usePhotometry = m.usePhotometry
             sceneSg = sceneSg
             view = view
             projTrafo = projTrafo 

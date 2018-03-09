@@ -66,16 +66,15 @@ module EffectApBaumFF =
 
                                 let worldI = t2w * i
 
-                                let dotOut = max 1e-5 (abs (Vec.dot (-worldI) uniform.LForwards.[addr]))
+                                let dotOut = max 1e-9 (abs (Vec.dot (-worldI) uniform.LForwards.[addr]))
                                                 
                                 let L = getPhotometricIntensity (-worldI) uniform.LForwards.[addr] uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
                                 
                                 illumination <-    
                                     
                                     let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
-
                                     illumination + L * brdf * I //* i.Z
-                                    
+
                                 ()
                                                               
                             ////////////////////////////////////////////////////////
@@ -101,7 +100,8 @@ module EffectApBaumFF =
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
-                |> setupUniformDt data.dt
+                |> setUniformDT data.dt
+                |> setUniformUsePhotometry data.usePhotometry
                 |> Sg.compile data.runtime signature
 
         let baumFFApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
