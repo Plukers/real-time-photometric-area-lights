@@ -17,6 +17,9 @@ module EffectGT =
     open EffectUtils
     open PhotometricLight
     open Light
+
+    type UniformScope with
+        member uniform.samplingMode : GTSamplingMode  = uniform?samplingMode 
     
     type GTVertex = {
         [<Position>]        pos     : V4d
@@ -37,14 +40,6 @@ module EffectGT =
         let d = sqrt((t2.Y - t1.Y) * (t2.Y - t1.Y) + (t2.X - t1.X) * (t2.X - t1.X))
         n / d     
         
-    [<ReflectedDefinition>]
-    let private sampleLightSurface (t2w : M33d) (addr : int) (p : V3d) = 
-
-        let i = p |> Vec.normalize  
-        let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr]      
-        let weight = 1.0 / (Vec.lengthSquared p + 1e-9)
-        weight * irr
-
     [<ReflectedDefinition>]
     let private signF (v : float) =
         if v > 0.0 then
@@ -78,13 +73,15 @@ module EffectGT =
                     let x = jitter.Y + uniform.HaltonSamples.[sIdx].Y
                     x - Math.Floor(x)
 
-                // let m = BRDF_GGX.sampleGGX u1 u2 alpha                
-                // let i = sampleHemisphere u1 u2
-                let i = cosineSampleHemisphere u1 u2   
-
                 
                 let brdf = v.c / PI 
-                let brdfPDF = i.Z / PI // uniform spherical sampling
+           
+                //let i = sampleHemisphere u1 u2                
+                //let brdfPDF = 1.0 / PI // uniform spherical sampling
+
+                let i = cosineSampleHemisphere u1 u2                   
+                let brdfPDF = i.Z / PI // cosine spherical sampling
+
 
                 for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
                     match uniform.Lights.[addr] with
@@ -99,7 +96,10 @@ module EffectGT =
                             
                             for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
-                                vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+                                if uniform.samplingMode = GTSamplingMode.BRDF then                                    
+                                    vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+                                else
+                                    vt.[vtc] <- uniform.LVertices.[vtcAddr]
      
                             ////////////////////////////////////////////////////////
 
@@ -109,63 +109,69 @@ module EffectGT =
                             let mutable lightPDF = 1.0
                             
                             match uniform.LBaseComponents.[addr] with
-                            | bt when bt = Light.LIGHT_BASE_TYPE_TRIANGLE ->           
-                                // TODO : Not working with direct light sampling. Fix this by time.
-                                let t = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
-                                hitLight <- t > 1e-8
+                            | bt when bt = Light.LIGHT_BASE_TYPE_TRIANGLE ->    
+                                if uniform.samplingMode = GTSamplingMode.BRDF then
+                                    
+                                    let t = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
+                                    hitLight <- t > 1e-8
 
-
-                                let vt02d = vt.[0] |> to2d w2t vt.[0]
-                                let vt12d = vt.[1] |> to2d w2t vt.[0]
-                                let vt22d = vt.[2] |> to2d w2t vt.[0]
-
-                                let u = vt.[1] - vt.[0]
-                                let v = vt.[2] - vt.[0]
-
-                                let s = vt.[0] + u1 * u + u2 * v
-                                
-                                let rSign = vt02d |> computePointLineDistance2D vt12d vt22d |> signF
-                                let sSign = s |> to2d w2t vt.[0] |> computePointLineDistance2D vt12d vt22d |> signF
-
-                                if rSign * sSign > 0 then
-                                    samplePoint <- s
                                 else
-                                    samplePoint <- vt.[0] - (s - (vt.[0] + u + v))
+                                    // TODO : Not working with direct light sampling. Fix this by time.
+
+                                    let vt02d = vt.[0] |> to2d w2t vt.[0]
+                                    let vt12d = vt.[1] |> to2d w2t vt.[0]
+                                    let vt22d = vt.[2] |> to2d w2t vt.[0]
+
+                                    let u = vt.[1] - vt.[0]
+                                    let v = vt.[2] - vt.[0]
+
+                                    let s = vt.[0] + u1 * u + u2 * v
+                                
+                                    let rSign = vt02d |> computePointLineDistance2D vt12d vt22d |> signF
+                                    let sSign = s |> to2d w2t vt.[0] |> computePointLineDistance2D vt12d vt22d |> signF
+
+                                    if rSign * sSign > 0 then
+                                        samplePoint <- s
+                                    else
+                                        samplePoint <- vt.[0] - (s - (vt.[0] + u + v))
 
                             | bt when bt = Light.LIGHT_BASE_TYPE_SQUARE -> 
-                                let t1 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
-                                let t2 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[2] vt.[3]
-                                hitLight <- t1 > 1e-8 || t2 > 1e-8
+                                if uniform.samplingMode = GTSamplingMode.BRDF then
+                                    let t1 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
+                                    let t2 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[2] vt.[3]
+                                    hitLight <- t1 > 1e-8 || t2 > 1e-8
 
-                                for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
-                                    vt.[vtc] <- t2w * vt.[vtc] + P
+                                else
+                                    let ex = vt.[1] - vt.[0]
+                                    let ey = vt.[3] - vt.[0]
+                                    let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
 
-                                let ex = vt.[1] - vt.[0]
-                                let ey = vt.[3] - vt.[0]
-                                let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
+                                    samplePoint <- w2t * (((SphericalQuad.sphQuadSample squad u1 u2) - P) |> Vec.normalize)
 
-                                samplePoint <- w2t * ((SphericalQuad.sphQuadSample squad u1 u2) - P)
-
-                                lightPDF <- 1.0 / squad.S
+                                    lightPDF <- 1.0 / squad.S
                             | _ -> ()  
                             
 
-                            illumination <- illumination + (brdf / lightPDF) * (sampleLightSurface t2w addr samplePoint) * i.Z 
+                            if uniform.samplingMode = GTSamplingMode.BRDF then                            
+                                if hitLight then
+                                
+                                    let worldI = t2w * -i
+
+                                    let dotOut = max 1e-9 (abs (Vec.dot worldI uniform.LForwards.[addr]))
+                                
+                                    let irr = (getPhotometricIntensity worldI uniform.LForwards.[addr]  uniform.LUps.[addr]) /  dotOut
+
+                                    //if irr > 0.0 then 
+                                    illumination <- illumination + (brdf * i.Z * irr) / brdfPDF //(brdf / pdf) * i.Z                            
+
+                            else 
+                                let i = samplePoint   
+                                let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] 
+                                let weight = 1.0 / (Vec.lengthSquared samplePoint + 1e-9)
+                                let irr = weight * irr
+
+                                illumination <- illumination + (brdf * i.Z * irr) / lightPDF 
                             
-                            (*
-                            if hitLight then
-                                
-                                let worldI = t2w * -i
-
-                                let dotOut = max 1e-5 (abs (Vec.dot worldI uniform.LForwards.[addr]))
-                                
-                                let irr = (getPhotometricIntensity worldI uniform.LForwards.[addr]  uniform.LUps.[addr]) / (uniform.LAreas.[addr] * dotOut)
-
-                                if irr > 0.0 then 
-
-                                    illumination <- illumination + irr * v.c//(brdf / pdf) * i.Z                            
-                                    ()                            
-                            *)
                             ////////////////////////////////////////////////////////
                         ()       
                 ()
@@ -193,6 +199,7 @@ module EffectGT =
             clear : ModRef<bool>
             frameCount : ModRef<int>
             updateGroundTruth : IMod<bool>
+            samplingMode : IMod<GTSamplingMode>
             }
 
         let initGTData (m : MRenderState) =
@@ -201,14 +208,16 @@ module EffectGT =
                 clear = ModRef(false) 
                 frameCount = ModRef(0)
                 updateGroundTruth = m.updateGroundTruth
+                samplingMode = m.gtSamplingMode
             }
 
-        let initGTData' (update : IMod<bool>) =
+        let initGTData' (update : IMod<bool>) (samplingMode : IMod<GTSamplingMode>) =
             {
-                haltonSequence = ModRef(HaltonSequence.init)
-                clear = ModRef(false) 
-                frameCount = ModRef(0)
+                haltonSequence = HaltonSequence.init |> Mod.init
+                clear = false |> Mod.init
+                frameCount = 0 |> Mod.init
                 updateGroundTruth = update
+                samplingMode = samplingMode
             }
 
         
@@ -258,6 +267,7 @@ module EffectGT =
                     |> Light.Sg.setLightCollectionUniforms data.lights
                     |> setupPhotometricData data.photometricData
                     |> setupCamera data.view data.projTrafo data.viewportSize 
+                    |> Sg.uniform "samplingMode" (gtData.samplingMode |> Mod.map (fun sm -> sm |> int))
                     |> Sg.uniform "HaltonSamples" gtData.haltonSequence
                     |> Sg.uniform "FrameCount" gtData.frameCount
                     |> Sg.compile data.runtime signature

@@ -80,7 +80,7 @@ module EffectUtils =
         let r = Math.Sqrt(1.0 - u1 * u1)
         let phi = 2.0 * PI * u2
 
-        V3d(Math.Cos(phi) * r, Math.Sin(phi) * r, u1) |> Vec.normalize
+        V3d((cos phi) * r, (sin phi) * r, u1) |> Vec.normalize
 
     (*
         Samples a direction from the hemisphere for two given random numbers where the samples are cosine weighted
@@ -92,7 +92,7 @@ module EffectUtils =
         let r = Math.Sqrt(u1)
         let theta = 2.0 * PI * u2
 
-        V3d(r * Math.Cos(theta), r * Math.Sin(theta), Math.Sqrt(max 0.0 (1.0 - u1))) |> Vec.normalize
+        V3d(r * (cos theta), r * (sin theta), Math.Sqrt(max 0.0 (1.0 - u1))) |> Vec.normalize
 
     // glsl mat3 is column major
     // transpose because of inverted multiplication logic
@@ -650,16 +650,16 @@ module EffectUtils =
             let v11 = V3d(x1, y1, z0)
 
             // compute normals to edges
-            let n0 = Vec.normalize(Vec.cross v00 v10)
-            let n1 = Vec.normalize(Vec.cross v10 v11)
-            let n2 = Vec.normalize(Vec.cross v11 v01)
-            let n3 = Vec.normalize(Vec.cross v01 v00)
+            let n0 = Vec.cross v00 v10 |> Vec.normalize
+            let n1 = Vec.cross v10 v11 |> Vec.normalize
+            let n2 = Vec.cross v11 v01 |> Vec.normalize
+            let n3 = Vec.cross v01 v00 |> Vec.normalize
 
             // compute internal angles (gamma_i)
-            let g0 = acos(-Vec.dot n0 n1)
-            let g1 = acos(-Vec.dot n1 n2)
-            let g2 = acos(-Vec.dot n2 n3)
-            let g3 = acos(-Vec.dot n3 n0)
+            let g0 = -Vec.dot n0 n1 |> acos
+            let g1 = -Vec.dot n1 n2 |> acos
+            let g2 = -Vec.dot n2 n3 |> acos
+            let g3 = -Vec.dot n3 n0 |> acos
 
             // compute predefined constants
             let b0 = n0.Z

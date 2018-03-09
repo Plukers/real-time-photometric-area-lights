@@ -29,6 +29,10 @@ type LightTransformMode =
     | Translate
     | Rotate
 
+type GTSamplingMode =
+    | BRDF = 0
+    | Light = 1
+
 type Action =
     | IMPORT_PHOTOMETRY of string
     | IMPORT_SCENE of string
@@ -36,6 +40,9 @@ type Action =
     | CHANGE_COMPARE of RenderMode
     | COMPUTED_ERROR of double * double * double // error, bright error, dark error
     | UPDATE_GROUND_TRUTH of bool
+
+    | SET_GT_SAMPLING_MODE of GTSamplingMode
+
     | OPENED_WINDOW 
     | CHANGE_LIGHT_TRANSFORM_MODE of LightTransformMode
     | TRANSLATE_LIGHT of int * V3d // lightID, direction
@@ -75,6 +82,8 @@ type RenderState =
 
         renderMode         : RenderMode
         updateGroundTruth  : bool
+
+        gtSamplingMode     : GTSamplingMode
 
         offlineRenderMode  : OfflineRenderMode
 

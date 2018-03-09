@@ -37,7 +37,7 @@ let main argv =
     form.Controls.Add ctrl
     ctrl.StartUrl <- "http://localhost:4321/"
 
-    ctrl.ShowDevTools()
+    // ctrl.ShowDevTools()
     
 
     Application.Run form

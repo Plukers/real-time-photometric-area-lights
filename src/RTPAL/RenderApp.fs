@@ -115,7 +115,7 @@
             
             
 
-        let gtData = initGTData' (true |> Mod.init)
+        let gtData = initGTData' (true |> Mod.init) (GTSamplingMode.Light |> Mod.init)
         let mrpData = initMRPData m
 
         let sampleIrrUniform = false |> Mod.init
@@ -532,6 +532,7 @@
             | COMPUTED_ERROR (error, brightError, darkError) -> { s with error = error; brightError = brightError; darkError = darkError }
             | OPENED_WINDOW -> s
             | UPDATE_GROUND_TRUTH update -> { s with updateGroundTruth = update }
+            | SET_GT_SAMPLING_MODE samplingMode -> {s with gtSamplingMode = samplingMode }
             | CHANGE_LIGHT_TRANSFORM_MODE mode -> { s with lightTransformMode = mode }
             | TRANSLATE_LIGHT (lightID, dir) ->             
                 transformLight s.lights lightID (Trafo3d.Translation(dir))
@@ -872,6 +873,12 @@
                                                                                 UPDATE_GROUND_TRUTH true
                                                                             )] [text "Continue Update"]
                                                         ]
+
+                                                        yield p [] [
+                                                            yield text "Sampling Mode"
+                                                            yield br[]
+                                                            yield dropDown m.gtSamplingMode (fun mode -> SET_GT_SAMPLING_MODE mode)
+                                                        ]
                                                         
                                                         let! fc = renderFeedback.frameCount   
                                                         yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
@@ -1073,6 +1080,7 @@
             renderMode = RenderMode.GroundTruth
             updateGroundTruth = true
             offlineRenderMode = OfflineRenderMode.Approximations
+            gtSamplingMode = GTSamplingMode.BRDF
             compare = RenderMode.StructuredIrrSampling 
             error = 0.0
             brightError = 0.0
