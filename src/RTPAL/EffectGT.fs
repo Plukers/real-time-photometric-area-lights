@@ -104,7 +104,8 @@ module EffectGT =
                             ////////////////////////////////////////////////////////
 
                             let mutable hitLight = false
-                            let mutable samplePoint = vt.[0]
+                            let mutable samplePointDir = vt.[0]
+                            let mutable samplePointDistSqrd = 1.0
 
                             let mutable lightPDF = 1.0
                             
@@ -130,12 +131,17 @@ module EffectGT =
                                     let rSign = vt02d |> computePointLineDistance2D vt12d vt22d |> signF
                                     let sSign = s |> to2d w2t vt.[0] |> computePointLineDistance2D vt12d vt22d |> signF
 
-                                    if rSign * sSign > 0 then
-                                        samplePoint <- s
-                                    else
-                                        samplePoint <- vt.[0] - (s - (vt.[0] + u + v))
+                                    let samplePoint = 
+                                        if rSign * sSign > 0 then
+                                            s
+                                        else
+                                            vt.[0] - (s - (vt.[0] + u + v))
+
+                                    samplePointDistSqrd <- Vec.lengthSquared samplePoint
+                                    samplePointDir <- w2t * (samplePoint |> Vec.normalize)
 
                             | bt when bt = Light.LIGHT_BASE_TYPE_SQUARE -> 
+                            
                                 if uniform.samplingMode = GTSamplingMode.BRDF then
                                     let t1 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
                                     let t2 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[2] vt.[3]
@@ -145,10 +151,14 @@ module EffectGT =
                                     let ex = vt.[1] - vt.[0]
                                     let ey = vt.[3] - vt.[0]
                                     let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
+                                
+                                    let samplePoint = (SphericalQuad.sphQuadSample squad u1 u2) - P
+                                    samplePointDistSqrd <- Vec.lengthSquared samplePoint
+                                    samplePointDir <- w2t * (samplePoint |> Vec.normalize)
 
-                                    samplePoint <- w2t * (((SphericalQuad.sphQuadSample squad u1 u2) - P) |> Vec.normalize)
+                                    lightPDF <- 1.0 / squad.S 
 
-                                    lightPDF <- 1.0 / squad.S
+                             
                             | _ -> ()  
                             
 
@@ -161,19 +171,20 @@ module EffectGT =
                                 
                                     let irr = (getPhotometricIntensity worldI uniform.LForwards.[addr]  uniform.LUps.[addr]) / (uniform.LAreas.[addr] * dotOut)
 
-                                    //if irr > 0.0 then 
-                                    illumination <- illumination + (brdf * i.Z * irr) / brdfPDF //(brdf / pdf) * i.Z                            
+                                    
+                                    illumination <- illumination + (brdf * i.Z * irr) / brdfPDF                          
 
                             if uniform.samplingMode = GTSamplingMode.Light then
 
+                                let i = samplePointDir   
 
-                                let i = samplePoint 
-                                let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr])
-                                let weight = 1.0 / (Vec.lengthSquared samplePoint + 1e-9)
-                                let irr = weight * irr
+                                let worldI = t2w * -i
+                                let dotOut = max 1e-9 (abs (Vec.dot worldI uniform.LForwards.[addr]))
 
-                                illumination <- illumination + (brdf * i.Z * irr) / lightPDF
-                            
+                                let irr = (getPhotometricIntensity (t2w * -i) uniform.LForwards.[addr]  uniform.LUps.[addr]) / (uniform.LAreas.[addr] * dotOut)
+
+                                illumination <- illumination + (brdf * irr * i.Z) / (lightPDF)
+
                             ////////////////////////////////////////////////////////
                         ()       
                 ()

@@ -9,6 +9,10 @@ module EffectSolidAngle =
     open EffectUtils
     open PhotometricLight
 
+    
+    type UniformScope with
+        member uniform.compMethod : SolidAngleCompMethod  = uniform?compMethod 
+
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
         [<Normal>]          n       : V3d
@@ -44,7 +48,11 @@ module EffectSolidAngle =
                             
                             for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
-                                vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+                                if uniform.compMethod = SolidAngleCompMethod.Triangle then                                    
+                                    vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+                                if uniform.compMethod = SolidAngleCompMethod.Square then
+                                    vt.[vtc] <- uniform.LVertices.[vtcAddr]
+                                
 
                             ////////////////////////////////////////////////////////
 
@@ -52,13 +60,29 @@ module EffectSolidAngle =
 
                             if clippedVc <> 0 then
                                 
-                                let solidAngle = 
-                                    if clippedVc = 3 then
-                                        computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
-                                    else
-                                        let sa1 = computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
-                                        let sa2 = computeSolidAngle clippedVa.[0] clippedVa.[2] clippedVa.[3]
-                                        sa1 + sa2
+                                let mutable solidAngle = 0.0
+
+                                if uniform.compMethod = SolidAngleCompMethod.Triangle then
+                                    solidAngle <-
+                                        if clippedVc = 3 then
+                                            computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
+                                        else
+                                            let sa1 = computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
+                                            let sa2 = computeSolidAngle clippedVa.[0] clippedVa.[2] clippedVa.[3]
+                                            sa1 + sa2
+
+                                if uniform.compMethod = SolidAngleCompMethod.Square then
+                                    solidAngle <-
+                                        if clippedVc = 3 then
+                                            // Not supported
+                                            0.0 // computeSolidAngle clippedVa.[0] clippedVa.[1] clippedVa.[2]
+                                        else
+                                            let ex = vt.[1] - vt.[0]
+                                            let ey = vt.[3] - vt.[0]
+                                            let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
+                                            squad.S
+
+                                    
 
                                 
                                 illumination <- illumination + solidAngle         

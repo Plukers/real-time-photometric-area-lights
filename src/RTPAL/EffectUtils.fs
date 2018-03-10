@@ -660,16 +660,16 @@ module EffectUtils =
             let v11 = V3d(x1, y1, z0)
 
             // compute normals to edges
-            let n0 = Vec.cross v00 v10 |> Vec.normalize
-            let n1 = Vec.cross v10 v11 |> Vec.normalize
-            let n2 = Vec.cross v11 v01 |> Vec.normalize
-            let n3 = Vec.cross v01 v00 |> Vec.normalize
+            let n0 = (Vec.cross v00 v10) |> Vec.normalize
+            let n1 = (Vec.cross v10 v11) |> Vec.normalize
+            let n2 = (Vec.cross v11 v01) |> Vec.normalize
+            let n3 = (Vec.cross v01 v00) |> Vec.normalize
 
             // compute internal angles (gamma_i)
-            let g0 = -Vec.dot n0 n1 |> acos
-            let g1 = -Vec.dot n1 n2 |> acos
-            let g2 = -Vec.dot n2 n3 |> acos
-            let g3 = -Vec.dot n3 n0 |> acos
+            let g0 = (-Vec.dot n0 n1) |> acos
+            let g1 = (-Vec.dot n1 n2) |> acos
+            let g2 = (-Vec.dot n2 n3) |> acos
+            let g3 = (-Vec.dot n3 n0) |> acos
 
             // compute predefined constants
             let b0 = n0.Z
@@ -710,7 +710,7 @@ module EffectUtils =
 
             // 1. compute 'cu'
             let au = u * squad.S + squad.k
-            let fu = (cos(au) * squad.b0 - squad.b1) / sin(au)
+            let fu = ((cos au) * squad.b0 - squad.b1) / (sin au)
             let mutable cu = 1.0 / sqrt(fu*fu + squad.b0sq) * (if fu > 0.0 then 1.0 else -1.0)
             cu <- clamp -1.0 1.0 cu // avoid NaNs
 

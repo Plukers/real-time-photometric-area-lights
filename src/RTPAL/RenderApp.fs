@@ -921,6 +921,22 @@
                                                 }
                                             )
 
+                                                                                                    
+
+                                            Incremental.div (AttributeMap.ofList []) (
+                                                alist {
+                                                    let! mode = m.renderMode
+
+                                                    if mode = RenderMode.SolidAngle then
+                                                        yield p [] [
+                                                            yield text "Solid Angle Compuation Method"
+                                                            yield br[]
+                                                            yield dropDown m.solidAngleCompMethod (fun mode -> SET_SOLID_ANGLE_COMP_METHOD mode)
+                                                        ]
+                                                                                                
+                                                }
+                                            )
+
                                             Incremental.div (AttributeMap.ofList []) (
                                                 alist {
                                                     let! mode = m.renderMode
@@ -1019,17 +1035,7 @@
                                                                 yield text "Tangent Approx Dist"
                                                                 yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDistIrr |> UI.map CHANGE_TANGENT_APPROX_DIST_IRR ]
                                                                 yield br[] 
-                                                            ]
-
-                                                        if mode = RenderMode.SolidAngle then
-                                                            yield p [] [
-                                                                yield text "Solid Angle Compuation Method"
-                                                                yield br[]
-                                                                yield dropDown m.solidAngleCompMethod (fun mode -> SET_SOLID_ANGLE_COMP_METHOD mode)
-                                                            ]
-
-
-                                                            
+                                                            ]                                                            
                                                         
                                                 }
                                             )
