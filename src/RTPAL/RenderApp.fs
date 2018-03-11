@@ -1085,8 +1085,7 @@
 
         // Setup Lights
         let lc = emptyLightCollection
-        //let light1 = addTriangleLight lc
-        let light1 = addSquareLight lc
+        let light1 = addRectangleLight lc 2.0 1.0
                 
         match light1 with
         | Some lightId ->             

@@ -13,7 +13,7 @@ module Light =
     let LIGHT_BASE_TYPE_TRIANGLE = 3
 
     [<ReflectedDefinition>] 
-    let LIGHT_BASE_TYPE_SQUARE = 4
+    let LIGHT_BASE_TYPE_ORTHO_QUAD = 4
 
     type LightCollection = {
         Lights            : ModRef<       int[]> // Size: Config.NUM_LIGHTS    
@@ -171,11 +171,9 @@ module Light =
             returnID
 
         | None -> Option.None
-               
-    // Adds a new square light to the given light collection
-    // Returns the updated light collection and the id of the added light
-    // If the light could not be added because there is no space left, no id is returned
-    let addSquareLight (lc : LightCollection) =
+
+
+    let private addOrthoganlQuadrilateralLight (lc : LightCollection) vertices =
         match lc.NextFreeAddr.Value with
         | Some nfa -> 
             let mutable returnID = Option.None;
@@ -186,18 +184,11 @@ module Light =
                 | Some (addr, lightID) ->
                     returnID <- Option.Some lightID
 
-                    let vertices = [|
-                            V3d(0.0, -0.5, -0.5)
-                            V3d(0.0,  0.5, -0.5)
-                            V3d(0.0,  0.5,  0.5)
-                            V3d(0.0, -0.5,  0.5)
-                        |] 
-
                     addVertices lc addr vertices
                 
                     addRenderIndices lc addr [| 0; 1; 2; 0; 2; 3 |]
 
-                    lc.BaseComponents.Value.[addr] <- LIGHT_BASE_TYPE_SQUARE
+                    lc.BaseComponents.Value.[addr] <- LIGHT_BASE_TYPE_ORTHO_QUAD
                     addPatchIndices lc addr [| 0; 1; 2; 3 |]
 
                     let samplePoints = OfflineStructuredSamplePoints.Square.samples 
@@ -218,6 +209,28 @@ module Light =
             returnID
 
         | None -> Option.None
+   
+    // Adds a new square light to the given light collection
+    // Returns the updated light collection and the id of the added light
+    // If the light could not be added because there is no space left, no id is returned
+    let addSquareLight (lc : LightCollection) =
+        [|
+            V3d(0.0, -0.5, -0.5)
+            V3d(0.0,  0.5, -0.5)
+            V3d(0.0,  0.5,  0.5)
+            V3d(0.0, -0.5,  0.5)
+        |] |> addOrthoganlQuadrilateralLight lc
+
+    // Adds a new rectangle light to the given light collection
+    // Returns the updated light collection and the id of the added light
+    // If the light could not be added because there is no space left, no id is returned
+    let addRectangleLight (lc : LightCollection) width height =
+        [|
+            V3d(0.0, -(width / 2.0), -(height / 2.0))
+            V3d(0.0,  (width / 2.0), -(height / 2.0))
+            V3d(0.0,  (width / 2.0),  (height / 2.0))
+            V3d(0.0, -(width / 2.0),  (height / 2.0))
+        |] |> addOrthoganlQuadrilateralLight lc
         
 
     // Transforms a given light with the given trafo

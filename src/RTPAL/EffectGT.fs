@@ -140,7 +140,7 @@ module EffectGT =
                                     samplePointDistSqrd <- Vec.lengthSquared samplePoint
                                     samplePointDir <- w2t * (samplePoint |> Vec.normalize)
 
-                            | bt when bt = Light.LIGHT_BASE_TYPE_SQUARE -> 
+                            | bt when bt = Light.LIGHT_BASE_TYPE_ORTHO_QUAD -> 
                             
                                 if uniform.samplingMode = GTSamplingMode.BRDF then
                                     let t1 = rayTriangleIntersaction V3d.Zero i vt.[0] vt.[1] vt.[2]
