@@ -163,6 +163,12 @@
             let random     = (mask &&& (1 <<< 5)) <> 0
             updateSamples corners barycenter closest norm mrp random
 
+        let numOfSRSamples = 8 |> Mod.init
+        let updateRandomSampleCount count =
+            transact (fun _ -> 
+                count |> Mod.change numOfSRSamples
+            )
+
         let ssData = 
             {
                 sampleCorners        = sampleCorners
@@ -175,7 +181,7 @@
                 blendSamples         = blendSamples
                 blendEasing          = m.blendEasing
                 blendDistance        = blendDistance
-                numSRSamples         = m.numOfSRSamples.value |> Mod.map (fun numSRS -> (int)(ceil numSRS))
+                numSRSamples         = numOfSRSamples
                 SRSWeightScale       = m.SRSWeightScale.value
                 TangentApproxDist    = m.TangentApproxDist.value
                 SRSWeightScaleIrr    = m.SRSWeightScaleIrr.value
@@ -329,36 +335,51 @@
                 let render path = 
                     fun step -> 
 
-                        let mode = RenderMode.CenterPointApprox
-                        mode |> renderApprox path step
-                        approxList <- mode |> createFileName None None
+                        //let mode = RenderMode.CenterPointApprox
+                        //mode |> renderApprox path step
+                        //approxList <- mode |> createFileName None None
 
 
-                        let mode = RenderMode.BaumFFApprox
-                        mode |> renderApprox path step
-                        approxList <- String.concat nl [approxList; mode |> createFileName None None ]
+                        //let mode = RenderMode.BaumFFApprox
+                        //mode |> renderApprox path step
+                        //approxList <- String.concat nl [approxList; mode |> createFileName None None ]
 
 
-                        let mode = RenderMode.MRPApprox
-                        mode |> renderApprox path step
-                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+                        //let mode = RenderMode.MRPApprox
+                        //mode |> renderApprox path step
+                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+                    
 
 
-                        let mode = RenderMode.StructuredIrrSampling
+                        let mode = RenderMode.StructuredSampling
                         updateBlendSamples false
-                        updateSampleIrrUniform true
 
                         for mask in 1 .. 31 do
                             updateSamplesBitmask mask // corners barycenter closest norm mrp random
                             mode |> renderApprox path step
                             approxList <-String.concat nl [approxList; mode |> createFileName None None ]
                         
+
+                        //let mode = RenderMode.StructuredIrrSampling
+                        //updateBlendSamples false
+                        //updateSampleIrrUniform true
+
+                        //for mask in 1 .. 31 do
+                        //    updateSamplesBitmask mask // corners barycenter closest norm mrp random
+                        //    mode |> renderApprox path step
+                        //    approxList <-String.concat nl [approxList; mode |> createFileName None None ]
                         
-                        (*
-                        Evaluation 01.03.2018
+                        //updateSampleIrrUniform false
+
+                        //for mask in 1 .. 31 do
+                        //    updateSamplesBitmask mask // corners barycenter closest norm mrp random
+                        //    mode |> renderApprox path step
+                        //    approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+
 
                         // corners barycenter closest norm mrp random
-                        updateSamples true false true true true false
+                        (*
+                        updateSamples true true true false true false
 
                         let mode = RenderMode.StructuredIrrSampling
 
@@ -366,13 +387,11 @@
                         updateSampleIrrUniform false
                         mode |> renderApprox path step
                         approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                        approxCounter <- approxCounter + 1 
 
                         updateSampleIrrUniform true
                         mode |> renderApprox path step
                         approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                        approxCounter <- approxCounter + 1 
-
+                        
                         updateBlendSamples true
                         for i in 0.0 .. 0.1 .. 1.0 do
                         
@@ -381,23 +400,19 @@
                             updateSampleIrrUniform false
                             mode |> renderApprox path step
                             approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                            approxCounter <- approxCounter + 1 
 
                             updateSampleIrrUniform true
                             mode |> renderApprox path step
                             approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                            approxCounter <- approxCounter + 1 
+                        *)
 
-                        updateSampleIrrUniform false
-
+                        //let mode = RenderMode.StructuredSampling
                         
-                        let mode = RenderMode.StructuredSampling
-                        
-                        updateBlendSamples false
-                        mode |> renderApprox path step
-                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                        approxCounter <- approxCounter + 1 
+                        //updateBlendSamples false
+                        //mode |> renderApprox path step
+                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
 
+                        (*
                         updateBlendSamples true
                         for i in 0.0 .. 0.1 .. 1.0 do
                         
@@ -405,9 +420,24 @@
                             
                             mode |> renderApprox path step
                             approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                            approxCounter <- approxCounter + 1 
                         *)
+                        
+                        
+                        //updateSamples false false false false false true
+                        //updateRandomSampleCount 380
 
+                        //let mode = RenderMode.StructuredIrrSampling
+                        //updateBlendSamples false
+                        //updateSampleIrrUniform false
+                        //mode |> renderApprox path step
+                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+                        
+                        //let mode = RenderMode.StructuredSampling
+                        //updateBlendSamples false
+                        //mode |> renderApprox path step
+                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+
+                        //updateSamples false false false false false false
 
                                 
                   
@@ -1085,7 +1115,7 @@
 
         // Setup Lights
         let lc = emptyLightCollection
-        let light1 = addRectangleLight lc 2.0 1.0
+        let light1 = addRectangleLight lc 1.0 1.0
                 
         match light1 with
         | Some lightId ->             
@@ -1106,7 +1136,7 @@
             updateGroundTruth = true
             usePhotometry = true
             offlineRenderMode = OfflineRenderMode.Approximations
-            gtSamplingMode = GTSamplingMode.BRDF
+            gtSamplingMode = GTSamplingMode.Light
             solidAngleCompMethod = SolidAngleCompMethod.Square
             compare = RenderMode.StructuredIrrSampling 
             error = 0.0
@@ -1118,14 +1148,14 @@
             lightTransformMode = Translate
             mrpWeights    = V3d(1.0/3.0, 1.0/3.0, 1.0/3.0)
             sampleCorners    = true
-            sampleBarycenter = false
+            sampleBarycenter = true
             sampleClosest    = true
-            sampleNorm       = true
+            sampleNorm       = false
             sampleMRP        = true
             sampleRandom     = false
             sampleIrrUniform = true
-            blendSamples     = true
-            blendEasing      = true
+            blendSamples     = false
+            blendEasing      = false
             blendDistance = {
                                 value   = 0.1
                                 min     = 0.0
@@ -1134,7 +1164,7 @@
                                 format  = "{0:F3}"
                                 }
             numOfSRSamples   = {
-                                value   = 8.0
+                                value   = 380.0
                                 min     = 0.0
                                 max     = (float) Config.SS_LIGHT_SAMPLES_ALL_LIGHT
                                 step    = 1.0

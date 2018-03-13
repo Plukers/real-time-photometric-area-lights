@@ -89,9 +89,9 @@ if exist(PlotPath, 'dir')
 end
 mkdir(PlotPath);
 
-BuildApproximationGraphs(approximations, errorImage, errorSign, solidAngle, numSteps, PlotPath);
+%BuildApproximationGraphs(approximations, errorImage, errorSign, solidAngle, numSteps, PlotPath);
 
-BuildCompareGraph(approximations, errorImage, solidAngle, PlotPath);
+%BuildCompareGraph(approximations, errorImage, solidAngle, PlotPath);
 
 
 

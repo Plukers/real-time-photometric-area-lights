@@ -148,17 +148,33 @@ module EffectGT =
                                     hitLight <- t1 > 1e-8 || t2 > 1e-8
 
                                 if uniform.samplingMode = GTSamplingMode.Light then
+                                
+                                    // This generates the samples on the projected light
                                     let ex = vt.[1] - vt.[0]
                                     let ey = vt.[3] - vt.[0]
                                     let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
-                                
+                                    
                                     let samplePoint = (SphericalQuad.sphQuadSample squad u1 u2) - P
                                     samplePointDistSqrd <- Vec.lengthSquared samplePoint
                                     samplePointDir <- w2t * (samplePoint |> Vec.normalize)
 
                                     lightPDF <- 1.0 / squad.S 
+                                    
+                                    (*
+                                    // This generates the samples on the light
 
-                             
+                                    for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
+                                        let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr                                
+                                        vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+
+                                    let samplePoint = vt.[0] + u1 * (vt.[1] - vt.[0]) + u2 * (vt.[3] - vt.[0])
+                                    samplePointDistSqrd <- Vec.lengthSquared samplePoint
+                                    samplePointDir <- samplePoint |> Vec.normalize
+
+                                    let dotOut = max 1e-9 (abs (Vec.dot (t2w * -samplePointDir) uniform.LForwards.[addr]))
+
+                                    lightPDF <- samplePointDistSqrd / (uniform.LAreas.[addr] * dotOut )
+                                    *)
                             | _ -> ()  
                             
 

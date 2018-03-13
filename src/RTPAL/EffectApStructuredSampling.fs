@@ -101,31 +101,22 @@ module EffectApStructuredSampling =
     let private sampleIrr (t2w : M33d) (scale : float) (addr : int) (p : V3d) = 
     
         let i = p |> Vec.normalize  
+        let iw = t2w * -i
  
-        let dotOut = max 1e-9 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
+        let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
 
         if uniform.sampleIrrUniform then
-            let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+
+            let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
             let weight = scale * 1.0 
 
             (irr, weight)
         else
-            let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr]) // * dotOut
+            let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
 
-            let weight = scale  * i.Z / (Vec.lengthSquared p + 1e-9) // add i.Z for a better weight
-        
-            //let sampledIrr = weight * irr
-            (*
-            let dist = Vec.length p
-            let weight = 
-                if dist < uniform.tangentApproxDistIrr then
-                    quadraticDistanceDerivative (uniform.LAreas.[addr] * dotOut * i.Z) (max 1e-9 scale) uniform.tangentApproxDistIrr dist
-                else
-                    (uniform.LAreas.[addr] * dotOut) * weight
-            *)
-            //let weight = dotOut * weight
+            let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
 
-            (weight * irr, weight)
+            (scale  * irr * i.Z * invDistSquared, scale  * i.Z * uniform.LAreas.[addr] * dotOut * invDistSquared)
         
 
     let structuredIrradianceSampling (v : Vertex) = 
@@ -343,27 +334,8 @@ module EffectApStructuredSampling =
 
                                     let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
-                                    //let clampedDist = (clamp 0.0 uniform.scaleSRSampleDist (Vec.length closestPoint)) / uniform.scaleSRSampleDist
-                                    //let scale = clampedDist * 1.0 + (1.0 - clampedDist) * uniform.weightScaleSRSamplesIrr
-
                                     illumination <- illumination + L * brdf * I //* scale // * i.Z  
                                     
-                                    (*
-                                    if sampleCount < 5 then
-                                        illumination <- V4d(0.0, 0.0, 0.0, 1.0) 
-                                    if sampleCount = 5 then
-                                        illumination <- V4d(1.0, 0.0, 0.0, 1.0) 
-                                    elif sampleCount = 6 then
-                                        illumination <- V4d(0.5, 0.5, 0.0, 1.0) 
-                                    elif sampleCount = 7 then
-                                        illumination <- V4d(0.0, 1.0, 0.0, 1.0) 
-                                    elif sampleCount = 8 then
-                                        illumination <- V4d(0.0, 0.5, 0.5, 1.0) 
-                                    elif sampleCount = 9 then
-                                        illumination <- V4d(0.0, 0.0, 1.0, 1.0) 
-                                    else 
-                                        illumination <- V4d(1.0, 1.0, 1.0, 1.0) 
-                                    *)
                                     
                                 ()
                                                                 
@@ -379,20 +351,11 @@ module EffectApStructuredSampling =
     let private sample (t2w : M33d) (scale : float) (addr : int) (p : V3d) = 
 
         let i = p |> Vec.normalize  
- 
-        //let dotOut = max 1e-5 (abs (Vec.dot -(t2w * i) uniform.LForwards.[addr]))
-        let irr = getPhotometricIntensity -(t2w * i) uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr]) // / (uniform.LAreas.[addr] * dotOut)
+        let iw = t2w * -i
         
-        let weight = scale * 1.0 / (Vec.lengthSquared p + 1e-9)
-        (*
-        let dist = Vec.length p
-        let weight = 
-            if dist < uniform.tangentApproxDist then
-                quadraticDistanceDerivative 1.0 (max 1e-9 scale) uniform.tangentApproxDist dist
-            else
-                weight
-        *)
-        weight * irr * i.Z
+        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
+
+        scale * irr * i.Z / (Vec.lengthSquared p + 1e-9)
 
     let structuredSampling (v : Vertex) = 
         fragment {
