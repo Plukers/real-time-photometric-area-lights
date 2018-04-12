@@ -69,7 +69,8 @@ module Rendering =
 
         let CreateAndLinkRenderTask (data : RenderData) (gtData : GroundTruthData) (mrpData : MRPData) (ssData : SSData) (saData : SolidAngleData) =
 
-
+            //let randomTex =  FileTexture(Path.combine [__SOURCE_DIRECTORY__;"misc";"uniform_rnd_1024_1024.exr"], TextureParams.empty)
+            //printfn "%A" randomTex.GetHashCode
 
             let sceneSg = 
                 data.sceneSg 
