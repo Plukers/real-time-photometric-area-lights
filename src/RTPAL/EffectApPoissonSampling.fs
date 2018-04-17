@@ -22,9 +22,11 @@ module EffectApPoissonSampling =
         32 * 31 = 992
 
         992 + 31 = 1023 random numbers <= Upper Limit
+        
+        We still choose 1024 because its a power of 2 and for fun
     *)
     [<Literal>]
-    let MAX_REQUIRED_RANDOM_SAMPLES = 1023
+    let MAX_REQUIRED_RANDOM_SAMPLES = 1024
 
     type UniformScope with
         member uniform.uniformRandomSamples : Arr<N<MAX_REQUIRED_RANDOM_SAMPLES>, float>  = uniform?uniformRandomSamples 
@@ -33,13 +35,14 @@ module EffectApPoissonSampling =
         [<WorldPosition>]   wp      : V4d
         [<Normal>]          n       : V3d
         [<Color>]           c       : V4d
+        [<FragCoord>]       fc      : V4d
     }  
 
     [<Literal>]
     let R = 0.34
 
     [<Literal>]
-    let K = 8
+    let K = 32
     
     [<Literal>]
     let CELL_SIZE = 0.2404163056 // R / sqrt(2)
@@ -77,7 +80,7 @@ module EffectApPoissonSampling =
         V2d(radius * cos(theta), radius * sin(theta))
 
     [<ReflectedDefinition>]
-    let private createPoissonSamples startSample = 
+    let private createPoissonSamples startSample randomOffset = 
     
         /////////////////////////////////////////
         // SETUP
@@ -91,7 +94,7 @@ module EffectApPoissonSampling =
         let samples = Arr<N<MAX_POSSIBLE_SAMPLES>, V2d>()
         let mutable sampleCnt = 0
 
-        let mutable uniformRandomSamplesIdx = 0
+        let mutable uniformRandomSamplesIdx = randomOffset % MAX_REQUIRED_RANDOM_SAMPLES
 
         /////////////////////////////////////////
         // Initialize First Sample
@@ -109,7 +112,7 @@ module EffectApPoissonSampling =
 
             let activeSampleListIdx = 
                 let rnd = uniform.uniformRandomSamples.[uniformRandomSamplesIdx]
-                uniformRandomSamplesIdx <- uniformRandomSamplesIdx + 1
+                uniformRandomSamplesIdx <- (uniformRandomSamplesIdx + 1)  % MAX_REQUIRED_RANDOM_SAMPLES
                 int (rnd * (float activeListCnt))
             let activeSampleIdx = activeList.[activeSampleListIdx]
             let activeSample = samples.[activeSampleIdx]
@@ -121,9 +124,9 @@ module EffectApPoissonSampling =
                 if not foundNextSample then
 
                     let u = uniform.uniformRandomSamples.[uniformRandomSamplesIdx]
-                    uniformRandomSamplesIdx <- uniformRandomSamplesIdx + 1
+                    uniformRandomSamplesIdx <- (uniformRandomSamplesIdx + 1)  % MAX_REQUIRED_RANDOM_SAMPLES
                     let v = uniform.uniformRandomSamples.[uniformRandomSamplesIdx]
-                    uniformRandomSamplesIdx <- uniformRandomSamplesIdx + 1
+                    uniformRandomSamplesIdx <- (uniformRandomSamplesIdx + 1)  % MAX_REQUIRED_RANDOM_SAMPLES
 
                     let candidate : V2d = activeSample + randomAnnulus u v
 
@@ -276,7 +279,7 @@ module EffectApPoissonSampling =
                                         let cp = t2l * (closestPoint - clippedVa.[0])
                                         V2d(cp.X, cp.Y)
 
-                                    let (samples, sampleCnt) = createPoissonSamples closestPoint2d
+                                    let (samples, sampleCnt) = createPoissonSamples closestPoint2d (int (0.5 * (v.fc.X + v.fc.Y) * (v.fc.X + v.fc.Y + 1.0) + v.fc.Y)) // https://math.stackexchange.com/questions/23503/create-unique-number-from-2-numbers
 
                                     if sampleCnt > 0 then
                                         for i in 0 .. sampleCnt - 1 do

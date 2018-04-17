@@ -317,7 +317,7 @@ module EffectUtils =
         | _ -> p // all coordinates are positive
 
     [<ReflectedDefinition>] 
-    let clampPointToPolygon (v : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (vc : int) (p : V3d) (tps : M33d) = // tls = transformation to polygon space matrix
+    let clampPointToPolygon (v : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (vc : int) (p : V3d) (tps : M33d) = // tps = transformation to polygon space matrix
 
         if v.Length = 0 then
             p
@@ -360,6 +360,7 @@ module EffectUtils =
                 let mutable closestInit = false
                 let mutable closestPoint = V3d.Zero
                 let mutable closestPointDist = 0.0
+                let mutable closestLineSegmentIndex = 0
 
                 for i in 0 .. 2 .. (linesPositiveDistanceCount * 2) - 1 do
 
@@ -367,6 +368,7 @@ module EffectUtils =
                         closestPoint <- projetToLineSegment lines.[i] lines.[i + 1] p
                         closestPointDist <- Vec.length (p - closestPoint)
                         closestInit <- true
+                        closestLineSegmentIndex <- i
                     else
                         let projectedPoint = projetToLineSegment lines.[i] lines.[i + 1] p
                         let dist = Vec.length (p - projectedPoint)
@@ -374,8 +376,9 @@ module EffectUtils =
                         if dist < closestPointDist then
                             closestPoint <- projectedPoint
                             closestPointDist <- dist
+                            closestLineSegmentIndex <- i
                             
-                closestPoint
+                closestPoint // TODO: implement a little translation along normal of line to make sure that the point is really inside
                 
 
     [<ReflectedDefinition>] 
