@@ -253,7 +253,7 @@
             
             transformLight renderData.lights activeTrafoLightId (rotation.Inverse)
             
-        
+         
         let resultPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
         let photometryFiles = 
             System.IO.Directory.GetFiles (Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry"])
@@ -288,7 +288,7 @@
                         
                         update true
 
-                        for _ in 1 .. (numOfSamples / Config.NUM_SAMPLES) do
+                        for _ in 1 .. (numOfSamples / Config.Light.NUM_SAMPLES) do
                             scRenderTask.Run(RenderToken.Empty, fbo)
                             update false
                             
@@ -921,11 +921,11 @@
                                                         ]
                                                         
                                                         let! fc = renderFeedback.frameCount   
-                                                        yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
+                                                        yield p [] [ text ("Num Samples: " + string (fc * Config.Light.NUM_SAMPLES))]
 
                                                         if updateGT then
                                                             let! fps = renderFeedback.fps
-                                                            yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
+                                                            yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.Light.NUM_SAMPLES)))]
 
                                                                                                                
                                                 }
@@ -1165,7 +1165,7 @@
             numOfSRSamples   = {
                                 value   = 380.0
                                 min     = 0.0
-                                max     = (float) Config.SS_LIGHT_SAMPLES_ALL_LIGHT
+                                max     = (float) Config.Light.SS_LIGHT_SAMPLES_ALL_LIGHT
                                 step    = 1.0
                                 format  = "{0:0}"
                                 }

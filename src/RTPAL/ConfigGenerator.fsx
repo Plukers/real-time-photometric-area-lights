@@ -1,7 +1,7 @@
 ﻿open System
 open System.IO
 
-let config =
+let lightConfig =
     
     let newEntry key value config = (value, config |> Map.add key value)
         
@@ -65,12 +65,18 @@ let mutable configStr =
 module Config = 
 """
 
-config |> Map.iter (fun entry value -> 
+
+let lightConfigHeader = """
+    module Light = 
+"""
+configStr <- String.concat "" [ configStr; lightConfigHeader ] 
+
+lightConfig |> Map.iter (fun entry value -> 
     
     let entrystring = 
         sprintf "
-    [<Literal>]
-    let %s = %A
+        [<Literal>]
+        let %s = %A
                       " entry value
 
     configStr <- String.concat "" [ configStr; entrystring ] 

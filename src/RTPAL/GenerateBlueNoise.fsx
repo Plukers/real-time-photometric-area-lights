@@ -15,7 +15,7 @@ let private genRandomUV (rnd : System.Random) count =
     List.init count (fun _ -> V2d(rnd.NextDouble (), rnd.NextDouble ()))
         
 (*
-    Returns sample points for a given triangle of size Config.NUM_SS_LIGHT_SAMPLES
+    Returns sample points for a given triangle of size Config.Light.NUM_SS_LIGHT_SAMPLES
 *)
 (*
 TODO add average distance

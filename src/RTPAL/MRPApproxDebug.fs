@@ -80,8 +80,8 @@ module MRPApproxDebug =
 
                 let addr = 0
 
-                let vAddr = addr * Config.VERT_PER_LIGHT
-                let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
 
                 ////////////////////////////////////////////////////////
 
@@ -104,7 +104,7 @@ module MRPApproxDebug =
                 
                 let computeLightData iIdx = 
                             
-                    let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                    let mutable vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
                     for vtc in 0 .. lBaseComponents.[addr] - 1 do
                         let vtcAddr = lPatchIndices.[iIdx + vtc] + vAddr

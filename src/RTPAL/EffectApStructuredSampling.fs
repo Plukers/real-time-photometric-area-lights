@@ -155,13 +155,13 @@ module EffectApStructuredSampling =
             
             ////////////////////////////////////////////////////////
 
-            for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
+            for addr in 0 .. (Config.Light.NUM_LIGHTS - 1) do 
                 match uniform.Lights.[addr] with
                     | -1 -> ()
                     |  _ ->    
                         
-                        let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                        let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                        let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
 
                         ////////////////////////////////////////////////////////
 
@@ -173,9 +173,9 @@ module EffectApStructuredSampling =
 
                         ////////////////////////////////////////////////////////
 
-                        for iIdx in iAddr .. Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
+                        for iIdx in iAddr .. Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
                             
-                            let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                            let mutable vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
                             for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
@@ -202,7 +202,7 @@ module EffectApStructuredSampling =
 
 
                                 let mutable barycenter = V3d.Zero
-                                for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                     if l < clippedVc then
                                         barycenter <- barycenter + clippedVa.[l]
                                     
@@ -254,7 +254,7 @@ module EffectApStructuredSampling =
                                     let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
                                     
                                     if uniform.sampleCorners then   
-                                        for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                        for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                             if l < clippedVc then
                                                 // if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
                                                 samples.[sampleIdx] <- V3d(clippedVa.[l])
@@ -341,7 +341,7 @@ module EffectApStructuredSampling =
                  
                                                 let uvSamplePoint = uniform.LUVSamplePoints.[l]
 
-                                                let samplePoint = (SphericalQuad.sphQuadSample squad uvSamplePoint.X uvSamplePoint.Y) - P
+                                                let samplePoint = (SphericalQuad.sphQuadSample squad uvSamplePoint.X uvSamplePoint.Y) - P 
                                                 let (irr, weight) = sampleIrr t2w squad.S addr samplePoint
 
                                                 patchIllumination <- patchIllumination + irr
@@ -368,14 +368,14 @@ module EffectApStructuredSampling =
                                             0.0
 
                                     
-                                    for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                    for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                             if l < clippedVc then
                                                 // Project polygon light onto sphere
                                                 clippedVa.[l] <- Vec.normalize clippedVa.[l]
 
-                                    for l in 0 .. clippedVc - 1 do
-                                        // Project polygon light onto sphere
-                                        clippedVa.[l] <- Vec.normalize clippedVa.[l]
+                                    //for l in 0 .. clippedVc - 1 do
+                                    //    // Project polygon light onto sphere
+                                    //    clippedVa.[l] <- Vec.normalize clippedVa.[l]
 
                                     let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
@@ -425,14 +425,14 @@ module EffectApStructuredSampling =
             
             ////////////////////////////////////////////////////////
 
-            for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
+            for addr in 0 .. (Config.Light.NUM_LIGHTS - 1) do 
                 match uniform.Lights.[addr] with
                     | -1 -> ()
                     |  _ ->    
                         
-                        let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
-                        let sAddr = addr * Config.SS_LIGHT_SAMPLES_PER_LIGHT
+                        let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                        let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                        let sAddr = addr * Config.Light.SS_LIGHT_SAMPLES_PER_LIGHT
 
                         ////////////////////////////////////////////////////////
 
@@ -444,9 +444,9 @@ module EffectApStructuredSampling =
 
                         ////////////////////////////////////////////////////////
 
-                        for iIdx in iAddr .. Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
+                        for iIdx in iAddr .. Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
                             
-                            let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                            let mutable vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
                             for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
@@ -524,7 +524,7 @@ module EffectApStructuredSampling =
                                     let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
                                     
                                     if uniform.sampleCorners then   
-                                        for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                        for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                             if l < clippedVc then
                                                 //if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
                                                 samples.[sampleIdx] <- V3d(clippedVa.[l])
@@ -734,8 +734,8 @@ module EffectApStructuredSampling =
 
                     let addr = 0
 
-                    let vAddr = addr * Config.VERT_PER_LIGHT
-                    let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                    let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                    let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
 
                     ////////////////////////////////////////////////////////
 
@@ -760,7 +760,7 @@ module EffectApStructuredSampling =
                 
                     let computeLightData iIdx = 
                             
-                        let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                        let mutable vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
                         for vtc in 0 .. lBaseComponents.[addr] - 1 do
                             let vtcAddr = lPatchIndices.[iIdx + vtc] + vAddr
@@ -831,7 +831,7 @@ module EffectApStructuredSampling =
 
                                 // corners
                                 if true then   
-                                    for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                    for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                         if l < clippedVc then                                                
                                             // if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
                                                 samples.[sampleIdx] <- V3d(clippedVa.[l])

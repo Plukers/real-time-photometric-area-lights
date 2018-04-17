@@ -63,7 +63,7 @@ module EffectGT =
             let mutable illumination = V4d.Zero
             
             // Iterate over Samples
-            for sIdx in 0 .. Config.NUM_SAMPLES - 1 do
+            for sIdx in 0 .. Config.Light.NUM_SAMPLES - 1 do
                    
                 let u1 = 
                     let x = jitter.X + uniform.HaltonSamples.[sIdx].X
@@ -83,16 +83,16 @@ module EffectGT =
                 let brdfPDF = i.Z / PI // cosine spherical sampling
 
 
-                for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
+                for addr in 0 .. (Config.Light.NUM_LIGHTS - 1) do 
                     match uniform.Lights.[addr] with
                     | -1 -> ()
                     |  _ ->                        
-                        let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                        let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                        let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
                         
-                        for iIdx in iAddr .. Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
+                        for iIdx in iAddr .. Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
 
-                            let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                            let mutable vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
                             for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
@@ -205,7 +205,7 @@ module EffectGT =
                         ()       
                 ()
 
-            illumination <- illumination / V4d(Config.NUM_SAMPLES)
+            illumination <- illumination / V4d(Config.Light.NUM_SAMPLES)
 
             let alpha = 1.0 / (float)(uniform.FrameCount)
 
@@ -316,7 +316,7 @@ module EffectGT =
 
         let groundTruthRenderUpdate (data : RenderData) (gtData : GroundTruthData) =
             
-            let mutable prevLightTrafos : Trafo3d[] = Array.create Config.NUM_LIGHTS Trafo3d.Identity
+            let mutable prevLightTrafos : Trafo3d[] = Array.create Config.Light.NUM_LIGHTS Trafo3d.Identity
             let lightDemandsClear = 
                 data.lights.Trafos |> Mod.map (
                     fun trafos -> 
@@ -381,7 +381,7 @@ module EffectGT =
                             if clear then
                                 HaltonSequence.init
                             else
-                                gtData.haltonSequence.Value.[Config.NUM_SAMPLES - 1] |> HaltonSequence.next     
+                                gtData.haltonSequence.Value.[Config.Light.NUM_SAMPLES - 1] |> HaltonSequence.next     
                                     
                         gtData.frameCount.Value <- 
                             if clear then
