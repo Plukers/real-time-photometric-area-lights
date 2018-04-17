@@ -233,11 +233,11 @@ module EffectApPoissonSampling =
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
                                 vt.[vtc] <- uniform.LVertices.[vtcAddr]
 
-                            let squad = 
-                                let ex = vt.[1] - vt.[0]
-                                let ey = vt.[3] - vt.[0]
-                                let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
-                                squad
+                            //let squad = 
+                            //    let ex = vt.[1] - vt.[0]
+                            //    let ey = vt.[3] - vt.[0]
+                            //    let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
+                            //    squad
 
                             for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
@@ -267,45 +267,76 @@ module EffectApPoissonSampling =
                                     
                                     let closestPoint = clampPointToPolygon clippedVa clippedVc closestPoint t2l
 
+                                    let (irr, weight) = sampleIrr t2w addr closestPoint
+
+                                    let mutable patchIllumination = irr
+                                    let mutable weightSum = weight
+
                                     let closestPoint2d = 
                                         let cp = t2l * (closestPoint - clippedVa.[0])
                                         V2d(cp.X, cp.Y)
 
                                     let (samples, sampleCnt) = createPoissonSamples closestPoint2d
 
-                                    let mutable patchIllumination = 0.0
-                                    let mutable weightSum = 0.0
-
-                                    for i in 0 .. sampleCnt - 1 do
+                                    if sampleCnt > 0 then
+                                        for i in 0 .. sampleCnt - 1 do
                                         
-                                        let samplePoint = l2t * V3d(samples.[i], 0.0) + clippedVa.[0]
+                                            let samplePoint = l2t * V3d(samples.[i], 0.0) + clippedVa.[0]
+                                            let (irr, weight) = sampleIrr t2w addr samplePoint
 
-                                        
-                                        let (irr, weight) = sampleIrr t2w addr samplePoint
+                                            patchIllumination <- patchIllumination + irr
+                                            weightSum <- weightSum + weight
 
-                                        patchIllumination <- patchIllumination + irr
-                                        weightSum <- weightSum + weight
 
-                                    let L =
-                                        if sampleCnt > 0 then
-                                            patchIllumination / weightSum
-                                        else 
-                                            0.0
+                                    let L = patchIllumination / weightSum
 
+                                    // Project polygon light onto sphere
                                     for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                         if l < clippedVc then
-                                            // Project polygon light onto sphere
                                             clippedVa.[l] <- Vec.normalize clippedVa.[l]
 
                                     let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
                                     illumination <- illumination + L * brdf * I //* scale // * i.Z  
                                     
-
-
                             ////////////////////////////////////////////////////////
                         ()
 
             return V4d(illumination.XYZ, v.c.W)
         }
 
+    module Rendering =
+
+        open Aardvark.SceneGraph
+
+        open RenderInterop
+        open Utils
+        open Utils.Sg
+        open Aardvark.Base.Incremental
+
+        let psIrrApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+
+            let rnd = System.Random(0818152372)
+            let uniformRandomSamples = 0.0 |> Array.create MAX_REQUIRED_RANDOM_SAMPLES 
+
+            for i in 0 .. MAX_REQUIRED_RANDOM_SAMPLES - 1 do
+                uniformRandomSamples.[i] <- rnd.NextDouble()
+
+            let uniformRandomSamples = uniformRandomSamples |> Mod.init
+
+
+            sceneSg
+                |> setupFbEffects [ 
+                        poissonIrradianceSampling |> toEffect
+                    ]
+                |> Light.Sg.setLightCollectionUniforms data.lights
+                |> setupPhotometricData data.photometricData
+                |> setupCamera data.view data.projTrafo data.viewportSize 
+                |> setUniformDT data.dt
+                |> setUniformUsePhotometry data.usePhotometry
+                |> Sg.uniform "uniformRandomSamples" uniformRandomSamples
+                |> Sg.compile data.runtime signature
+
+        let psIrrApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+            psIrrApproxRenderTask data signature sceneSg
+            |> RenderTask.renderToColor data.viewportSize
