@@ -108,15 +108,14 @@ module EffectApStructuredSampling =
         if uniform.sampleIrrUniform then
 
             let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
-            let weight = scale * 1.0 
 
-            (irr, weight)
+            (i.Z * irr, i.Z)
         else
             let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
 
             let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
 
-            (scale  * irr * i.Z * invDistSquared, scale  * i.Z * uniform.LAreas.[addr] * dotOut * invDistSquared)
+            (irr * i.Z * invDistSquared, i.Z * uniform.LAreas.[addr] * dotOut * invDistSquared)
         
 
     let structuredIrradianceSampling (v : Vertex) = 
@@ -352,10 +351,17 @@ module EffectApStructuredSampling =
 
         let i = p |> Vec.normalize  
         let iw = t2w * -i
-        
-        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
 
-        scale * irr * i.Z / (Vec.lengthSquared p + 1e-9)
+        if uniform.sampleIrrUniform then
+
+            let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
+            let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+
+            i.Z * irr
+        else
+            let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
+
+            irr * i.Z / (Vec.lengthSquared p + 1e-9)
 
     let structuredSampling (v : Vertex) = 
         fragment {
