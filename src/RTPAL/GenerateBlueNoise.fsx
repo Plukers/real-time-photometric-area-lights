@@ -15,7 +15,7 @@ let private genRandomUV (rnd : System.Random) count =
     List.init count (fun _ -> V2d(rnd.NextDouble (), rnd.NextDouble ()))
         
 (*
-    Returns sample points for a given triangle of size Config.NUM_SS_LIGHT_SAMPLES
+    Returns sample points for a given triangle of size Config.Light.NUM_SS_LIGHT_SAMPLES
 *)
 (*
 TODO add average distance
@@ -196,6 +196,33 @@ module Triangle =
 module Rectangle = 
         
     (*
+        Generates a UV sequence for a rectancle with both ranges [0,1]
+    *)
+    let computeUVSequence (samplePoints : Option<List<V2d>>) num = 
+                
+        let discard  (p : V2d) = 
+            false
+
+        let distance (p0 : V2d) (p1 : V2d) = 
+            V2d.Distance(p0, p1)
+                
+        let samplePoints = 
+            match samplePoints with 
+            | Some sps -> sps
+            | None ->
+                let rnd = System.Random(061815)
+                let mutable seed = (genRandomUV rnd 1).[0]
+
+                while discard seed do
+                    seed <- (genRandomUV rnd 1).[0]
+
+                seed :: List.empty<V2d>
+                
+        let (uvSamplePoints, avgDist) = samplePoints |> generateUVSequenceRelaxDartThrowing discard distance num 
+
+        (uvSamplePoints, avgDist)
+
+    (*
         Rectangle is given by its sides a and b, which have a corner point in common and are orthonormal
     *)
     let private computePointSequence (a : V3d) (b : V3d) (o : V3d) (samplePoints : Option<List<V2d>>) num = 
@@ -251,73 +278,128 @@ module OfflineStructuredSamplePoints =
 """
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Triangle Samples 
-let tri_vertices = [|
-        V3d(0.0, -0.5, -0.5)
-        V3d(0.0,  0.5, -0.5)
-        V3d(0.0,  0.0,  1.0)
-    |] 
 
-let tri_title = 
-    sprintf "
+module TriangleSamples =
+
+// Triangle Samples 
+    let addSamples sampleStr =
+
+        let mutable newSampleStr = sampleStr
+
+        let vertices = [|
+                V3d(0.0, -0.5, -0.5)
+                V3d(0.0,  0.5, -0.5)
+                V3d(0.0,  0.0,  1.0)
+            |] 
+
+        let title = 
+            sprintf "
     module Triangle = 
         let samples = 
             let l = ["
 
-sampleStr <- String.concat "" [ sampleStr; tri_title ] 
+        newSampleStr <- String.concat "" [ newSampleStr; title ] 
 
-let (tri_samples, tri_avg_dist) = Triangle.generateNewPointSequence tri_vertices.[0] tri_vertices.[1] tri_vertices.[2] numOfSamples 
+        let (samples, avg_dist) = Triangle.generateNewPointSequence vertices.[0] vertices.[1] vertices.[2] numOfSamples 
 
-for s in tri_samples |> List.rev do
-    let sampleString = 
-        sprintf "
+        for s in samples |> List.rev do
+            let sampleString = 
+                sprintf "
                 V3d(%.10f, %.10f, %.10f)"  s.X s.Y s.Z
-    sampleStr <- String.concat "" [ sampleStr; sampleString ]
+            newSampleStr <- String.concat "" [ newSampleStr; sampleString ]
     
-let tri_close = 
-    sprintf "   
+        let close = 
+            sprintf "   
                 ]
             l
         "
-sampleStr <- String.concat "" [ sampleStr; tri_close ]
+        newSampleStr <- String.concat "" [ newSampleStr; close ]
+
+        newSampleStr
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
+
+
+module SquareSamples = 
+
 // Square Samples 
-let sqr_vertices = [|
-            V3d(0.0, -0.5, -0.5)
-            V3d(0.0,  0.5, -0.5)
-            V3d(0.0,  0.5,  0.5)
-            V3d(0.0, -0.5,  0.5)
-        |] 
+    let addSamples sampleStr = 
 
-let sqr_title = 
-    sprintf "
+        let mutable newSampleStr = sampleStr
+
+        let vertices = [|
+                    V3d(0.0, -0.5, -0.5)
+                    V3d(0.0,  0.5, -0.5)
+                    V3d(0.0,  0.5,  0.5)
+                    V3d(0.0, -0.5,  0.5)
+                |] 
+
+        let title = 
+            sprintf "
     module Square = 
         let samples = 
             let l = ["
 
-sampleStr <- String.concat "" [ sampleStr; sqr_title ] 
+        newSampleStr <- String.concat "" [ newSampleStr; title ] 
 
-let (sqr_samples, sqr_avg_dist) = Rectangle.generateNewPointSequence (sqr_vertices.[1] - sqr_vertices.[0]) (sqr_vertices.[3] - sqr_vertices.[0]) (sqr_vertices.[0]) numOfSamples 
+        let (samples, avg_dist) = Rectangle.generateNewPointSequence (vertices.[1] - vertices.[0]) (vertices.[3] - vertices.[0]) (vertices.[0]) numOfSamples 
 
-for s in sqr_samples |> List.rev do
-    let sampleString = 
-        sprintf "
+        for s in samples |> List.rev do
+            let sampleString = 
+                sprintf "
                 V3d(%.10f, %.10f, %.10f)"  s.X s.Y s.Z
-    sampleStr <- String.concat "" [ sampleStr; sampleString ]
+            newSampleStr <- String.concat "" [ newSampleStr; sampleString ]
     
-let sqr_close = 
-    sprintf "   
+        let close = 
+            sprintf "   
                 ]
             l
         "
    
-sampleStr <- String.concat "" [ sampleStr; sqr_close ]
+        newSampleStr <- String.concat "" [ newSampleStr; close ]
+
+        newSampleStr
+
+
+// Square UV Samples 
+    let addUVSamples sampleStr = 
+
+        let mutable newSampleStr = sampleStr
+
+        let title = 
+            sprintf "
+        let uvSamples = 
+            let l = ["
+
+        newSampleStr <- String.concat "" [ newSampleStr; title ] 
+
+        let (samples, avg_dist) = Rectangle.computeUVSequence None numOfSamples 
+
+        for s in samples |> List.rev do
+            let sampleString = 
+                sprintf "
+                V3d(%.10f, %.10f,  %.10f)"  s.X s.Y 0.0
+            newSampleStr <- String.concat "" [ newSampleStr; sampleString ]
+    
+        let close = 
+            sprintf "   
+                ]
+            l
+        "
+   
+        newSampleStr <- String.concat "" [ newSampleStr; close ]
+
+        newSampleStr
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
+
+sampleStr <- TriangleSamples.addSamples sampleStr
+sampleStr <- SquareSamples.addSamples sampleStr
+sampleStr <- SquareSamples.addUVSamples sampleStr
 
 File.WriteAllText("BlueNoiseSamples.fs", sampleStr);
 

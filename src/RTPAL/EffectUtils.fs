@@ -317,15 +317,15 @@ module EffectUtils =
         | _ -> p // all coordinates are positive
 
     [<ReflectedDefinition>] 
-    let clampPointToPolygon (v : Arr<N<Config.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (vc : int) (p : V3d) (tps : M33d) = // tls = transformation to polygon space matrix
+    let clampPointToPolygon (v : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (vc : int) (p : V3d) (tps : M33d) = // tls = transformation to polygon space matrix
 
         if v.Length = 0 then
             p
         else
 
-            let mutable v2d = Arr<N<Config.MAX_PATCH_SIZE_PLUS_ONE>, V2d>()
+            let mutable v2d = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V2d>()
 
-            for i in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+            for i in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                 if i < vc then
                     let tmp = tps * (v.[i] - v.[0])
                     v2d.[i] <- V2d(tmp.X, tmp.Y)
@@ -337,11 +337,11 @@ module EffectUtils =
               
             let mutable linesPositiveDistanceCount = 0
             let mutable linesPositiveDistanceIndex = 0
-            let mutable lines                      = Arr<N<Config.MAX_PATCH_SIZE_TIMES_TWO>, V3d>()
+            let mutable lines                      = Arr<N<Config.Light.MAX_PATCH_SIZE_TIMES_TWO>, V3d>()
                         
             let eps = 1e-9
 
-            for i in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+            for i in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                 if i < vc then
 
                     let d = linePointDistance v2d.[i] v2d.[(i + 1) % vc] p2d
@@ -430,12 +430,12 @@ module EffectUtils =
 
 
     [<ReflectedDefinition>] 
-    let clipPatch(p : V3d, n : V3d, vertices : Arr<N<Config.MAX_PATCH_SIZE>, V3d>, vertexCount : int) =
+    let clipPatch(p : V3d, n : V3d, vertices : Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>, vertexCount : int) =
         let plane = V4d(n, -V3d.Dot(p, n))
         let eps = 1e-9
 
         let mutable vc = 0
-        let va = Arr<N<Config.MAX_PATCH_SIZE_PLUS_ONE>, V3d>()
+        let va = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>()
 
         let vb = V4d(vertices.[0], 1.0)
         let hb = V4d.Dot(plane, vb) 
@@ -482,13 +482,13 @@ module EffectUtils =
         V3d.Cross(a, b).Z * if theta < 1e-5 then 1.0 else theta/sin(theta)
 
     [<ReflectedDefinition>] 
-    let baumFormFactor(va : Arr<N<Config.MAX_PATCH_SIZE_PLUS_ONE>, V3d>, vc : int) =
+    let baumFormFactor(va : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>, vc : int) =
 
         let mutable sum = 0.0
 
         //for vi in 0 .. vc - 2 do
 
-        for vi in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE do
+        for vi in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE do
             if vi < vc - 1 then
                 sum <- sum + integrateSegment(va.[vi], va.[vi + 1])
 

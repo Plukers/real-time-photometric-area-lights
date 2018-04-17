@@ -35,13 +35,13 @@ module EffectApMRP =
             
             ////////////////////////////////////////////////////////
 
-            for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
+            for addr in 0 .. (Config.Light.NUM_LIGHTS - 1) do 
                 match uniform.Lights.[addr] with
                     | -1 -> ()
                     |  _ ->    
                         
-                        let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                        let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                        let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
 
                         ////////////////////////////////////////////////////////
 
@@ -53,9 +53,9 @@ module EffectApMRP =
 
                         ////////////////////////////////////////////////////////
 
-                        for iIdx in iAddr .. Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
+                        for iIdx in iAddr .. Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
                             
-                            let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                            let mutable vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
                             for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr

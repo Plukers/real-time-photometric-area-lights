@@ -119,10 +119,10 @@
         let gtData = initGTData' (true |> Mod.init) (GTSamplingMode.Light |> Mod.init)
         let mrpData = initMRPData m
 
-        let sampleIrrUniform = false |> Mod.init
-        let updateSampleIrrUniform siu = 
+        let sampleLight = false |> Mod.init
+        let updateSampleLight sl = 
             transact (fun _ ->
-                siu |> Mod.change sampleIrrUniform
+                sl |> Mod.change sampleLight
             )
 
         let blendSamples = false |> Mod.init
@@ -177,7 +177,7 @@
                 sampleNorm           = sampleNorm
                 sampleMRP            = sampleMRP
                 sampleRandom         = sampleRandom
-                sampleIrrUniform     = sampleIrrUniform
+                sampleLight          = sampleLight
                 blendSamples         = blendSamples
                 blendEasing          = m.blendEasing
                 blendDistance        = blendDistance
@@ -253,7 +253,7 @@
             
             transformLight renderData.lights activeTrafoLightId (rotation.Inverse)
             
-        
+         
         let resultPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
         let photometryFiles = 
             System.IO.Directory.GetFiles (Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry"])
@@ -288,7 +288,7 @@
                         
                         update true
 
-                        for _ in 1 .. (numOfSamples / Config.NUM_SAMPLES) do
+                        for _ in 1 .. (numOfSamples / Config.Light.NUM_SAMPLES) do
                             scRenderTask.Run(RenderToken.Empty, fbo)
                             update false
                             
@@ -350,9 +350,10 @@
                         //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
                     
 
-
-                        let mode = RenderMode.StructuredSampling
+                        updateSampleLight true
                         updateBlendSamples false
+
+                        let mode = RenderMode.StructuredSampling                        
 
                         for mask in 1 .. 31 do
                             updateSamplesBitmask mask // corners barycenter closest norm mrp random
@@ -360,14 +361,12 @@
                             approxList <-String.concat nl [approxList; mode |> createFileName None None ]
                         
 
-                        //let mode = RenderMode.StructuredIrrSampling
-                        //updateBlendSamples false
-                        //updateSampleIrrUniform true
+                        let mode = RenderMode.StructuredIrrSampling                        
 
-                        //for mask in 1 .. 31 do
-                        //    updateSamplesBitmask mask // corners barycenter closest norm mrp random
-                        //    mode |> renderApprox path step
-                        //    approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+                        for mask in 1 .. 31 do
+                            updateSamplesBitmask mask // corners barycenter closest norm mrp random
+                            mode |> renderApprox path step
+                            approxList <-String.concat nl [approxList; mode |> createFileName None None ]
                         
                         //updateSampleIrrUniform false
 
@@ -632,7 +631,7 @@
             | TOGGLE_SAMPLE_MRP -> { s with sampleMRP = (not s.sampleMRP) }
             | TOGGLE_SAMPLE_RND -> { s with sampleRandom = (not s.sampleRandom) }
             | TOGGLE_BLEND_SAMPLES -> { s with blendSamples = (not s.blendSamples) }
-            | TOGGLE_SAMPLE_IRR_UNIFORM -> { s with sampleIrrUniform = (not s.sampleIrrUniform) }
+            | TOGGLE_SAMPLE_LIGHT -> { s with sampleLight = (not s.sampleLight) }
             | TOGGLE_BLEND_EASING -> { s with blendEasing = (not s.blendEasing) }
             | CHANGE_BLEND_DIST bd -> { s with blendDistance = Numeric.update s.blendDistance bd}
             | CHANGE_SRS_SAMPLE_NUM nss -> { s with numOfSRSamples = Numeric.update s.numOfSRSamples nss}
@@ -922,11 +921,11 @@
                                                         ]
                                                         
                                                         let! fc = renderFeedback.frameCount   
-                                                        yield p [] [ text ("Num Samples: " + string (fc * Config.NUM_SAMPLES))]
+                                                        yield p [] [ text ("Num Samples: " + string (fc * Config.Light.NUM_SAMPLES))]
 
                                                         if updateGT then
                                                             let! fps = renderFeedback.fps
-                                                            yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.NUM_SAMPLES)))]
+                                                            yield p [] [ text ("Samples/Second: " + (sprintf "%.2f" (fps * (float)Config.Light.NUM_SAMPLES)))]
 
                                                                                                                
                                                 }
@@ -1002,10 +1001,10 @@
                                                             yield text "Sample Random"                                                    
                                                             yield br[]  
 
-                                                            if mode = RenderMode.StructuredIrrSampling || (mode = RenderMode.Compare && c = RenderMode.StructuredIrrSampling) then
-                                                                yield toggleBox m.sampleIrrUniform TOGGLE_SAMPLE_IRR_UNIFORM      
-                                                                yield text "Uniform Sample Weight"                                                    
-                                                                yield br[]  
+                                                            
+                                                            yield toggleBox m.sampleLight TOGGLE_SAMPLE_LIGHT      
+                                                            yield text "Sample Light"                                                    
+                                                            yield br[]  
                                                             
                                                         ]
 
@@ -1153,7 +1152,7 @@
             sampleNorm       = false
             sampleMRP        = true
             sampleRandom     = false
-            sampleIrrUniform = true
+            sampleLight      = true
             blendSamples     = false
             blendEasing      = false
             blendDistance = {
@@ -1166,7 +1165,7 @@
             numOfSRSamples   = {
                                 value   = 380.0
                                 min     = 0.0
-                                max     = (float) Config.SS_LIGHT_SAMPLES_ALL_LIGHT
+                                max     = (float) Config.Light.SS_LIGHT_SAMPLES_ALL_LIGHT
                                 step    = 1.0
                                 format  = "{0:0}"
                                 }

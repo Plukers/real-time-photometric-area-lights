@@ -16,7 +16,7 @@ module EffectApStructuredSampling =
         member uniform.sampleNorm               : bool  = uniform?sampleNorm 
         member uniform.sampleMRP                : bool  = uniform?sampleMRP 
         member uniform.sampleRandom             : bool  = uniform?sampleRandom
-        member uniform.sampleIrrUniform         : bool  = uniform?sampleIrrUniform
+        member uniform.sampleLight              : bool  = uniform?sampleLight
         member uniform.blendSamples             : bool  = uniform?blendSamples
         member uniform.blendEasing              : bool  = uniform?blendEasing
         member uniform.blendDistance            : float = uniform?blendDistance
@@ -104,18 +104,39 @@ module EffectApStructuredSampling =
         let iw = t2w * -i
  
         let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
+        let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
 
-        if uniform.sampleIrrUniform then
+        if uniform.sampleLight then
 
             let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
 
-            (i.Z * irr, i.Z)
+            (irr * i.Z, i.Z)
         else
             let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
 
-            let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
+            (irr * i.Z * invDistSquared, i.Z * (* uniform.LAreas.[addr] *) dotOut * invDistSquared)
 
-            (irr * i.Z * invDistSquared, i.Z * uniform.LAreas.[addr] * dotOut * invDistSquared)
+
+
+        (*
+                let i = p |> Vec.normalize  
+        let iw = t2w * -i
+
+        if uniform.sampleLight then
+            
+            let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
+
+            let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+
+            i.Z * irr * S
+        else
+
+            let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
+
+            irr * i.Z / (Vec.lengthSquared p + 1e-9)
+
+        *)
+
         
 
     let structuredIrradianceSampling (v : Vertex) = 
@@ -134,13 +155,13 @@ module EffectApStructuredSampling =
             
             ////////////////////////////////////////////////////////
 
-            for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
+            for addr in 0 .. (Config.Light.NUM_LIGHTS - 1) do 
                 match uniform.Lights.[addr] with
                     | -1 -> ()
                     |  _ ->    
                         
-                        let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                        let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                        let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
 
                         ////////////////////////////////////////////////////////
 
@@ -152,13 +173,23 @@ module EffectApStructuredSampling =
 
                         ////////////////////////////////////////////////////////
 
-                        for iIdx in iAddr .. Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
+                        for iIdx in iAddr .. Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
                             
-                            let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                            let mutable vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
                             for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
-                                vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+                                vt.[vtc] <- uniform.LVertices.[vtcAddr]
+
+                            let squad = 
+                                let ex = vt.[1] - vt.[0]
+                                let ey = vt.[3] - vt.[0]
+                                let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
+                                squad
+
+                            for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
+                                let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
+                                vt.[vtc] <- w2t * (vt.[vtc] - P)
 
                             ////////////////////////////////////////////////////////
 
@@ -171,7 +202,7 @@ module EffectApStructuredSampling =
 
 
                                 let mutable barycenter = V3d.Zero
-                                for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                     if l < clippedVc then
                                         barycenter <- barycenter + clippedVa.[l]
                                     
@@ -223,7 +254,7 @@ module EffectApStructuredSampling =
                                     let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
                                     
                                     if uniform.sampleCorners then   
-                                        for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                        for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                             if l < clippedVc then
                                                 // if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
                                                 samples.[sampleIdx] <- V3d(clippedVa.[l])
@@ -305,15 +336,30 @@ module EffectApStructuredSampling =
                                                 weightSum <- weightSum + weight
                                                        
                                     if uniform.sampleRandom && uniform.numSRSamples > 0 then
-                                        for l in 0 .. uniform.numSRSamples do
-                                            let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
+                                        if uniform.sampleLight then
+                                            for l in 0 .. uniform.numSRSamples do
+                 
+                                                let uvSamplePoint = uniform.LUVSamplePoints.[l]
 
-                                            if samplePoint.Z >= eps then
-                                                // let scale = uniform.weightScaleSRSamplesIrr * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDistIrr addr samplePoint
+                                                let samplePoint = (SphericalQuad.sphQuadSample squad uvSamplePoint.X uvSamplePoint.Y) - P 
+                                                let (irr, weight) = sampleIrr t2w squad.S addr samplePoint
 
-                                                let (irr, weight) = sampleIrr t2w 1.0 addr samplePoint
                                                 patchIllumination <- patchIllumination + irr
                                                 weightSum <- weightSum + weight
+
+                                        else
+
+
+                                            for l in 0 .. uniform.numSRSamples do
+                                        
+                                                let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
+
+                                                if samplePoint.Z >= eps then
+                                                    // let scale = uniform.weightScaleSRSamplesIrr * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDistIrr addr samplePoint
+
+                                                    let (irr, weight) = sampleIrr t2w 1.0 addr samplePoint
+                                                    patchIllumination <- patchIllumination + irr
+                                                    weightSum <- weightSum + weight
                                                 
                                     let L =
                                         if sampleCount > 0 then
@@ -322,14 +368,14 @@ module EffectApStructuredSampling =
                                             0.0
 
                                     
-                                    for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                    for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                             if l < clippedVc then
                                                 // Project polygon light onto sphere
                                                 clippedVa.[l] <- Vec.normalize clippedVa.[l]
 
-                                    for l in 0 .. clippedVc - 1 do
-                                        // Project polygon light onto sphere
-                                        clippedVa.[l] <- Vec.normalize clippedVa.[l]
+                                    //for l in 0 .. clippedVc - 1 do
+                                    //    // Project polygon light onto sphere
+                                    //    clippedVa.[l] <- Vec.normalize clippedVa.[l]
 
                                     let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
@@ -347,17 +393,19 @@ module EffectApStructuredSampling =
 
     
     [<ReflectedDefinition>]
-    let private sample (t2w : M33d) (scale : float) (addr : int) (p : V3d) = 
+    let private sample (t2w : M33d) (S : float) (addr : int) (p : V3d) = 
 
         let i = p |> Vec.normalize  
         let iw = t2w * -i
 
-        if uniform.sampleIrrUniform then
 
+        if uniform.sampleLight then
+            
             let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
+
             let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
 
-            i.Z * irr
+            i.Z * irr * S
         else
             let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
 
@@ -377,14 +425,14 @@ module EffectApStructuredSampling =
             
             ////////////////////////////////////////////////////////
 
-            for addr in 0 .. (Config.NUM_LIGHTS - 1) do 
+            for addr in 0 .. (Config.Light.NUM_LIGHTS - 1) do 
                 match uniform.Lights.[addr] with
                     | -1 -> ()
                     |  _ ->    
                         
-                        let vAddr = addr * Config.VERT_PER_LIGHT
-                        let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
-                        let sAddr = addr * Config.SS_LIGHT_SAMPLES_PER_LIGHT
+                        let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                        let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                        let sAddr = addr * Config.Light.SS_LIGHT_SAMPLES_PER_LIGHT
 
                         ////////////////////////////////////////////////////////
 
@@ -396,13 +444,23 @@ module EffectApStructuredSampling =
 
                         ////////////////////////////////////////////////////////
 
-                        for iIdx in iAddr .. Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
+                        for iIdx in iAddr .. Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
                             
-                            let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                            let mutable vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
                             for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
                                 let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
-                                vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+                                vt.[vtc] <- uniform.LVertices.[vtcAddr]
+
+                            let squad =  
+                                let ex = vt.[1] - vt.[0]
+                                let ey = vt.[3] - vt.[0]
+                                let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
+                                squad
+
+                            for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
+                                let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
+                                vt.[vtc] <- w2t * (vt.[vtc] - P)
 
                             ////////////////////////////////////////////////////////
 
@@ -466,7 +524,7 @@ module EffectApStructuredSampling =
                                     let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
                                     
                                     if uniform.sampleCorners then   
-                                        for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                        for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                             if l < clippedVc then
                                                 //if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
                                                 samples.[sampleIdx] <- V3d(clippedVa.[l])
@@ -540,19 +598,33 @@ module EffectApStructuredSampling =
 
                                         for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                             if l < sampleIdx then 
+
                                                 // let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samples.[l]
                                                 
-                                                let irr = sample t2w samplesWeightScale.[l] addr samples.[l]
+                                                //let irr = sample t2w samplesWeightScale.[l] addr samples.[l]
+
+                                                let irr = sample t2w squad.S addr samples.[l]
                                                 patchIllumination <- patchIllumination + irr
 
                                     if uniform.sampleRandom && uniform.numSRSamples > 0 then
-                                        for l in 0 .. uniform.numSRSamples - 1 do
-                                            let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
+                                        if uniform.sampleLight then
+                                            for l in 0 .. uniform.numSRSamples - 1 do
+                                                let uvSamplePoint = uniform.LUVSamplePoints.[l]
 
-                                            if samplePoint.Z >= eps then
-                                                // let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samplePoint
-                                                let irr = sample t2w 1.0 addr samplePoint
+                                                let samplePoint = (SphericalQuad.sphQuadSample squad uvSamplePoint.X uvSamplePoint.Y) - P
+                                                let irr = sample t2w squad.S addr samplePoint
                                                 patchIllumination <- patchIllumination + irr
+
+                                        else
+                                            for l in 0 .. uniform.numSRSamples - 1 do
+                                                let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
+
+                                                if samplePoint.Z >= eps then
+                                                    // let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samplePoint
+                                                    let irr = sample t2w squad.S addr samplePoint
+                                                    patchIllumination <- patchIllumination + irr
+
+                                            
 
                                     if sampleCount > 0 then
 
@@ -584,7 +656,7 @@ module EffectApStructuredSampling =
             sampleNorm           : IMod<bool>
             sampleMRP            : IMod<bool>
             sampleRandom         : IMod<bool>
-            sampleIrrUniform     : IMod<bool>
+            sampleLight          : IMod<bool>
             blendSamples         : IMod<bool>
             blendEasing          : IMod<bool>
             blendDistance        : IMod<float>
@@ -604,7 +676,7 @@ module EffectApStructuredSampling =
                 sampleNorm           = m.sampleNorm
                 sampleMRP            = m.sampleMRP
                 sampleRandom         = m.sampleRandom
-                sampleIrrUniform     = m.sampleIrrUniform
+                sampleLight          = m.sampleLight
                 blendSamples         = m.blendSamples
                 blendEasing          = m.blendEasing
                 blendDistance        = m.blendDistance.value
@@ -662,8 +734,8 @@ module EffectApStructuredSampling =
 
                     let addr = 0
 
-                    let vAddr = addr * Config.VERT_PER_LIGHT
-                    let iAddr = addr * Config.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+                    let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                    let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
 
                     ////////////////////////////////////////////////////////
 
@@ -688,7 +760,7 @@ module EffectApStructuredSampling =
                 
                     let computeLightData iIdx = 
                             
-                        let mutable vt = Arr<N<Config.MAX_PATCH_SIZE>, V3d>() 
+                        let mutable vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
                         for vtc in 0 .. lBaseComponents.[addr] - 1 do
                             let vtcAddr = lPatchIndices.[iIdx + vtc] + vAddr
@@ -759,7 +831,7 @@ module EffectApStructuredSampling =
 
                                 // corners
                                 if true then   
-                                    for l in 0 .. Config.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                    for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
                                         if l < clippedVc then                                                
                                             // if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
                                                 samples.[sampleIdx] <- V3d(clippedVa.[l])
@@ -940,7 +1012,7 @@ module EffectApStructuredSampling =
                 |> Sg.uniform "sampleNorm"              ssData.sampleNorm
                 |> Sg.uniform "sampleMRP"               ssData.sampleMRP
                 |> Sg.uniform "sampleRandom"            ssData.sampleRandom
-                |> Sg.uniform "sampleIrrUniform"        ssData.sampleIrrUniform
+                |> Sg.uniform "sampleLight"             ssData.sampleLight
                 |> Sg.uniform "blendSamples"            ssData.blendSamples
                 |> Sg.uniform "blendEasing"             ssData.blendEasing
                 |> Sg.uniform "numSRSamples"            ssData.numSRSamples
@@ -978,7 +1050,7 @@ module EffectApStructuredSampling =
             if mTb ssData.sampleNorm then settings <- String.concat "_" [ settings; "sNorm" ]
             if mTb ssData.sampleMRP then settings <- String.concat "_" [ settings; "sMRP" ]
             if mTb ssData.sampleRandom then settings <- String.concat "_" [ settings; (sprintf "sRandom-%i" (ssData.numSRSamples |> Mod.force)) ]
-            if mTb ssData.sampleIrrUniform then settings <- String.concat "_" [ settings; "sIrrUniform" ]
+            if mTb ssData.sampleLight then settings <- String.concat "_" [ settings; "sampleLight" ]
 
             if mTb ssData.blendSamples then
                 let mutable s = sprintf "blend-%f" (ssData.blendDistance |> Mod.force)

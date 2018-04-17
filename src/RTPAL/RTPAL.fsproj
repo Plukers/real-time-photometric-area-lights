@@ -90,7 +90,9 @@
   <ItemGroup>
     <Compile Include="ConfigGenerator.fsx" />
     <None Include="GenerateBlueNoise.fsx" />
+    <None Include="GenerateSampleArray.fsx" />
     <Compile Include="BlueNoiseSamples.fs" />
+    <Compile Include="PoissonSampleCollection.fs" />
     <Compile Include="Config.fs" />
     <Compile Include="PhotometricLight.fs" />
     <Compile Include="EffectUtils.fs" />
@@ -104,6 +106,7 @@
     <Compile Include="EffectApMRP.fs" />
     <Compile Include="EffectApBaumFF.fs" />
     <Compile Include="EffectApStructuredSampling.fs" />
+    <Compile Include="EffectApPoissonSampling.fs" />
     <Compile Include="EffectCompare.fs" />
     <Compile Include="EffectOutline.fs" />
     <Compile Include="EffectToneMapping.fs" />

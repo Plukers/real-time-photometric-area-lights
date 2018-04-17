@@ -68,7 +68,7 @@ type Action =
     | TOGGLE_SAMPLE_MRP
     | TOGGLE_SAMPLE_RND
     | TOGGLE_BLEND_SAMPLES
-    | TOGGLE_SAMPLE_IRR_UNIFORM
+    | TOGGLE_SAMPLE_LIGHT
     | TOGGLE_BLEND_EASING
     | CHANGE_BLEND_DIST of Numeric.Action
     | CHANGE_SRS_SAMPLE_NUM of Numeric.Action
@@ -105,7 +105,7 @@ type RenderState =
         sampleNorm           : bool
         sampleMRP            : bool
         sampleRandom         : bool
-        sampleIrrUniform     : bool
+        sampleLight          : bool
         blendSamples         : bool
         blendEasing          : bool
         blendDistance        : NumericInput
