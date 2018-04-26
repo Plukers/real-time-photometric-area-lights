@@ -224,6 +224,17 @@ module EffectUtils =
                 else 
                     ((Vec.dot e2 qVec) * invDet)
 
+
+
+    [<Literal>]
+    let PROJECT_TO_LINE_RESULT_LINE = 0
+    
+    [<Literal>]
+    let PROJECT_TO_LINE_RESULT_A = 1
+    
+    [<Literal>]
+    let PROJECT_TO_LINE_RESULT_B = 2
+
     [<ReflectedDefinition>]   
     let private projetToLineSegment a b p = 
         let projection = projectPointOnLine a b p
@@ -232,11 +243,13 @@ module EffectUtils =
         let pb = b - projection           
 
         if (Vec.dot pa pb) < 0.0 then
-            projection
+            (projection, PROJECT_TO_LINE_RESULT_LINE)
         elif (Vec.length pa) < Vec.length(pb) then
-            a
+            (a, PROJECT_TO_LINE_RESULT_A)
         else
-            b
+            (b, PROJECT_TO_LINE_RESULT_B)
+
+
 
     [<ReflectedDefinition>]       
     let clampPointToTriangle (a : V3d) (b : V3d) (c : V3d) (p : V3d) (tts : M33d) = // tls = transformation to triangle space matrix
@@ -260,12 +273,18 @@ module EffectUtils =
 
         let clampedP = 
             match barycentricCoordinates p2d a2d b2d c2d with
-            | (u, v, w) when u <= eps && v <= eps && w >  eps -> c                         //   I
-            | (u, v, w) when u >  eps && v <  eps && w >  eps -> projetToLineSegment c a p //  II
-            | (u, v, w) when u >  eps && v <= eps && w <= eps -> a                         // III
-            | (u, v, w) when u >  eps && v >  eps && w <  eps -> projetToLineSegment a b p //  IV
-            | (u, v, w) when u <= eps && v >  eps && w <= eps -> b                         //   V
-            | (u, v, w) when u <  eps && v >  eps && w >  eps -> projetToLineSegment b c p //  VI
+            | (u, v, w) when u <= eps && v <= eps && w >  eps -> c  //   I
+            | (u, v, w) when u >  eps && v <  eps && w >  eps ->    //  II
+                let (p, _) = projetToLineSegment c a p 
+                p
+            | (u, v, w) when u >  eps && v <= eps && w <= eps -> a  // III
+            | (u, v, w) when u >  eps && v >  eps && w <  eps ->    //  IV
+                let (p, _) = projetToLineSegment a b p 
+                p
+            | (u, v, w) when u <= eps && v >  eps && w <= eps -> b  //   V
+            | (u, v, w) when u <  eps && v >  eps && w >  eps ->    //  VI
+                let (p, _) = projetToLineSegment b c p 
+                p
             | _ -> p // all coordinates are positive
 
         clampedP
@@ -306,21 +325,56 @@ module EffectUtils =
         let eps = 1e-9
 
         match (t, u, v, w) with
-        | (t, u, v, w) when t >  eps && u <= eps && v <= eps && w <= eps -> projetToLineSegment a b p //    I
-        | (t, u, v, w) when t >  eps && u >  eps && v <= eps && w <= eps -> b                         //   II
-        | (t, u, v, w) when t <= eps && u >  eps && v <= eps && w <= eps -> projetToLineSegment b c p //  III
-        | (t, u, v, w) when t <= eps && u >  eps && v >  eps && w <= eps -> c                         //   IV
-        | (t, u, v, w) when t <= eps && u <= eps && v >  eps && w <= eps -> projetToLineSegment c d p //    V
-        | (t, u, v, w) when t <= eps && u <= eps && v >  eps && w >  eps -> d                         //   VI
-        | (t, u, v, w) when t <= eps && u <= eps && v <= eps && w >  eps -> projetToLineSegment d a p //  VII
-        | (t, u, v, w) when t >  eps && u <= eps && v <= eps && w >  eps -> a                         // VIII
+        | (t, u, v, w) when t >  eps && u <= eps && v <= eps && w <= eps ->     //    I
+            let (p, _) = projetToLineSegment a b p 
+            p
+        | (t, u, v, w) when t >  eps && u >  eps && v <= eps && w <= eps -> b   //   II
+        | (t, u, v, w) when t <= eps && u >  eps && v <= eps && w <= eps ->     //  III
+            let (p, _) = projetToLineSegment b c p 
+            p
+        | (t, u, v, w) when t <= eps && u >  eps && v >  eps && w <= eps -> c   //   IV
+        | (t, u, v, w) when t <= eps && u <= eps && v >  eps && w <= eps ->     //    V 
+            let (p, _) = projetToLineSegment c d p 
+            p
+        | (t, u, v, w) when t <= eps && u <= eps && v >  eps && w >  eps -> d   //   VI
+        | (t, u, v, w) when t <= eps && u <= eps && v <= eps && w >  eps ->     //  VII
+            let (p, _) = projetToLineSegment d a p 
+            p
+        | (t, u, v, w) when t >  eps && u <= eps && v <= eps && w >  eps -> a   // VIII
         | _ -> p // all coordinates are positive
 
+
+
+
+    [<Literal>]
+    let CLAMP_POLYGON_RESULT_NONE = 0
+
+    [<Literal>]
+    let CLAMP_POLYGON_RESULT_POINT = 1
+
+    [<Literal>]
+    let CLAMP_POLYGON_RESULT_LINE = 2
+
+    (*
+        Clamps a point to a polyogn in 3D
+
+        Returns the clamped point + info regarding the clamping process
+
+        (clamped point, clamp state, p0_id, p1_id)
+
+        clamp state:
+        CLAMP_POLYGON_RESULT_NONE  => (clamped point, CLAMP_POLYGON_RESULT_NONE, -1, -1)
+
+        CLAMP_POLYGON_RESULT_POINT => (clamped point, CLAMP_POLYGON_RESULT_POINT, clamped to point id, -1)
+
+        CLAMP_POLYGON_RESULT_LINE  => (clamped point, CLAMP_POLYGON_RESULT_LINE, line point 0 id, line point 1 id) 
+            line is given counterclockwise
+    *)
     [<ReflectedDefinition>] 
     let clampPointToPolygon (v : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (vc : int) (p : V3d) (tps : M33d) = // tps = transformation to polygon space matrix
 
         if v.Length = 0 then
-            p
+            (p, CLAMP_POLYGON_RESULT_NONE, -1, -1)
         else
 
             let mutable v2d = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V2d>()
@@ -354,7 +408,7 @@ module EffectUtils =
                         linesPositiveDistanceCount                  <- linesPositiveDistanceCount + 1
                     
             if linesPositiveDistanceCount = 0 then
-                p
+                (p, CLAMP_POLYGON_RESULT_NONE, -1, -1)
             else
 
                 let mutable closestInit = false
@@ -365,12 +419,13 @@ module EffectUtils =
                 for i in 0 .. 2 .. (linesPositiveDistanceCount * 2) - 1 do
 
                     if not closestInit then
-                        closestPoint <- projetToLineSegment lines.[i] lines.[i + 1] p
+                        let projectedPoint, PROJECT_TO_LINE_RESULT = projetToLineSegment lines.[i] lines.[i + 1] p
+                        closestPoint <- projectedPoint
                         closestPointDist <- Vec.length (p - closestPoint)
                         closestInit <- true
                         closestLineSegmentIndex <- i
                     else
-                        let projectedPoint = projetToLineSegment lines.[i] lines.[i + 1] p
+                        let projectedPoint, PROJECT_TO_LINE_RESULT = projetToLineSegment lines.[i] lines.[i + 1] p
                         let dist = Vec.length (p - projectedPoint)
 
                         if dist < closestPointDist then
@@ -378,7 +433,8 @@ module EffectUtils =
                             closestPointDist <- dist
                             closestLineSegmentIndex <- i
                             
-                closestPoint // TODO: implement a little translation along normal of line to make sure that the point is really inside
+                // TODO: Return correct output
+                (closestPoint, CLAMP_POLYGON_RESULT_NONE, -1, -1)
                 
 
     [<ReflectedDefinition>] 
