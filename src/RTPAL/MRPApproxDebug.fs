@@ -150,8 +150,8 @@ module MRPApproxDebug =
 
                             let (closestPointDir, normPlanePointDir) = 
 
-                                let closestPoint = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-                                let normPlaneP =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
+                                let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                let (normPlaneP, _, _, _) =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
      
                                 (closestPoint |> Vec.normalize, normPlaneP |> Vec.normalize)
 

@@ -102,8 +102,8 @@ module EffectApMRP =
                                     
                                     let (closestPointDir, normPlanePDir) = 
                                         
-                                        let closestPoint = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-                                        let normPlaneP =   clampPointToPolygon clippedVa clippedVc normPlaneP t2l 
+                                        let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                        let (normPlaneP, _, _, _) =   clampPointToPolygon clippedVa clippedVc normPlaneP t2l 
      
                                         (closestPoint |> Vec.normalize, normPlaneP |> Vec.normalize)
                                     

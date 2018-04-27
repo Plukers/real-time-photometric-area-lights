@@ -240,8 +240,8 @@ module EffectApStructuredSampling =
                                     
                                     let (closestPoint, normPlanePoint) = 
                                         
-                                        let closestPoint = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-                                        let normPlanePoint =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
+                                        let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                        let (normPlanePoint, _, _, _) =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
      
                                         (closestPoint, normPlanePoint)
 
@@ -503,8 +503,8 @@ module EffectApStructuredSampling =
                                     
                                     let (closestPoint, normPlanePoint) = 
                                         
-                                        let closestPoint = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-                                        let normPlanePoint =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
+                                        let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                        let (normPlanePoint, _, _, _) =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
      
                                         (closestPoint, normPlanePoint)
                                     
@@ -813,8 +813,8 @@ module EffectApStructuredSampling =
                                     
                                 let (closestPoint, normPlanePoint) = 
                                         
-                                    let closestPoint = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-                                    let normPlanePoint =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
+                                    let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                    let (normPlanePoint, _, _, _) =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
      
                                     (closestPoint, normPlanePoint)
 

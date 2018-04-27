@@ -268,7 +268,8 @@ module EffectApPoissonSampling =
                                 
                                 if not insideLightPlane then
                                     
-                                    let closestPoint = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                    let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                    let closestPoint = closestPoint
 
                                     let (irr, weight) = sampleIrr t2w addr closestPoint
 

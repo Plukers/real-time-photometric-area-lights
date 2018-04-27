@@ -392,6 +392,7 @@ module EffectUtils =
             let mutable linesPositiveDistanceCount = 0
             let mutable linesPositiveDistanceIndex = 0
             let mutable lines                      = Arr<N<Config.Light.MAX_PATCH_SIZE_TIMES_TWO>, V3d>()
+            let mutable linesVIdx                  = Arr<N<Config.Light.MAX_PATCH_SIZE_TIMES_TWO>, int32>()
                         
             let eps = 1e-9
 
@@ -403,6 +404,9 @@ module EffectUtils =
                     if d > eps then
                         lines.[linesPositiveDistanceIndex]     <- v.[i]
                         lines.[linesPositiveDistanceIndex + 1] <- v.[(i + 1) % vc]
+
+                        linesVIdx.[linesPositiveDistanceIndex] <- i
+                        linesVIdx.[linesPositiveDistanceIndex + 1] <- (i + 1) % vc
                     
                         linesPositiveDistanceIndex                  <- linesPositiveDistanceIndex + 2
                         linesPositiveDistanceCount                  <- linesPositiveDistanceCount + 1
@@ -416,6 +420,10 @@ module EffectUtils =
                 let mutable closestPointDist = 0.0
                 let mutable closestLineSegmentIndex = 0
 
+                let mutable clampState = CLAMP_POLYGON_RESULT_NONE
+                let mutable cp0 = -1
+                let mutable cp1 = -1
+
                 for i in 0 .. 2 .. (linesPositiveDistanceCount * 2) - 1 do
 
                     if not closestInit then
@@ -424,6 +432,19 @@ module EffectUtils =
                         closestPointDist <- Vec.length (p - closestPoint)
                         closestInit <- true
                         closestLineSegmentIndex <- i
+
+                        match PROJECT_TO_LINE_RESULT with
+                        | PROJECT_TO_LINE_RESULT_A ->
+                            clampState <- CLAMP_POLYGON_RESULT_POINT
+                            cp0 <- linesVIdx.[i]
+                        | PROJECT_TO_LINE_RESULT_B ->
+                            clampState <- CLAMP_POLYGON_RESULT_POINT
+                            cp0 <- linesVIdx.[i + 1]
+                        | _ (* PROJECT_TO_LINE_RESULT_LINE *) ->
+                            clampState <- CLAMP_POLYGON_RESULT_LINE
+                            cp0 <- linesVIdx.[i]
+                            cp1 <- linesVIdx.[i + 1]
+
                     else
                         let projectedPoint, PROJECT_TO_LINE_RESULT = projetToLineSegment lines.[i] lines.[i + 1] p
                         let dist = Vec.length (p - projectedPoint)
@@ -432,10 +453,22 @@ module EffectUtils =
                             closestPoint <- projectedPoint
                             closestPointDist <- dist
                             closestLineSegmentIndex <- i
+
+                            match PROJECT_TO_LINE_RESULT with
+                            | PROJECT_TO_LINE_RESULT_A ->
+                                clampState <- CLAMP_POLYGON_RESULT_POINT
+                                cp0 <- linesVIdx.[i]
+                            | PROJECT_TO_LINE_RESULT_B ->
+                                clampState <- CLAMP_POLYGON_RESULT_POINT
+                                cp0 <- linesVIdx.[i + 1]
+                            | _ (* PROJECT_TO_LINE_RESULT_LINE *) ->
+                                clampState <- CLAMP_POLYGON_RESULT_LINE
+                                cp0 <- linesVIdx.[i]
+                                cp1 <- linesVIdx.[i + 1]
                             
-                // TODO: Return correct output
-                (closestPoint, CLAMP_POLYGON_RESULT_NONE, -1, -1)
-                
+
+                (closestPoint, clampState, cp0, cp1)
+
 
     [<ReflectedDefinition>] 
     let Lerp (a : V3d) (b : V3d) (s : float) : V3d = (1.0 - s) * a + s * b
