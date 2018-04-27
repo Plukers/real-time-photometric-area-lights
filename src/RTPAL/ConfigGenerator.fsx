@@ -34,6 +34,8 @@ let lightConfig =
 
     let (MAX_PATCH_SIZE_PLUS_ONE, c) = c |> newEntry "MAX_PATCH_SIZE_PLUS_ONE" (MAX_PATCH_SIZE + 1)
 
+    let (MAX_PATCH_SIZE_PLUS_TWO, c) = c |> newEntry "MAX_PATCH_SIZE_PLUS_TWO" (MAX_PATCH_SIZE + 2)
+
     let (MAX_PATCH_SIZE_MINUS_ONE, c) = c |> newEntry "MAX_PATCH_SIZE_MINUS_ONE" (MAX_PATCH_SIZE - 1)
     
     let (MAX_PATCH_SIZE_TIMES_TWO, c) = c |> newEntry "MAX_PATCH_SIZE_TIMES_TWO" (MAX_PATCH_SIZE * 2)

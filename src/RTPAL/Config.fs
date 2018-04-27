@@ -25,6 +25,9 @@ module Config =
         let MAX_PATCH_SIZE_PLUS_ONE = 5
                       
         [<Literal>]
+        let MAX_PATCH_SIZE_PLUS_TWO = 6
+                      
+        [<Literal>]
         let MAX_PATCH_SIZE_TIMES_TWO = 8
                       
         [<Literal>]

@@ -269,16 +269,15 @@ module EffectApPoissonSampling =
                                 if not insideLightPlane then
                                     
                                     let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-                                    let closestPoint = closestPoint
 
                                     let (irr, weight) = sampleIrr t2w addr closestPoint
 
                                     let mutable patchIllumination = irr
                                     let mutable weightSum = weight
 
-                                    let closestPoint2d = 
-                                        let cp = t2l * (closestPoint - clippedVa.[0])
-                                        V2d(cp.X, cp.Y)
+                                    let closestProjected = (t2l * (closestPoint - clippedVa.[0]))
+                                    let closestPoint2d = V2d(closestProjected.X, closestProjected.Y)
+                                       
 
                                     let (samples, sampleCnt) = createPoissonSamples closestPoint2d (int (0.5 * (v.fc.X + v.fc.Y) * (v.fc.X + v.fc.Y + 1.0) + v.fc.Y)) // https://math.stackexchange.com/questions/23503/create-unique-number-from-2-numbers
 
