@@ -91,6 +91,7 @@
     <Compile Include="ConfigGenerator.fsx" />
     <None Include="GenerateBlueNoise.fsx" />
     <None Include="GenerateSampleArray.fsx" />
+    <None Include="GenerateVoronoi.fsx" />
     <Compile Include="BlueNoiseSamples.fs" />
     <Compile Include="PoissonSampleCollection.fs" />
     <Compile Include="Config.fs" />
