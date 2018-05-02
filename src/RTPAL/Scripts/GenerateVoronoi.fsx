@@ -170,11 +170,11 @@ let computeVoronoiAreaWithPoint p =
 
 /// Generate Textures
 
-let texDimensions = V2i(256, 256)
+let texDimensions = V2i(1024, 1024)
 
 let normalize x y = 
-    let normalize v dim = (v |> float) / (dim |> float) |> clamp 0.0 1.0
-    (normalize x (texDimensions.X), normalize y (texDimensions.Y))
+    let normalize v dim = ((v |> float) + 0.5) / (dim |> float) |> clamp 0.0 1.0
+    (normalize x (texDimensions.X), 1.0 - normalize y (texDimensions.Y))
 
 
 let generateVoronoiTex pixelFunc texName =
@@ -186,7 +186,6 @@ let generateVoronoiTex pixelFunc texName =
     voronoiTex.SaveAsImage(Path.Combine("..", "misc", texName),PixFileFormat.Exr)
 
     printfn "Generated %A" (Path.Combine("..", "misc", texName))
-
 
 
 printfn "Generate Voronoi Texture of size %A" texDimensions
@@ -205,7 +204,9 @@ let pixelFuncB =
     let pFunc (x : int64) (y : int64) =        
         let p = normalize x y
         let areas, pUsed = computeVoronoiAreaWithPoint p   
-        C4f(areas |> Map.find 4, (if pUsed then areas |> Map.find 5 else 0.0), 0.0, 0.0) 
+
+        let pX, pY = p
+        C4f(areas |> Map.find 4, (if pUsed then areas |> Map.find 5 else 0.0), pX, pY) 
 
     Func<int64, int64, C4f>(pFunc)
 

@@ -88,10 +88,10 @@
   </Target>
   -->
   <ItemGroup>
-    <Compile Include="ConfigGenerator.fsx" />
-    <None Include="GenerateBlueNoise.fsx" />
-    <None Include="GenerateSampleArray.fsx" />
-    <None Include="GenerateVoronoi.fsx" />
+    <None Include="Scripts\GenerateVoronoi.fsx" />
+    <None Include="Scripts\ConfigGenerator.fsx" />
+    <None Include="Scripts\GenerateBlueNoise.fsx" />
+    <None Include="Scripts\GenerateSampleArray.fsx" />
     <Compile Include="BlueNoiseSamples.fs" />
     <Compile Include="PoissonSampleCollection.fs" />
     <Compile Include="Config.fs" />
@@ -108,6 +108,7 @@
     <Compile Include="EffectApBaumFF.fs" />
     <Compile Include="EffectApStructuredSampling.fs" />
     <Compile Include="EffectApPoissonSampling.fs" />
+    <Compile Include="EffectApVoronoiIrradianceIntegration.fs" />
     <Compile Include="EffectApDelaunayIrradianceIntegration.fs" />
     <Compile Include="EffectCompare.fs" />
     <Compile Include="EffectOutline.fs" />
