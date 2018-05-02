@@ -1,7 +1,7 @@
-﻿#r @"..\..\packages\Aardvark.Base\lib\net45\Aardvark.Base.dll"
-#r @"..\..\packages\Aardvark.Base.Essentials\lib\net45\Aardvark.Base.Essentials.dll"
-#r @"..\..\packages\Aardvark.Base.FSharp\lib\net45\Aardvark.Base.TypeProviders.dll"
-#r @"..\..\packages\Aardvark.Base.FSharp\lib\net45\Aardvark.Base.FSharp.dll"
+﻿#r @"..\..\..\packages\Aardvark.Base\lib\net45\Aardvark.Base.dll"
+#r @"..\..\..\packages\Aardvark.Base.Essentials\lib\net45\Aardvark.Base.Essentials.dll"
+#r @"..\..\..\packages\Aardvark.Base.FSharp\lib\net45\Aardvark.Base.TypeProviders.dll"
+#r @"..\..\..\packages\Aardvark.Base.FSharp\lib\net45\Aardvark.Base.FSharp.dll"
 
 open System
 open System.IO
@@ -383,7 +383,9 @@ let close =
     sprintf "   
             ]"
 
-File.WriteAllText("PoissonSampleCollection.fs", String.concat "" [ header; sampleStr; close ]);
+
+
+File.WriteAllText(Path.Combine("..", "PoissonSampleCollection.fs"), String.concat "" [ header; sampleStr; close ]);
 
 //let list = ['A'; 'B'; 'C'; 'D']
 

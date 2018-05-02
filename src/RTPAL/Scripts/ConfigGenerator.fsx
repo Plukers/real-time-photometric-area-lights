@@ -84,4 +84,4 @@ lightConfig |> Map.iter (fun entry value ->
     configStr <- String.concat "" [ configStr; entrystring ] 
     ()) 
                      
-File.WriteAllText("Config.fs", configStr);
+File.WriteAllText(Path.Combine("..", "Config.fs"), configStr);

@@ -677,8 +677,8 @@
                 let comp = renderFeedback.compareTexture.GetValue()
                             
                 let compPixData = app.Runtime.Download(comp |> unbox<_>)
-                let downlaoded = compPixData.ToPixImage<float32>()
-                let data = downlaoded.GetMatrix<C4f>()
+                let downloaded = compPixData.ToPixImage<float32>()
+                let data = downloaded.GetMatrix<C4f>()
                 //let ec = data.Elements |> Seq.fold ( fun (cs : double) c -> (double c.R) + cs) 0.0
 
                 let mutable ec : double = 0.0
