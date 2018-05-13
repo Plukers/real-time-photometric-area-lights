@@ -9,6 +9,77 @@ module EffectApDelaunayIrradianceIntegration =
     open EffectUtils
     open PhotometricLight
 
+    [<Literal>]
+    let MAX_EDGES = 10
+
+    [<Literal>]
+    let MAX_FACES = 5
+
+
+    (*
+            // vertices
+            // vertex0 (v0), opposite0 (o0), vertex1 (v1), opposite1 (o1)
+            let V = Arr<N<MAX_EDGES>, V4i>([
+                                            ])
+
+            // edges
+            // v0 -> o0, o0 -> v1, v1 -> o1, o1 -> v0
+            let E = Arr<N<MAX_EDGES>, V4i>([
+                                            ])
+
+            // meta    
+            // inside, marked
+            // 1 = true, 0 = false
+            let M = Arr<N<MAX_EDGES>, V2i>([
+                                            ])
+            
+            // faces
+            // (v0 + v1 + v2), v0, v1, v2
+            let F = Arr<N<MAX_FACES>, V4i>([
+                                            ])
+
+    *)
+
+    module QUAD_DATA =
+
+        module INSIDE =
+
+            // vertices
+            // vertex0 (v0), opposite0 (o0), vertex1 (v1), opposite1 (o1)
+            let V = Arr<N<MAX_EDGES>, V4i>([
+                                                V4i()
+                                            ])
+
+            // edges
+            // v0 -> o0, o0 -> v1, v1 -> o1, o1 -> v0
+            let E = Arr<N<MAX_EDGES>, V4i>([
+                                                V4i()
+                                            ])
+
+            // meta    
+            // inside, marked
+            // 1 = true, 0 = false
+            let M = Arr<N<MAX_EDGES>, V2i>([
+                                                V2i()
+                                            ])
+            
+            // faces
+            // (v0 + v1 + v2), v0, v1, v2
+            let F = Arr<N<MAX_FACES>, V4i>([
+                                                V4i()
+                                            ])
+
+            // stack of marked edges
+            let S = Arr<N<MAX_EDGES>, int>([
+                                                
+                                            ])
+
+            // stack pointer
+            let SP = 0
+
+        
+
+
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
         [<Normal>]          n       : V3d
@@ -83,14 +154,22 @@ module EffectApDelaunayIrradianceIntegration =
                                 if not insideLightPlane then
 
                                     let vt = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
-
-
-                                    
+                                                                        
                                     let (closestPoint, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-
 
                                     // create triangulation
 
+                                    match CLAMP_POLYGON_RESULT with
+                                    | CLAMP_POLYGON_RESULT_POINT -> ()
+                                    | CLAMP_POLYGON_RESULT_LINE -> ()
+                                    | _ (* CLAMP_POLYGON_RESULT_NONE *) -> ()
+
+
+
+                                    // transform to a Delaunay triangulation
+
+
+                                    // integrate
 
 
                                     ()
