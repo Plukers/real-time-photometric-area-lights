@@ -41,10 +41,19 @@ module EffectApDelaunayIrradianceIntegration =
         member uniform.quadMeta             : Arr<N<MAX_EDGES_ALL>, V2i>  = uniform?quadMeta 
         member uniform.quadFaces            : Arr<N<MAX_FACES_ALL>, V4i>  = uniform?quadFaces 
         member uniform.quadStack            : Arr<N<MAX_EDGES_ALL>, int>  = uniform?quadStack
-        member uniform.quadStackPointer     : Arr<N<NUM_CASE>, int>  = uniform?quadStackPointer
+        member uniform.quadStackPointer     : Arr<N<NUM_CASE>, int>       = uniform?quadStackPointer
 
     [<ReflectedDefinition>]
     let private IDHash a b c = 
+    
+        let (a, b, c) =
+            if a < b && a < c then
+                (a, b, c)
+            elif b < a && b < c then
+                (b, c, a)
+            else
+                (c, a, b)
+                
         (a <<< 20) ||| (b <<< 10) ||| c
 
     module QUAD_DATA =
@@ -86,6 +95,81 @@ module EffectApDelaunayIrradianceIntegration =
             
 
         module ALL =
+
+            (*
+
+            v0 is always the special point (e.g. closest)
+            The other points follow in counter clockwise order
+
+            CASE_CORNER
+
+             v3               e2                   v2
+                +--------------------------------+   
+                |                              --|   
+                |                            -/  |   
+                |                          -/    |   
+                |                        -/      |   
+                |                      -/        |   
+                |                   --/          |   
+                |                 -/             |   
+                |               -/               | e1
+             e3 |             -/  e4             |   
+                |          --/                   |   
+                |        -/                      |   
+                |      -/                        |   
+                |    -/                          |   
+                |  -/                            |   
+                |-/                              |   
+                +--------------------------------+   
+              v0                e0                 v1
+            
+
+            CASE_EDGE
+
+             v3               e2                   v2
+                +--------------------------------+   
+                |-                             - |   
+                | \                           /  |   
+                |  \                         /   |   
+                |   \                       /    |   
+                |    \                     /     |   
+                |     \                   /      |   
+                |      \                 /       |   
+                |       \ e6           -/        | e1
+             e3 |        \            / e5       |   
+                |         \          /           |   
+                |          \        /            |   
+                |           \      /             |   
+                |            \    /              |   
+                |             \  /               |   
+                |              \/                |   
+                +--------------------------------+   
+             v4         e4     v0        e0        v1
+
+
+            CASE_INSIDE
+                                                     
+               v4             e2                 v3  
+                +--------------------------------+   
+                |--                            --|   
+                |  \-                        -/  |   
+                |    \-                    -/    |   
+                |      \-e7           e6 -/      |   
+                |        \-            -/        |   
+                |          \--      --/          |   
+                |             \-  -/             |   
+                |               \- v0            | e1
+             e3 |             -/  \-             |   
+                |          --/      \--          |   
+                |        -/            \-        |   
+                |      -/ e4          e5 \-      |   
+                |    -/                    \-    |   
+                |  -/                        \-  |   
+                |-/                            \-|   
+                +--------------------------------+   
+              v1             e0                   v2 
+
+            *)
 
             // vertices
             // vertex0 (v0), opposite0 (o0), vertex1 (v1), opposite1 (o1)
@@ -255,7 +339,7 @@ module EffectApDelaunayIrradianceIntegration =
             
             // faces
             // (IDHash v0 v1 v2), v0, v1, v2
-            // v0 is the smallest ID, v0, v1, v2 ordered counter clockwise
+            // v0 should be the smallest ID, v0, v1, v2 ordered counter clockwise
             let F = Arr<N<MAX_FACES_ALL>, V4i>([
                                             // CASE_CORNER
                                                 V4i((IDHash 0 1 2), 0, 1, 2) 
@@ -389,21 +473,38 @@ module EffectApDelaunayIrradianceIntegration =
                                 
                                 if not insideLightPlane then
 
-                                    let vt = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
                                                                         
                                     let (closestPoint, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
 
                                     // create triangulation
 
-                                    match CLAMP_POLYGON_RESULT with
-                                    | CLAMP_POLYGON_RESULT_POINT -> ()
-                                    | CLAMP_POLYGON_RESULT_LINE -> ()
-                                    | _ (* CLAMP_POLYGON_RESULT_NONE *) -> ()
+                                    let (case, v1Idx) =
+                                        if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
+                                            (CASE_CORNER, clampP0Id)
+                                        elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
+                                            (CASE_EDGE, clampP1ID)
+                                        else (*CLAMP_POLYGON_RESULT =  CLAMP_POLYGON_RESULT_NONE *) 
+                                            (CASE_INSIDE, 0)
+                                                                                
+                                    let vt = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
+                                    if case <> CASE_CORNER then vt.[0] <- closestPoint |> Vec.normalize
+                                    for i in 0 .. clippedVc - 1 do vt.[i + 1] <- clippedVa.[v1Idx + i % clippedVc] |> Vec.normalize
+                                    let vc = if case <> CASE_CORNER then clippedVc + 1 else clippedVc
 
-
+                                    let delVertexData = QUAD_DATA.getInitVertexData case
+                                    let delNEdgeData = QUAD_DATA.getInitNeighbourEdgeData case
+                                    let delMetaData = QUAD_DATA.getInitMetaData case
+                                    let delFaceData = QUAD_DATA.getInitFaceData case
+                                    let (delStack, delSP) = QUAD_DATA.getInitStackData case
 
                                     // transform to a Delaunay triangulation
 
+                                    while delSP <> 0 do
+
+                                        // todo implement delaunay
+
+
+                                        ()
 
                                     // integrate
 
