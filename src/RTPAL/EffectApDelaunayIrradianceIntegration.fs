@@ -407,6 +407,22 @@ module EffectApDelaunayIrradianceIntegration =
         [<FragCoord>]       fc      : V4d
     }  
 
+    [<ReflectedDefinition>]
+    let private sampleIrr (t2w : M33d) (addr : int) (p : V3d) = 
+    
+        let i = p |> Vec.normalize  
+        let iw = t2w * -i
+ 
+        let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
+        // let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
+
+        getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+
+    // true if flip, false otherwise
+    [<ReflectedDefinition>]
+    let private localDelaunayFlipTest (a : V3d) (b : V3d) (c : V3d) (d : V3d) = (Vec.cross (b - c) (d - c) |> Vec.dot (a - c)) < 0.0     
+
+
     let delaunyIrrIntegration (v : Vertex) = 
         fragment {
 
@@ -476,6 +492,7 @@ module EffectApDelaunayIrradianceIntegration =
                                                                         
                                     let (closestPoint, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
 
+                                    ////////////////////////////////////////
                                     // create triangulation
 
                                     let (case, v1Idx) =
@@ -485,31 +502,115 @@ module EffectApDelaunayIrradianceIntegration =
                                             (CASE_EDGE, clampP1ID)
                                         else (*CLAMP_POLYGON_RESULT =  CLAMP_POLYGON_RESULT_NONE *) 
                                             (CASE_INSIDE, 0)
-                                                                                
-                                    let vt = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
-                                    if case <> CASE_CORNER then vt.[0] <- closestPoint |> Vec.normalize
-                                    for i in 0 .. clippedVc - 1 do vt.[i + 1] <- clippedVa.[v1Idx + i % clippedVc] |> Vec.normalize
-                                    let vc = if case <> CASE_CORNER then clippedVc + 1 else clippedVc
+                                     
+                                     
+                                    // XYZ -> Spherical coords; W -> luminance
+                                    let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V4d>() 
 
-                                    let delVertexData = QUAD_DATA.getInitVertexData case
-                                    let delNEdgeData = QUAD_DATA.getInitNeighbourEdgeData case
-                                    let delMetaData = QUAD_DATA.getInitMetaData case
-                                    let delFaceData = QUAD_DATA.getInitFaceData case
+                                    let mutable vc = clippedVc
+                                    if case <> CASE_CORNER then 
+                                        vertices.[0] <- V4d(closestPoint |> Vec.normalize, (sampleIrr t2w  addr closestPoint))
+                                        vc <- clippedVc + 1 
+                                    
+
+                                    for i in 0 .. clippedVc - 1 do 
+                                        vertices.[i + 1] <- V4d(clippedVa.[v1Idx + i % clippedVc] |> Vec.normalize, (sampleIrr t2w  addr clippedVa.[v1Idx + i % clippedVc]))
+                                    
+
+                                    let delVertexData   = QUAD_DATA.getInitVertexData case
+                                    let delNEdgeData    = QUAD_DATA.getInitNeighbourEdgeData case
+                                    let delMetaData     = QUAD_DATA.getInitMetaData case
+                                    let delFaceData     = QUAD_DATA.getInitFaceData case
                                     let (delStack, delSP) = QUAD_DATA.getInitStackData case
+                                    let mutable delSP = delSP
 
+                                    ////////////////////////////////////////
                                     // transform to a Delaunay triangulation
 
                                     while delSP <> 0 do
 
-                                        // todo implement delaunay
+                                        // get edge Id
+                                        let eId = delStack.[delSP]
+
+                                        // unmark edge
+                                        delMetaData.[eId] <- V2i(delMetaData.[eId].X, 0)
+                                        delSP <- delSP - 1
+                                        
+                                        let eVertices = delVertexData.[eId]
+                                        let eNEdges = delNEdgeData.[eId]
+
+                                        // test if edge is locally delaunay
+                                        let notLD = localDelaunayFlipTest (vertices.[eVertices.X].XYZ) (vertices.[eVertices.Y].XYZ) (vertices.[eVertices.Z].XYZ) (vertices.[eVertices.W].XYZ)
+
+                                        if notLD then
+                                            // flip edge
+
+                                            // left shift vertices and edges of edge to flip
+                                            delVertexData.[eId] <- V4i(eVertices.Y, eVertices.Z, eVertices.W, eVertices.X)
+                                            delNEdgeData.[eId] <- V4i(eNEdges.Y, eNEdges.Z, eNEdges.W, eNEdges.X)
+
+                                            // adopt faces
+                                            let ef0Id = IDHash (eVertices.X) (eVertices.Y) (eVertices.Z)
+                                            let ef1Id = IDHash (eVertices.Z) (eVertices.W) (eVertices.X)
+
+                                            for f in 0 .. MAX_FACES - 1 do
+                                                let face = delFaceData.[f]
+
+                                                if face.X = ef0Id then
+                                                    let fId = IDHash (delVertexData.[eId].X) (delVertexData.[eId].Y) (delVertexData.[eId].Z)
+                                                    delFaceData.[f] <- V4i(fId, (delVertexData.[eId].X), (delVertexData.[eId].Y), (delVertexData.[eId].Z))
+
+                                                if face.X = ef1Id then
+                                                    let fId = IDHash (delVertexData.[eId].Z) (delVertexData.[eId].W) (delVertexData.[eId].X)
+                                                    delFaceData.[f] <- V4i(fId, (delVertexData.[eId].Z), (delVertexData.[eId].W), (delVertexData.[eId].X))
+
+                                            
+                                            // adapt neighbour edges
+                                            for ne in 0 .. 3 do
+                                                let (neId, otherEdgesOfE, otherOppositeV) = 
+                                                    match ne with
+                                                    | 0 -> (eNEdges.X, eNEdges.ZW, eVertices.W)
+                                                    | 1 -> (eNEdges.Y, eNEdges.ZW, eVertices.W)
+                                                    | 2 -> (eNEdges.Z, eNEdges.XY, eVertices.Y)
+                                                    | _ -> (eNEdges.W, eNEdges.XY, eVertices.Y)
+
+                                                    
+                                                if eId = delNEdgeData.[neId].X then
+                                                    delNEdgeData.[neId] <- V4i(otherEdgesOfE.X, eId, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
+                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, otherOppositeV, delVertexData.[neId].Z, delVertexData.[neId].W)
+                                                elif eId = delNEdgeData.[neId].Y then
+                                                    delNEdgeData.[neId] <- V4i(eId, otherEdgesOfE.Y, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
+                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, otherOppositeV, delVertexData.[neId].Z, delVertexData.[neId].W)
+                                                elif eId = delNEdgeData.[neId].Z then
+                                                    delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, otherEdgesOfE.X, eId)
+                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, otherOppositeV)
+                                                else (* eId = neNEdges.W *)
+                                                    delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, eId, otherEdgesOfE.Y)
+                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, otherOppositeV)
+
+                                                // if inside and not marked add to stack
+                                                if delMetaData.[neId].X = 1 && delMetaData.[neId].Y = 0 then
+                                                    delMetaData.[neId] <- V2i(1, 1)
+                                                    delSP <- delSP + 1
+                                                    delStack.[delSP] <- neId
 
 
-                                        ()
-
+                                    ////////////////////////////////////////
                                     // integrate
 
+                                    for f in 0 .. MAX_FACES - 1 do
+                                        let face = delFaceData.[f]
 
-                                    ()
+                                        if face.X <> -1 then
+
+                                            let sum = (vertices.[face.Y].W + vertices.[face.Z].W + vertices.[face.W].W) / 3.0
+
+                                            let area =  computeSolidAngle (vertices.[face.Y].XYZ) (vertices.[face.Z].XYZ) (vertices.[face.W].XYZ)
+
+                                            illumination <- illumination + sum * area
+
+
+                                    
                            
                             ////////////////////////////////////////////////////////
                         

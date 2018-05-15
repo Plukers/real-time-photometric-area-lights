@@ -38,10 +38,16 @@ module EffectApVoronoiIrradianceIntegration =
         let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
         let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
 
-        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
-        let weight = voronoiArea * dotOut * invDistSquared
+        // let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+        // let areaToHemisphere = uniform.LAreas.[addr] * invDistSquared * dotOut //voronoiArea * dotOut * invDistSquared
+        // let weight = areaToHemisphere
+
+
+        // simplified
+        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
+        let weight = voronoiArea * invDistSquared  
         
-        (irr * i.Z * weight, i.Z * weight)
+        (irr * weight, weight)
 
     let voronoiIrrIntegration (v : Vertex) = 
         fragment {

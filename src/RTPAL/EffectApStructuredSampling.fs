@@ -112,9 +112,18 @@ module EffectApStructuredSampling =
 
             (irr * i.Z, i.Z)
         else
+
+            //let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+
+            //let areaToHemisphere =  uniform.LAreas.[addr]  * dotOut * invDistSquared
+
+            //(irr * i.Z * areaToHemisphere, i.Z * areaToHemisphere)
+
+
+            // simplified version
             let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
 
-            (irr * i.Z * invDistSquared, i.Z * (* uniform.LAreas.[addr] *) dotOut * invDistSquared)
+            (irr * invDistSquared, (* uniform.LAreas.[addr] * dotOut *) invDistSquared)
 
 
 
@@ -284,54 +293,15 @@ module EffectApStructuredSampling =
                                     if uniform.sampleRandom then        
                                         sampleCount <- sampleCount + uniform.numSRSamples
 
-
-                                    
-                                    let samplesWeightScale = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, float>()
-                                    let neighborhoodSize = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, int>() 
-                                                     
                                     let mutable patchIllumination = 0.0
                                     let mutable weightSum = 0.0
 
                                     if sampleIdx > 0 then
-                                        for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                            if r < sampleIdx then 
-                                                samplesWeightScale.[r] <- 1.0
-
-                                        if uniform.blendSamples then 
-
-                                            for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                                if r < sampleIdx then 
-
-                                                    for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                                        if r < o && o < sampleIdx then
-
-                                                            let dist  = Vec.length (samples.[r] - samples.[o])
-
-                                                            if dist < uniform.blendDistance then
-                                                                neighborhoodSize.[r] <- neighborhoodSize.[r] + 1
-                                                                neighborhoodSize.[o] <- neighborhoodSize.[o] + 1
-
-
-                                                    let scale = 
-                                                        if neighborhoodSize.[r] = 0 then
-                                                            1.0
-                                                        elif neighborhoodSize.[r] = 1 then
-                                                            MIN_WEIGHT_SCALE_FACTOR_1
-                                                        elif neighborhoodSize.[r] = 2 then 
-                                                            MIN_WEIGHT_SCALE_FACTOR_2
-                                                        else
-                                                            MIN_WEIGHT_SCALE_FACTOR_3
-
-                                                    for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                                        if o < sampleIdx && o <> r then
-                                                            let dist  = Vec.length (samples.[r] - samples.[o])
-                                                            samplesWeightScale.[r] <- (computeSampleScale (uniform.blendDistance) dist scale) * samplesWeightScale.[r]
-
                                         for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                             if l < sampleIdx then 
                                                 //let scale = uniform.weightScaleSRSamplesIrr * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDistIrr addr samples.[l]
 
-                                                let (irr, weight) = sampleIrr t2w samplesWeightScale.[l] addr samples.[l]
+                                                let (irr, weight) = sampleIrr t2w 1.0 addr samples.[l]
                                                 patchIllumination <- patchIllumination + irr
                                                 weightSum <- weightSum + weight
                                                        
@@ -380,8 +350,6 @@ module EffectApStructuredSampling =
                                     let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
                                     illumination <- illumination + L * brdf * I //* scale // * i.Z  
-                                    
-                                    
                                 ()
                                                                 
                             ////////////////////////////////////////////////////////

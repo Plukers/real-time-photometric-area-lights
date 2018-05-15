@@ -41,6 +41,7 @@ module Rendering =
         open EffectApStructuredSampling.Rendering
         open EffectApPoissonSampling.Rendering
         open EffectApVoronoiIrradianceIntegration.Rendering
+        open EffectApDelaunayIrradianceIntegration.Rendering
         open EffectCompare.Rendering
 
         open EffectFormFactor.Rendering
@@ -90,8 +91,9 @@ module Rendering =
                 |> Map.add RenderMode.BaumFFApprox                  (baumFFApproxFb         data            signature sceneSg |> applyTonemappingOnFb data signature)
                 |> Map.add RenderMode.StructuredIrrSampling         (ssIrrApproxFb          data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
                 |> Map.add RenderMode.StructuredSampling            (ssApproxFb             data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
-             // |> Map.add RenderMode.StructuredPoissonSampling     (psIrrApproxFb          data            signature sceneSg |> applyTonemappingOnFb data signature)
+              //|> Map.add RenderMode.StructuredPoissonSampling     (psIrrApproxFb          data            signature sceneSg |> applyTonemappingOnFb data signature)
                 |> Map.add RenderMode.VoronoiIrradianceSampling     (voronoiIrrIntApproxFb  data            signature sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.delaunyIrradianceSampling     (delIrrIntApproxFb      data            signature sceneSg |> applyTonemappingOnFb data signature)
                                            
                 |> Map.add RenderMode.FormFactor                    (formFactorFb           data            signature sceneSg)
                 |> Map.add RenderMode.SolidAngle                    (solidAngleFb           data saData     signature sceneSg)
