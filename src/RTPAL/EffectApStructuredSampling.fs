@@ -117,13 +117,17 @@ module EffectApStructuredSampling =
 
             //let areaToHemisphere =  uniform.LAreas.[addr]  * dotOut * invDistSquared
 
-            //(irr * i.Z * areaToHemisphere, i.Z * areaToHemisphere)
+            //(irr * areaToHemisphere, areaToHemisphere)
 
 
             // simplified version
             let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
 
-            (irr * invDistSquared, (* uniform.LAreas.[addr] * dotOut *) invDistSquared)
+            let weight = i.Z * invDistSquared  
+        
+            (irr * weight, weight * dotOut)
+
+            // (irr * invDistSquared, (* uniform.LAreas.[addr] * dotOut *) invDistSquared)
 
 
 

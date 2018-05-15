@@ -39,15 +39,17 @@ module EffectApVoronoiIrradianceIntegration =
         let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
 
         // let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
-        // let areaToHemisphere = uniform.LAreas.[addr] * invDistSquared * dotOut //voronoiArea * dotOut * invDistSquared
+
+        // let areaToHemisphere = uniform.LAreas.[addr] * invDistSquared * dotOut * i.Z //voronoiArea * dotOut * invDistSquared
+
         // let weight = areaToHemisphere
 
 
         // simplified
-        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
-        let weight = voronoiArea * invDistSquared  
+        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr]
+        let weight = voronoiArea * i.Z * invDistSquared  
         
-        (irr * weight, weight)
+        (irr * weight, weight * dotOut)
 
     let voronoiIrrIntegration (v : Vertex) = 
         fragment {
@@ -126,7 +128,7 @@ module EffectApVoronoiIrradianceIntegration =
 
                                     let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
                                     let closestProjected = (t2l * (closestPoint - clippedVa.[0]))
-                                    let closestPoint2d = V2d(closestProjected.X, closestProjected.Y)
+                                    let closestPoint2d = V2d(closestProjected.X, 1.0 - closestProjected.Y)
 
                                     let weights = 
                                         let wCorners = voronoiTexCorners.Sample(closestPoint2d)
