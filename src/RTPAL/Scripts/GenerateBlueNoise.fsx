@@ -1,6 +1,6 @@
-﻿#r @"..\..\..\packages\Aardvark.Base\lib\net45\Aardvark.Base.dll"
-#r @"..\..\..\packages\Aardvark.Base.Essentials\lib\net45\Aardvark.Base.Essentials.dll"
-#r @"..\..\..\packages\Aardvark.Base.FSharp\lib\net45\Aardvark.Base.FSharp.dll"
+﻿#r @"..\..\..\packages\Aardvark.Base\lib\netstandard2.0\Aardvark.Base.dll"
+#r @"..\..\..\packages\Aardvark.Base.Essentials\lib\netstandard2.0\Aardvark.Base.Essentials.dll"
+#r @"..\..\..\packages\Aardvark.Base.FSharp\lib\netstandard2.0\Aardvark.Base.FSharp.dll"
 
 open System
 open System.IO

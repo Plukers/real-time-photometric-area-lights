@@ -656,26 +656,26 @@ module EffectUtils =
 
             }
 
-    let debugShaderOutput shader = 
+    //let debugShaderOutput shader = 
    
-        let config =
-            EffectConfig.ofList [ 
-                Intrinsics.Color, typeof<V4d>, 0
-            ]
+    //    let config =
+    //        EffectConfig.ofList [ 
+    //            Intrinsics.Color, typeof<V4d>, 0
+    //        ]
 
-        let cModule = 
-            Effect.ofFunction shader
-               |> Effect.toModule config
-               |> ModuleCompiler.compile glsl410
+    //    let cModule = 
+    //        Effect.ofFunction shader
+    //           |> Effect.toModule config
+    //           |> ModuleCompiler.compile glsl410
 
-        let glsl = 
-            cModule
-                |> GLSL.Assembler.assemble glsl410
+    //    let glsl = 
+    //        cModule
+    //            |> GLSL.Assembler.assemble glsl410
                 
-        printfn "+--------- Start Shader Output ---------+"
-        printfn "%A" glsl.builtIns
-        printfn "%s" glsl.code
-        printfn "+---------- End Shader Output ----------+"
+    //    printfn "+--------- Start Shader Output ---------+"
+    //    printfn "%A" glsl.builtIns
+    //    printfn "%s" glsl.code
+    //    printfn "+---------- End Shader Output ----------+"
 
     module SphericalQuad = 
         (*

@@ -1,29 +1,28 @@
-framework: net45
+framework: net471
 source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://vrvis.myget.org/F/aardvark/api/v3/index.json
 
-nuget Aardvark.Base                    ~> 3.0.42
-nuget Aardvark.Base.Incremental        ~> 3.0.42
-nuget Aardvark.Base.FSharp             ~> 3.0.42
-nuget Aardvark.Base.Essentials         ~> 3.0.42
+nuget Aardvark.Base                    ~> 4.0.12
+nuget Aardvark.Base.Incremental        ~> 4.0.12
+nuget Aardvark.Base.FSharp             ~> 4.0.12
+nuget Aardvark.Base.Essentials         ~> 4.0.12
 
-nuget FShade.Debug					   ~> 3.3.17
+nuget FShade.Debug					   ~> 4.0.2
                                        
-nuget Aardvark.Base.Rendering          ~> 3.6.0
-nuget Aardvark.Application.WinForms.GL ~> 3.6.0
-nuget Aardvark.SceneGraph              ~> 3.6.0
-nuget Aardvark.SceneGraph.IO           ~> 3.6.0
-nuget Aardvark.Rendering.NanoVg        ~> 3.6.0
-nuget Aardvark.Rendering.Text          ~> 3.6.0
+nuget Aardvark.Base.Rendering          ~> 4.1.7
+nuget Aardvark.Application.WinForms.GL ~> 4.1.7
+nuget Aardvark.SceneGraph              ~> 4.1.7
+nuget Aardvark.SceneGraph.IO           ~> 4.1.7
+nuget Aardvark.Rendering.Text          ~> 4.1.7
                                        
-nuget Aardvark.Data.Photometry		   ~> 3.1.11
+nuget Aardvark.Data.Photometry		   ~> 4.0.4
  
-nuget Aardvark.UI            ~> 3.4.2
-nuget Aardvark.UI.Primitives ~> 3.4.2
-nuget Aardvark.Service       ~> 3.4.2
-nuget Aardvark.Cef.WinForms  ~> 3.4.2
-nuget Aardvark.Cef           ~> 3.4.2
+nuget Aardvark.UI            ~> 4.0.6
+nuget Aardvark.UI.Primitives ~> 4.0.6
+nuget Aardvark.Service       ~> 4.0.6
+nuget Aardvark.Cef.WinForms  ~> 4.0.6
+nuget Aardvark.Cef           ~> 4.0.6
 
 nuget Another.Unofficial.Xilium.CefGlue ~> 0.1.0
 nuget Another.Unofficial.Xilium.CefGlue.UnpackNativeDependencies ~> 0.1.0
@@ -32,9 +31,9 @@ nuget Another.Unofficial.Xilium.CefGlue.WindowsForms ~> 0.1.0
 
 
 group Build
-framework: net45
+framework: net471
 content: none
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 
-github vrvis/Aardvark.Fake:standalone
+github aardvark-platform/aardvark.fake:v4
