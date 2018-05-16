@@ -414,9 +414,13 @@ module EffectApDelaunayIrradianceIntegration =
         let iw = t2w * -i
  
         let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
-        // let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
+        let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
 
-        getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+        // simplified
+        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr]
+        let weight = i.Z * invDistSquared  
+
+        V2d(irr * weight, weight * dotOut)
 
     // true if flip, false otherwise
     [<ReflectedDefinition>]
@@ -504,30 +508,40 @@ module EffectApDelaunayIrradianceIntegration =
                                             (CASE_INSIDE, 0)
                                      
                                      
-                                    // XYZ -> Spherical coords; W -> luminance
-                                    let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V4d>() 
+                                    // XYZ -> Spherical coords; 
+                                    let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
+
+                                    // X -> luminance, Y -> Weight
+                                    let funVal = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V2d>() 
+
 
                                     let mutable vc = clippedVc
                                     if case <> CASE_CORNER then 
-                                        vertices.[0] <- V4d(closestPoint |> Vec.normalize, (sampleIrr t2w  addr closestPoint))
+                                        vertices.[0] <- closestPoint |> Vec.normalize
+                                        funVal.[0]   <- sampleIrr t2w addr closestPoint
                                         vc <- clippedVc + 1 
                                     
-
-                                    for i in 0 .. clippedVc - 1 do 
-                                        vertices.[i + 1] <- V4d(clippedVa.[v1Idx + i % clippedVc] |> Vec.normalize, (sampleIrr t2w  addr clippedVa.[v1Idx + i % clippedVc]))
+                                        for i in 0 .. clippedVc - 1 do 
+                                            vertices.[i + 1] <- clippedVa.[v1Idx + i % clippedVc] |> Vec.normalize
+                                            funVal.[i + 1]   <- sampleIrr t2w  addr clippedVa.[v1Idx + i % clippedVc]
+                                     
+                                    else
+                                        for i in 0 .. clippedVc - 1 do 
+                                            vertices.[i] <- clippedVa.[v1Idx + i % clippedVc] |> Vec.normalize
+                                            funVal.[i]   <- sampleIrr t2w  addr clippedVa.[v1Idx + i % clippedVc]
                                     
 
-                                    let delVertexData   = QUAD_DATA.getInitVertexData case
-                                    let delNEdgeData    = QUAD_DATA.getInitNeighbourEdgeData case
-                                    let delMetaData     = QUAD_DATA.getInitMetaData case
-                                    let delFaceData     = QUAD_DATA.getInitFaceData case
+                                    let delVertexData     = QUAD_DATA.getInitVertexData case
+                                    let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData case
+                                    let delMetaData       = QUAD_DATA.getInitMetaData case
+                                    let delFaceData       = QUAD_DATA.getInitFaceData case
                                     let (delStack, delSP) = QUAD_DATA.getInitStackData case
                                     let mutable delSP = delSP
 
                                     ////////////////////////////////////////
                                     // transform to a Delaunay triangulation
-
-                                    while delSP <> 0 do
+                                    (*
+                                    while false do // delSP <> -1 do
 
                                         // get edge Id
                                         let eId = delStack.[delSP]
@@ -542,7 +556,7 @@ module EffectApDelaunayIrradianceIntegration =
                                         // test if edge is locally delaunay
                                         let notLD = localDelaunayFlipTest (vertices.[eVertices.X].XYZ) (vertices.[eVertices.Y].XYZ) (vertices.[eVertices.Z].XYZ) (vertices.[eVertices.W].XYZ)
 
-                                        if notLD then
+                                        if false then // notLD then
                                             // flip edge
 
                                             // left shift vertices and edges of edge to flip
@@ -594,22 +608,40 @@ module EffectApDelaunayIrradianceIntegration =
                                                     delSP <- delSP + 1
                                                     delStack.[delSP] <- neId
 
-
+                                    *)
                                     ////////////////////////////////////////
                                     // integrate
+
+                                    let mutable patchIllumination = 0.0
+                                    let mutable weightSum = 0.0
 
                                     for f in 0 .. MAX_FACES - 1 do
                                         let face = delFaceData.[f]
 
                                         if face.X <> -1 then
 
-                                            let sum = (vertices.[face.Y].W + vertices.[face.Z].W + vertices.[face.W].W) / 3.0
+                                            
+                                            let area =  computeSolidAngle (vertices.[face.Y]) (vertices.[face.Z]) (vertices.[face.W])
 
-                                            let area =  computeSolidAngle (vertices.[face.Y].XYZ) (vertices.[face.Z].XYZ) (vertices.[face.W].XYZ)
+                                            patchIllumination <- patchIllumination + area * (funVal.[face.Y].X + funVal.[face.Z].X + funVal.[face.W].X) / 3.0
+                                            weightSum <- weightSum + area * (funVal.[face.Y].Y + funVal.[face.Z].Y + funVal.[face.W].Y) / 3.0
 
-                                            illumination <- illumination + sum * area
 
+                                    let L =
+                                        if weightSum > 0.0 then
+                                            patchIllumination / weightSum
+                                        else 
+                                            0.0
 
+                                    
+                                    for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                            if l < clippedVc then
+                                                // Project polygon light onto sphere
+                                                clippedVa.[l] <- Vec.normalize clippedVa.[l]
+                                                
+                                    let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
+                                        
+                                    illumination <- illumination + L * brdf * I //* scale // * i.Z  
                                     
                            
                             ////////////////////////////////////////////////////////

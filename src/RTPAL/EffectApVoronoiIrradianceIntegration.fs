@@ -3,7 +3,11 @@
 module EffectApVoronoiIrradianceIntegration = 
     open Aardvark.Base
     open Aardvark.Base.Rendering
+
+    
+    open Aardvark.Base.ShaderReflection
     open FShade
+    open FShade.Imperative
 
     open Light.Effect
     open EffectUtils
@@ -128,7 +132,7 @@ module EffectApVoronoiIrradianceIntegration =
 
                                     let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
                                     let closestProjected = (t2l * (closestPoint - clippedVa.[0]))
-                                    let closestPoint2d = V2d(closestProjected.X, 1.0 - closestProjected.Y)
+                                    let closestPoint2d = V2d(closestProjected.X, closestProjected.Y)
 
                                     let weights = 
                                         let wCorners = voronoiTexCorners.Sample(closestPoint2d)
@@ -198,21 +202,24 @@ module EffectApVoronoiIrradianceIntegration =
 
         let voronoiIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
 
+
             let voronoiTexA = FileTexture(Path.combine [__SOURCE_DIRECTORY__;"misc";"voronoiTexA.exr"], TextureParams.empty)
             let voronoiTexB = FileTexture(Path.combine [__SOURCE_DIRECTORY__;"misc";"voronoiTexB.exr"], TextureParams.empty)
 
             sceneSg
-                |> setupFbEffects [ 
-                        voronoiIrrIntegration |> toEffect
-                    ]
-                |> Light.Sg.setLightCollectionUniforms data.lights
-                |> setupPhotometricData data.photometricData
-                |> setupCamera data.view data.projTrafo data.viewportSize 
-                |> setUniformDT data.dt
-                |> setUniformUsePhotometry data.usePhotometry
-                |> Sg.texture (Sym.ofString "voronoiTexCorners")       ((voronoiTexA :> ITexture) |> Mod.constant)    
-                |> Sg.texture (Sym.ofString "voronoiTexCenterCustom")  ((voronoiTexB :> ITexture) |> Mod.constant)    
-                |> Sg.compile data.runtime signature
+            |> setupFbEffects [ 
+                    voronoiIrrIntegration |> toEffect
+                ]
+            |> Light.Sg.setLightCollectionUniforms data.lights
+            |> setupPhotometricData data.photometricData
+            |> setupCamera data.view data.projTrafo data.viewportSize 
+            |> setUniformDT data.dt
+            |> setUniformUsePhotometry data.usePhotometry
+            |> Sg.texture (Sym.ofString "voronoiTexCorners")       ((voronoiTexA :> ITexture) |> Mod.constant)    
+            |> Sg.texture (Sym.ofString "voronoiTexCenterCustom")  ((voronoiTexB :> ITexture) |> Mod.constant)    
+            |> Sg.compile data.runtime signature
+
+
 
         let voronoiIrrIntApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
             voronoiIrrIntApproxRenderTask data signature sceneSg
