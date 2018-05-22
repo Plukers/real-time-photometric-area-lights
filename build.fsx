@@ -1,4 +1,4 @@
-#load @"paket-files/build/vrvis/Aardvark.Fake/DefaultSetup.fsx"
+#load @"paket-files/build/aardvark-platform/aardvark.fake/DefaultSetup.fsx"
 
 open Fake
 open System
@@ -12,11 +12,6 @@ DefaultSetup.install ["src/RTPAL.sln"]
 
 Target "Run" (fun() ->
     tracefn "exec: %d" (Shell.Exec "bin/Release/RTPAL.exe")
-)
-
-Target "Test" (fun () ->
-    Fake.NUnitSequential.NUnit (fun p -> { p with ToolPath = @"packages\NUnit.Runners\tools"
-                                                  ToolName = "nunit-console.exe" }) [@"bin\Release\Aardvark.Base.Incremental.Tests.exe"]
 )
 
 Target "Statistics" (fun () ->
