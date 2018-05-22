@@ -522,7 +522,7 @@ module EffectApDelaunayIrradianceIntegration =
                                         offset <- 1
 
                                     // is the point in front of the light or behind?
-                                    // if in front, iterate the light vertices backwards for counter clockwise order
+                                    // if behind, iterate the light vertices backwards for counter clockwise order
                                     if Vec.dot (uniform.LForwards.[addr]) (t2w *(closestPoint |> Vec.normalize)) < 0.0 then 
                                     
                                         for i in 0 .. clippedVc - 1 do 
