@@ -523,7 +523,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     // is the point in front of the light or behind?
                                     // if in front, iterate the light vertices backwards for counter clockwise order
-                                    if Vec.dot (uniform.LForwards.[addr]) ((closestPoint - P) |> Vec.normalize) < 0.0 then 
+                                    if Vec.dot (uniform.LForwards.[addr]) (t2w *(closestPoint |> Vec.normalize)) < 0.0 then 
                                     
                                         for i in 0 .. clippedVc - 1 do 
                                             vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] 
@@ -531,12 +531,13 @@ module EffectApDelaunayIrradianceIntegration =
                                             funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
                                             
                                     else
-
+                                        let mutable j = 0
                                         for i in clippedVc - 1 .. -1 .. 0 do 
-                                            vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] 
-                                            verticesNormalized.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
-                                            funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
-                                   
+                                            vertices.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc] 
+                                            verticesNormalized.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
+                                            funVal.[j + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
+                                                
+                                            j <- j + 1
 
                                     let delVertexData     = QUAD_DATA.getInitVertexData case
                                     let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData case
@@ -571,7 +572,7 @@ module EffectApDelaunayIrradianceIntegration =
                                             let c = verticesNormalized.[eVertices.Z].XYZ
                                             let d = verticesNormalized.[eVertices.W].XYZ
                                             
-                                            (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
+                                            (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) > 0.0     
 
                                         oneNotLd <- oneNotLd || notLD
                                         
@@ -667,6 +668,15 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     if oneNotLd then
                                         illumination <- V4d(1.0, 1.0, 1.0, 0.0)
+
+
+
+                                    // if Vec.dot (uniform.LForwards.[addr]) (t2w *((closestPoint - P) |> Vec.normalize)) < 0.0 then
+                                    //let dot = Vec.dot (uniform.LForwards.[addr]) (t2w *(closestPoint|> Vec.normalize))
+                                    //if dot < 0.0 then
+                                    //    illumination <- V4d(dot / 2.0 + 1.0, 0.0, 0.0, 0.0)
+                                    //else
+                                    //    illumination <- V4d(0.0, 0.0, dot / 2.0 + 1.0, 0.0)
                                     
                                     (*
                                     if case = CASE_CORNER then 
