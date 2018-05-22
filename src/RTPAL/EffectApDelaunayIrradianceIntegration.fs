@@ -550,7 +550,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     let mutable oneNotLd = false
                                     
-                                    while delSP <> -1 do
+                                    while delSP >= 0 do
 
                                         // get edge Id
                                         let eId = delStack.[delSP]
@@ -574,7 +574,7 @@ module EffectApDelaunayIrradianceIntegration =
                                             (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
 
                                         oneNotLd <- oneNotLd || notLD
-                                        delSP <- delSP - 1
+                                        
                                         if false then
                                             // flip edge
 
