@@ -495,7 +495,7 @@
         // let view = CameraView.lookAt (V3d(1.0, 0.0, 0.0)) (V3d(-1.0, 0.0, -1.0)) V3d.OOI
         
         let view = 
-            CameraView.lookAt (V3d(2.0, 0.0, 3.0)) (V3d(-4.0, 0.0, -1.0)) V3d.OOI
+            CameraView.lookAt (V3d(8.0, 0.0, 3.0)) (V3d(-11.0, 0.0, -1.0)) V3d.OOI
             |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
         let projTrafo =
             Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y)

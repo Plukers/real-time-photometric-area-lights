@@ -409,7 +409,7 @@ module EffectApDelaunayIrradianceIntegration =
 
     [<ReflectedDefinition>]
     let private sampleIrr (t2w : M33d) (addr : int) (p : V3d) = 
-    
+
         let i = p |> Vec.normalize  
         let iw = t2w * -i
  
@@ -421,11 +421,6 @@ module EffectApDelaunayIrradianceIntegration =
         let weight = i.Z * invDistSquared  
 
         V2d(irr * weight, weight * dotOut)
-
-    // true if flip, false otherwise
-    [<ReflectedDefinition>]
-    let private localDelaunayFlipTest (a : V3d) (b : V3d) (c : V3d) (d : V3d) = (Vec.cross (b - c) (d - c) |> Vec.dot (a - c)) < 0.0     
-
 
     let delaunyIrrIntegration (v : Vertex) = 
         fragment {
@@ -509,6 +504,8 @@ module EffectApDelaunayIrradianceIntegration =
                                      
                                      
                                     // XYZ -> Spherical coords; 
+                                    let verticesNormalized = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
+
                                     let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
 
                                     // X -> luminance, Y -> Weight
@@ -516,20 +513,30 @@ module EffectApDelaunayIrradianceIntegration =
 
 
                                     let mutable vc = clippedVc
+                                    let mutable offset = 0
                                     if case <> CASE_CORNER then 
-                                        vertices.[0] <- closestPoint |> Vec.normalize
+                                        vertices.[0] <- closestPoint
+                                        verticesNormalized.[0] <- closestPoint |> Vec.normalize
                                         funVal.[0]   <- sampleIrr t2w addr closestPoint
-                                        vc <- clippedVc + 1 
+                                        vc <- vc + 1 
+                                        offset <- 1
+
+                                    // is the point in front of the light or behind?
+                                    // if in front, iterate the light vertices backwards for counter clockwise order
+                                    if Vec.dot (uniform.LForwards.[addr]) ((closestPoint - P) |> Vec.normalize) < 0.0 then 
                                     
                                         for i in 0 .. clippedVc - 1 do 
-                                            vertices.[i + 1] <- clippedVa.[v1Idx + i % clippedVc] |> Vec.normalize
-                                            funVal.[i + 1]   <- sampleIrr t2w  addr clippedVa.[v1Idx + i % clippedVc]
-                                     
+                                            vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] 
+                                            verticesNormalized.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
+                                            funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
+                                            
                                     else
-                                        for i in 0 .. clippedVc - 1 do 
-                                            vertices.[i] <- clippedVa.[v1Idx + i % clippedVc] |> Vec.normalize
-                                            funVal.[i]   <- sampleIrr t2w  addr clippedVa.[v1Idx + i % clippedVc]
-                                    
+
+                                        for i in clippedVc - 1 .. -1 .. 0 do 
+                                            vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] 
+                                            verticesNormalized.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
+                                            funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
+                                   
 
                                     let delVertexData     = QUAD_DATA.getInitVertexData case
                                     let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData case
@@ -540,8 +547,10 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     ////////////////////////////////////////
                                     // transform to a Delaunay triangulation
-                                    (*
-                                    while false do // delSP <> -1 do
+
+                                    let mutable oneNotLd = false
+                                    
+                                    while delSP <> -1 do
 
                                         // get edge Id
                                         let eId = delStack.[delSP]
@@ -554,9 +563,19 @@ module EffectApDelaunayIrradianceIntegration =
                                         let eNEdges = delNEdgeData.[eId]
 
                                         // test if edge is locally delaunay
-                                        let notLD = localDelaunayFlipTest (vertices.[eVertices.X].XYZ) (vertices.[eVertices.Y].XYZ) (vertices.[eVertices.Z].XYZ) (vertices.[eVertices.W].XYZ)
+                                            // true if flip, false otherwise
+    
+                                        let notLD = 
+                                            let a = verticesNormalized.[eVertices.X].XYZ
+                                            let b = verticesNormalized.[eVertices.Y].XYZ
+                                            let c = verticesNormalized.[eVertices.Z].XYZ
+                                            let d = verticesNormalized.[eVertices.W].XYZ
+                                            
+                                            (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
 
-                                        if false then // notLD then
+                                        oneNotLd <- oneNotLd || notLD
+                                        delSP <- delSP - 1
+                                        if false then
                                             // flip edge
 
                                             // left shift vertices and edges of edge to flip
@@ -608,10 +627,12 @@ module EffectApDelaunayIrradianceIntegration =
                                                     delSP <- delSP + 1
                                                     delStack.[delSP] <- neId
 
-                                    *)
+                                    
                                     ////////////////////////////////////////
                                     // integrate
 
+                                    
+                                    (*
                                     let mutable patchIllumination = 0.0
                                     let mutable weightSum = 0.0
 
@@ -642,7 +663,36 @@ module EffectApDelaunayIrradianceIntegration =
                                     let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
                                     illumination <- illumination + L * brdf * I //* scale // * i.Z  
+                                    *)
+
+                                    if oneNotLd then
+                                        illumination <- V4d(1.0, 1.0, 1.0, 0.0)
                                     
+                                    (*
+                                    if case = CASE_CORNER then 
+                                        illumination <- V4d(1.0, 0.0, 0.0, 0.0)
+                                        if (Vec.length (vertices.[0] - (closestPoint |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[1] - (clippedVa.[(v1Idx + 1) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[2] - (clippedVa.[(v1Idx + 2) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[3] - (clippedVa.[(v1Idx + 3) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        then illumination <- illumination + V4d(0.0, 1.0, 1.0, 0.0)
+                                    elif case = CASE_EDGE then
+                                        illumination <- V4d(0.0, 1.0, 0.0, 0.0)
+                                        if (Vec.length (vertices.[0] - (closestPoint |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[1] - (clippedVa.[(v1Idx + 0) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[2] - (clippedVa.[(v1Idx + 1) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[3] - (clippedVa.[(v1Idx + 2) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[4] - (clippedVa.[(v1Idx + 3) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        then illumination <- illumination + V4d(1.0, 0.0, 1.0, 0.0)
+                                    else
+                                        illumination <- V4d(0.0, 0.0, 1.0, 0.0)
+                                        if (Vec.length (vertices.[0] - (closestPoint |> Vec.normalize))) < 1e-5
+                                        && (Vec.length (vertices.[1] - (clippedVa.[(v1Idx + 0) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[2] - (clippedVa.[(v1Idx + 1) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[3] - (clippedVa.[(v1Idx + 2) % clippedVc] |> Vec.normalize))) < 1e-5 
+                                        && (Vec.length (vertices.[4] - (clippedVa.[(v1Idx + 3) % clippedVc] |> Vec.normalize))) < 1e-5                                      
+                                        then illumination <- illumination + V4d(1.0, 1.0, 0.0, 0.0)
+                                    *)
                            
                             ////////////////////////////////////////////////////////
                         
