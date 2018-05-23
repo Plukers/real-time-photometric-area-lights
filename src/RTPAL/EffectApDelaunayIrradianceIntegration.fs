@@ -404,7 +404,6 @@ module EffectApDelaunayIrradianceIntegration =
         [<WorldPosition>]   wp      : V4d
         [<Normal>]          n       : V3d
         [<Color>]           c       : V4d
-        [<FragCoord>]       fc      : V4d
     }  
 
     [<ReflectedDefinition>]
@@ -711,6 +710,337 @@ module EffectApDelaunayIrradianceIntegration =
 
         }
 
+    module Debug =
+
+        open System
+
+        open Aardvark.Base
+        open Aardvark.Base.Incremental
+        open Aardvark.Base.Rendering
+
+        open Aardvark.SceneGraph
+
+        open Light
+
+        open EffectUtils
+
+
+        let private slerp (p0 : V3d) (p1 : V3d) (t : float) = 
+
+            let t = clamp 0.0 1.0 t
+
+            let omega = Vec.dot p0 p1 |> Math.Acos
+            let sinOmega = Math.Sin omega 
+
+            let a = (Math.Sin ((1.0 - t) * omega)) / sinOmega
+            let b = (Math.Sin (t * omega)) / sinOmega
+
+            a * p0 + b * p1
+
+        
+        let private pointSg (radius : float) color trafo = 
+            IndexedGeometryPrimitives.solidSubdivisionSphere (Sphere3d(V3d.Zero, radius)) 6 color
+            |> Sg.ofIndexedGeometry
+            |> Sg.trafo trafo
+            |> Sg.effect [
+                    DefaultSurfaces.trafo |> toEffect
+                    DefaultSurfaces.vertexColor |> toEffect
+                ]
+
+        let private arcSg (p0 : V3d) (p1 : V3d) (color : C4b) trafo =
+
+            let arcSegments = seq {
+                                let mutable lastPoint = p0
+                                for t in 0.0 .. 0.05 .. 1.0 do
+                                    let nextPoint = slerp p0 p1 t
+                                        
+                                    yield (Line3d(lastPoint, nextPoint), color)
+                                    lastPoint <- nextPoint
+
+                                }
+
+            IndexedGeometryPrimitives.lines arcSegments
+                |> Sg.ofIndexedGeometry
+                |> Sg.trafo trafo
+                |> Sg.effect [
+                        DefaultSurfaces.trafo |> toEffect
+                        DefaultSurfaces.vertexColor |> toEffect
+                    ]
+            
+        let M33dFromCols (c1 : V3d) (c2 : V3d) (c3 : V3d) =
+            M33d(c1.X, c2.X, c3.X, c1.Y, c2.Y, c3.Y, c1.Z, c2.Z, c3.Z)
+
+        let basisFrisvad (n : V3d) = 
+            let c1 = V3d(
+                        1.0 - (n.X  * n.X) / (1.0 + n.Z),
+                        (-n.X * n.Y) / (1.0 + n.Z),
+                        -n.X
+                        )
+
+            let c2 = V3d(
+                        (-n.X * n.Y) / (1.0 + n.Z),
+                        1.0 - (n.Y  * n.Y) / (1.0 + n.Z),
+                        -n.Y
+                        )
+
+            let c3 = n
+            
+            M33dFromCols c1 c2 c3
+
+        let v = {
+            wp = V4d.Zero
+            n = V3d.OOI
+            c = V4d.One 
+        }
+           
+            
+        let delaunyScene (lc : Light.LightCollection) = 
+
+            let lc = 
+                adaptive {
+                    let! lights = lc.Lights
+                    let! patchIndices = lc.PatchIndices
+                    let! vertices = lc.Vertices
+                    let! baseComponents = lc.BaseComponents
+                    let! forwards = lc.Forwards
+                    let! ups = lc.Ups
+
+                    return (lights, patchIndices, vertices, baseComponents, forwards, ups)
+
+                }
+
+            lc |> Mod.map (fun lc ->
+
+                let (lights, lPatchIndices, lVertices, lBaseComponents, lForwards, lUps) = lc
+
+                ////////////////////////////////////////////////////////
+                // SHADER START
+
+                let P = v.wp.XYZ
+
+                let t2w = v.n |> Vec.normalize |> basisFrisvad 
+                let w2t = t2w |> Mat.transpose
+
+                let brdf = v.c / PI 
+
+                let mutable illumination = V4d.Zero
+            
+                ////////////////////////////////////////////////////////
+
+                let addr = 0
+ 
+                let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+
+                ////////////////////////////////////////////////////////
+
+                let l2w = M33dFromCols  (V3d.Cross((lUps.[addr]), (lForwards.[addr]))) lUps.[addr] lForwards.[addr]
+                            
+                let w2l = l2w |> Mat.transpose
+
+                let t2l = w2l * t2w
+
+                let l2t = l2w * w2t
+
+                ////////////////////////////////////////////////////////
+
+                let iIdx = 0
+
+                let vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
+                            
+                for vtc in 0 .. lBaseComponents.[addr] - 1 do
+                    let vtcAddr = lPatchIndices.[iIdx + vtc] + vAddr
+                    vt.[vtc] <- w2t * (lVertices.[vtcAddr] - P)
+
+                ////////////////////////////////////////////////////////
+
+                let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, lBaseComponents.[addr])
+
+                if clippedVc <> 0 then
+
+                    let eps = 1e-9
+
+                    let lightPlaneN = w2t * lForwards.[addr] |> Vec.normalize   
+
+                    // find closest point limited to upper hemisphere
+                    let t = (- clippedVa.[0]) |> Vec.dot lightPlaneN
+                    let mutable closestPoint = t * (-lightPlaneN)
+                                                    
+                    if (Vec.dot closestPoint V3d.OOI) < 0.0 then
+                        let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
+                        closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
+                                    
+                    let insideLightPlane = (Vec.length closestPoint) < eps
+                                
+                    if not insideLightPlane then
+
+                                                                        
+                        let (closestPoint, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+
+                        ////////////////////////////////////////
+                        // create triangulation
+
+                        let (case, v1Idx) =
+                            if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
+                                (CASE_CORNER, clampP0Id)
+                            elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
+                                (CASE_EDGE, clampP1ID)
+                            else (*CLAMP_POLYGON_RESULT =  CLAMP_POLYGON_RESULT_NONE *) 
+                                (CASE_INSIDE, 0)
+                                     
+                                     
+                        // XYZ -> Spherical coords; 
+                        let verticesNormalized = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
+
+                        let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
+
+                        // X -> luminance, Y -> Weight
+                        // let funVal = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V2d>() 
+
+
+                        let mutable vc = clippedVc
+                        let mutable offset = 0
+                        if case <> CASE_CORNER then 
+                            vertices.[0] <- closestPoint
+                            verticesNormalized.[0] <- closestPoint |> Vec.normalize
+                            // funVal.[0]   <- sampleIrr t2w addr closestPoint
+                            vc <- vc + 1 
+                            offset <- 1
+
+                        // is the point in front of the light or behind?
+                        // if behind, iterate the light vertices backwards for counter clockwise order
+                        if Vec.dot (lForwards.[addr]) (t2w *(closestPoint |> Vec.normalize)) < 0.0 then 
+                                    
+                            for i in 0 .. clippedVc - 1 do 
+                                vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] 
+                                verticesNormalized.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
+                                // funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
+                                            
+                        else
+                            let mutable j = 0
+                            for i in clippedVc - 1 .. -1 .. 0 do 
+                                vertices.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc] 
+                                verticesNormalized.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
+                                // funVal.[j + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
+                                                
+                                j <- j + 1
+
+                        let delVertexData     = QUAD_DATA.getInitVertexData case
+                        let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData case
+                        let delMetaData       = QUAD_DATA.getInitMetaData case
+                        let delFaceData       = QUAD_DATA.getInitFaceData case
+                        let (delStack, delSP) = QUAD_DATA.getInitStackData case
+                        let mutable delSP = delSP
+
+                        ////////////////////////////////////////
+                        // transform to a Delaunay triangulation
+
+                        let mutable oneNotLd = false
+                                    
+                        while delSP >= 0 do
+
+                            // get edge Id
+                            let eId = delStack.[delSP]
+
+                            // unmark edge
+                            delMetaData.[eId] <- V2i(delMetaData.[eId].X, 0)
+                            delSP <- delSP - 1
+                                        
+                            let eVertices = delVertexData.[eId]
+                            let eNEdges = delNEdgeData.[eId]
+
+                            // test if edge is locally delaunay
+                                // true if flip, false otherwise
+    
+                            let notLD = 
+                                let a = verticesNormalized.[eVertices.X].XYZ
+                                let b = verticesNormalized.[eVertices.Y].XYZ
+                                let c = verticesNormalized.[eVertices.Z].XYZ
+                                let d = verticesNormalized.[eVertices.W].XYZ
+                                            
+                                (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) > 0.0     
+
+                            oneNotLd <- oneNotLd || notLD
+                                        
+                            if false then
+                                // flip edge
+
+                                // left shift vertices and edges of edge to flip
+                                delVertexData.[eId] <- V4i(eVertices.Y, eVertices.Z, eVertices.W, eVertices.X)
+                                delNEdgeData.[eId] <- V4i(eNEdges.Y, eNEdges.Z, eNEdges.W, eNEdges.X)
+
+                                // adopt faces
+                                let ef0Id = IDHash (eVertices.X) (eVertices.Y) (eVertices.Z)
+                                let ef1Id = IDHash (eVertices.Z) (eVertices.W) (eVertices.X)
+
+                                for f in 0 .. MAX_FACES - 1 do
+                                    let face = delFaceData.[f]
+
+                                    if face.X = ef0Id then
+                                        let fId = IDHash (delVertexData.[eId].X) (delVertexData.[eId].Y) (delVertexData.[eId].Z)
+                                        delFaceData.[f] <- V4i(fId, (delVertexData.[eId].X), (delVertexData.[eId].Y), (delVertexData.[eId].Z))
+
+                                    if face.X = ef1Id then
+                                        let fId = IDHash (delVertexData.[eId].Z) (delVertexData.[eId].W) (delVertexData.[eId].X)
+                                        delFaceData.[f] <- V4i(fId, (delVertexData.[eId].Z), (delVertexData.[eId].W), (delVertexData.[eId].X))
+
+                                            
+                                // adapt neighbour edges
+                                for ne in 0 .. 3 do
+                                    let (neId, otherEdgesOfE, otherOppositeV) = 
+                                        match ne with
+                                        | 0 -> (eNEdges.X, eNEdges.ZW, eVertices.W)
+                                        | 1 -> (eNEdges.Y, eNEdges.ZW, eVertices.W)
+                                        | 2 -> (eNEdges.Z, eNEdges.XY, eVertices.Y)
+                                        | _ -> (eNEdges.W, eNEdges.XY, eVertices.Y)
+
+                                                    
+                                    if eId = delNEdgeData.[neId].X then
+                                        delNEdgeData.[neId] <- V4i(otherEdgesOfE.X, eId, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
+                                        delVertexData.[neId] <- V4i(delVertexData.[neId].X, otherOppositeV, delVertexData.[neId].Z, delVertexData.[neId].W)
+                                    elif eId = delNEdgeData.[neId].Y then
+                                        delNEdgeData.[neId] <- V4i(eId, otherEdgesOfE.Y, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
+                                        delVertexData.[neId] <- V4i(delVertexData.[neId].X, otherOppositeV, delVertexData.[neId].Z, delVertexData.[neId].W)
+                                    elif eId = delNEdgeData.[neId].Z then
+                                        delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, otherEdgesOfE.X, eId)
+                                        delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, otherOppositeV)
+                                    else (* eId = neNEdges.W *)
+                                        delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, eId, otherEdgesOfE.Y)
+                                        delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, otherOppositeV)
+
+                                    // if inside and not marked add to stack
+                                    if delMetaData.[neId].X = 1 && delMetaData.[neId].Y = 0 then
+                                        delMetaData.[neId] <- V2i(1, 1)
+                                        delSP <- delSP + 1
+                                        delStack.[delSP] <- neId
+
+                        ////////////////////////////////////////////////////////
+
+                        let getTrafo pos = Trafo3d.Translation pos |> Mod.init
+                        
+                        let mutable sg = Sg.empty
+
+                        sg <- Sg.group' [sg; pointSg 0.98 C4b.White (Trafo3d.Identity |> Mod.init)]
+
+                        for i in 0 .. vc - 1 do 
+                            sg <- Sg.group' [sg; pointSg 0.05 C4b.Red (getTrafo (vertices.[i]))]
+            
+                        for i in 0 .. MAX_EDGES - 1 do         
+                            let edgeStart = verticesNormalized.[delVertexData.[i].X]
+                            let edgeEnd   = verticesNormalized.[delVertexData.[i].Y]
+                            sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red (Trafo3d.Identity |> Mod.init)]
+
+                        sg
+
+                    else
+                        
+                        Sg.empty
+                else 
+
+                    Sg.empty
+
+            )
+
 
     module Rendering =
 
@@ -722,6 +1052,18 @@ module EffectApDelaunayIrradianceIntegration =
         open Aardvark.Base.Incremental
 
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+
+            let sceneSg = sceneSg
+
+            
+            let sceneSg = 
+                [
+                    sceneSg
+                    Debug.delaunyScene data.lights |> Sg.dynamic
+                ]
+                |> Sg.group'
+            
+
             sceneSg
                 |> setupFbEffects [ 
                         delaunyIrrIntegration |> toEffect
