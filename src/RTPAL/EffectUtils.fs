@@ -240,8 +240,8 @@ module EffectUtils =
         let projection = projectPointOnLine a b p
         
         let pa = a - projection     
-        let pb = b - projection           
-
+        let pb = b - projection     
+        
         if (Vec.dot pa pb) < 0.0 then
             (projection, PROJECT_TO_LINE_RESULT_LINE)
         elif (Vec.length pa) < Vec.length(pb) then
@@ -615,9 +615,18 @@ module EffectUtils =
     [<ReflectedDefinition>]
     let computeSphericalExcess (va : V3d) (vb : V3d) (vc : V3d) =
 
-        let alpha = Vec.dot (Vec.cross va vb) (Vec.cross vc va) |> acos
-        let betha = Vec.dot (Vec.cross vb vc) (Vec.cross va vb) |> acos
-        let gamma = Vec.dot (Vec.cross vc va) (Vec.cross vb vc) |> acos
+        let crossVaVc = Vec.cross va vc |> Vec.normalize
+        let crossVcVa = Vec.cross vc va |> Vec.normalize
+
+        let crossVaVb = Vec.cross va vb |> Vec.normalize
+        let crossVbVa = Vec.cross vb va |> Vec.normalize
+
+        let crossVbVc = Vec.cross vb vc |> Vec.normalize
+        let crossVcVb = Vec.cross vc vb |> Vec.normalize
+
+        let alpha = Vec.dot crossVaVc crossVaVb |> acos
+        let betha = Vec.dot crossVbVa crossVbVc |> acos
+        let gamma = Vec.dot crossVcVb crossVcVa |> acos
 
         alpha + betha + gamma - PI
 

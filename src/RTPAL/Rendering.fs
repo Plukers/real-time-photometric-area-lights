@@ -87,7 +87,7 @@ module Rendering =
                 Map.empty
                 |> Map.add RenderMode.GroundTruth                   (groundTruthFb          data gtData     signature sceneSg |> applyTonemappingOnFb data signature)
                 |> Map.add RenderMode.CenterPointApprox             (centerPointApproxFb    data            signature sceneSg |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.MRPApprox                     (mrpApproxFb            data mrpData    signature sceneSg |> applyTonemappingOnFb data signature)
+             // |> Map.add RenderMode.MRPApprox                     (mrpApproxFb            data mrpData    signature sceneSg |> applyTonemappingOnFb data signature)
                 |> Map.add RenderMode.BaumFFApprox                  (baumFFApproxFb         data            signature sceneSg |> applyTonemappingOnFb data signature)
                 |> Map.add RenderMode.StructuredIrrSampling         (ssIrrApproxFb          data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
                 |> Map.add RenderMode.StructuredSampling            (ssApproxFb             data ssData     signature sceneSg |> applyTonemappingOnFb data signature)

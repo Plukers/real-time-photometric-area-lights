@@ -441,6 +441,18 @@ module EffectApDelaunayIrradianceIntegration =
     [<ReflectedDefinition>]
     let private sampleIrr (t2w : M33d) (addr : int) (p : V3d) = 
 
+        //let i = p |> Vec.normalize  
+        //let iw = t2w * -i
+ 
+        //let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
+        //let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
+
+        //// simplified
+        //let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr]
+        //let weight = i.Z * invDistSquared  
+
+        //V2d(irr * weight, weight * dotOut)
+
         let i = p |> Vec.normalize  
         let iw = t2w * -i
  
@@ -448,10 +460,10 @@ module EffectApDelaunayIrradianceIntegration =
         let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
 
         // simplified
-        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr]
-        let weight = i.Z * invDistSquared  
+        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+        let weight = i.Z  
 
-        V2d(irr * weight, weight * dotOut)
+        V2d(irr * weight, weight)
 
     let delaunyIrrIntegration (v : Vertex) = 
         fragment {
@@ -692,44 +704,6 @@ module EffectApDelaunayIrradianceIntegration =
                                     illumination <- illumination + L * brdf * I //* scale // * i.Z  
                                     
 
-                                    //if oneNotLd then
-                                    //    illumination <- V4d(1.0, 1.0, 1.0, 0.0)
-
-
-
-                                    // if Vec.dot (uniform.LForwards.[addr]) (t2w *((closestPoint - P) |> Vec.normalize)) < 0.0 then
-                                    //let dot = Vec.dot (uniform.LForwards.[addr]) (t2w *(closestPoint|> Vec.normalize))
-                                    //if dot < 0.0 then
-                                    //    illumination <- V4d(dot / 2.0 + 1.0, 0.0, 0.0, 0.0)
-                                    //else
-                                    //    illumination <- V4d(0.0, 0.0, dot / 2.0 + 1.0, 0.0)
-                                    
-                                    (*
-                                    if case = CASE_CORNER then 
-                                        illumination <- V4d(1.0, 0.0, 0.0, 0.0)
-                                        if (Vec.length (vertices.[0] - (closestPoint |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[1] - (clippedVa.[(v1Idx + 1) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[2] - (clippedVa.[(v1Idx + 2) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[3] - (clippedVa.[(v1Idx + 3) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        then illumination <- illumination + V4d(0.0, 1.0, 1.0, 0.0)
-                                    elif case = CASE_EDGE then
-                                        illumination <- V4d(0.0, 1.0, 0.0, 0.0)
-                                        if (Vec.length (vertices.[0] - (closestPoint |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[1] - (clippedVa.[(v1Idx + 0) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[2] - (clippedVa.[(v1Idx + 1) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[3] - (clippedVa.[(v1Idx + 2) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[4] - (clippedVa.[(v1Idx + 3) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        then illumination <- illumination + V4d(1.0, 0.0, 1.0, 0.0)
-                                    else
-                                        illumination <- V4d(0.0, 0.0, 1.0, 0.0)
-                                        if (Vec.length (vertices.[0] - (closestPoint |> Vec.normalize))) < 1e-5
-                                        && (Vec.length (vertices.[1] - (clippedVa.[(v1Idx + 0) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[2] - (clippedVa.[(v1Idx + 1) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[3] - (clippedVa.[(v1Idx + 2) % clippedVc] |> Vec.normalize))) < 1e-5 
-                                        && (Vec.length (vertices.[4] - (clippedVa.[(v1Idx + 3) % clippedVc] |> Vec.normalize))) < 1e-5                                      
-                                        then illumination <- illumination + V4d(1.0, 1.0, 0.0, 0.0)
-                                    *)
-                           
                             ////////////////////////////////////////////////////////
                         
 
@@ -840,6 +814,8 @@ module EffectApDelaunayIrradianceIntegration =
 
                 let (lights, lPatchIndices, lVertices, lBaseComponents, lForwards, lUps) = lc
 
+                printfn "Light Vertices : %A" lVertices 
+
                 ////////////////////////////////////////////////////////
                 // SHADER START
 
@@ -909,10 +885,13 @@ module EffectApDelaunayIrradianceIntegration =
 
                         let (case, v1Idx) =
                             if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
+                                printfn "CASE_CORNER"
                                 (CASE_CORNER, clampP0Id)
                             elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
+                                printfn "CASE_EDGE"
                                 (CASE_EDGE, clampP1ID)
                             else (*CLAMP_POLYGON_RESULT =  CLAMP_POLYGON_RESULT_NONE *) 
+                                printfn "CASE_INSIDE"
                                 (CASE_INSIDE, 0)
                                      
                                      
@@ -1045,13 +1024,17 @@ module EffectApDelaunayIrradianceIntegration =
 
                         let mutable areaSum = 0.0
 
+                        printfn "Faces: "  
+
                         for f in 0 .. MAX_FACES - 1 do
                             let face = delFaceData.[f]
 
                             if face.X <> -1 then
-
+                                
                                             
                                 let area = computeSphericalExcess (verticesNormalized.[face.Y]) (verticesNormalized.[face.Z]) (verticesNormalized.[face.W])
+
+                                printfn " - %A - Area: %A" face area
 
                                 areaSum <- areaSum + area 
 
@@ -1067,10 +1050,17 @@ module EffectApDelaunayIrradianceIntegration =
                         for i in 0 .. vc - 1 do 
                             sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (verticesNormalized.[i]))]
             
+                        
+                        printfn "Vertices %A : %A" vc verticesNormalized
+
+                        printfn "Edges: "
                         for i in 0 .. MAX_EDGES - 1 do         
                             if delVertexData.[i].X <> -1 && delVertexData.[i].Z <> -1 then 
                                 let edgeStart = verticesNormalized.[delVertexData.[i].X]
                                 let edgeEnd   = verticesNormalized.[delVertexData.[i].Z]
+
+                                printfn " - %A -> %A" edgeStart edgeEnd
+
                                 sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red (Trafo3d.Identity |> Mod.init)]
 
                         sg
@@ -1097,14 +1087,14 @@ module EffectApDelaunayIrradianceIntegration =
 
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
 
-            
+            (*
             let sceneSg = 
                 [
                     sceneSg
                     Debug.delaunyScene data.lights |> Sg.dynamic
                 ]
                 |> Sg.group'
-
+            *)
             
             sceneSg
                 |> setupFbEffects [ 

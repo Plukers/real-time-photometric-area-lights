@@ -1119,7 +1119,7 @@
         match light1 with
         | Some lightId ->             
             // let t = Trafo3d.Translation(-8.0, 0.0, -5.0)        
-            let t = Trafo3d.Translation(-15.0, 0.0, 0.6)
+            let t = Trafo3d.Translation(-3.0, 0.0, 0.6)
             transformLight lc lightId t |> ignore
         | None -> ()
         
