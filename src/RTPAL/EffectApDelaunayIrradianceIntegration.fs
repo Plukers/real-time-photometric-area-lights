@@ -92,7 +92,8 @@ module EffectApDelaunayIrradianceIntegration =
             for i in 0 .. MAX_EDGES - 1 do
                 s.[i] <- uniform.quadStack.[MAX_EDGES * case + i]
             (s, uniform.quadStackPointer.[case])
-            
+
+       
 
         module ALL =
 
@@ -391,14 +392,45 @@ module EffectApDelaunayIrradianceIntegration =
             // stack pointer
             let SP = Arr<N<NUM_CASE>, int>([
                                             // CASE_CORNER
-                                                1
+                                                0
 
                                             // CASE_EDGE
-                                                2
+                                                1
 
                                             // CASE_INSIDE
-                                                4
+                                                3
                                             ])
+
+
+        let getInitVertexDataRaw case =             
+            let d = Arr<N<MAX_EDGES>, V4i>()
+            for i in 0 .. MAX_EDGES - 1 do
+                d.[i] <- ALL.V.[MAX_EDGES * case + i]
+            d
+
+        let getInitNeighbourEdgeDataRaw case =             
+            let d = Arr<N<MAX_EDGES>, V4i>()
+            for i in 0 .. MAX_EDGES - 1 do
+                d.[i] <- ALL.E.[MAX_EDGES * case + i]
+            d
+
+        let getInitMetaDataRaw case =             
+            let d = Arr<N<MAX_EDGES>, V2i>()
+            for i in 0 .. MAX_EDGES - 1 do
+                d.[i] <- ALL.M.[MAX_EDGES * case + i]
+            d
+
+        let getInitFaceDataRaw case =             
+            let d = Arr<N<MAX_FACES>, V4i>()
+            for i in 0 .. MAX_FACES - 1 do
+                d.[i] <- ALL.F.[MAX_FACES * case + i]
+            d
+
+        let getInitStackDataRaw case =             
+            let s = Arr<N<MAX_EDGES>, int>()
+            for i in 0 .. MAX_EDGES - 1 do
+                s.[i] <- ALL.S.[MAX_EDGES * case + i]
+            (s, ALL.SP.[case])
 
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
@@ -424,6 +456,8 @@ module EffectApDelaunayIrradianceIntegration =
     let delaunyIrrIntegration (v : Vertex) = 
         fragment {
 
+            return V4d.IIII
+            (*
             ////////////////////////////////////////////////////////
 
             let P = v.wp.XYZ
@@ -542,8 +576,8 @@ module EffectApDelaunayIrradianceIntegration =
                                     let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData case
                                     let delMetaData       = QUAD_DATA.getInitMetaData case
                                     let delFaceData       = QUAD_DATA.getInitFaceData case
-                                    let (delStack, delSP) = QUAD_DATA.getInitStackData case
-                                    let mutable delSP = delSP
+                                    let (delStack, delSPInit) = QUAD_DATA.getInitStackData case
+                                    let mutable delSP = delSPInit
 
                                     ////////////////////////////////////////
                                     // transform to a Delaunay triangulation
@@ -571,11 +605,11 @@ module EffectApDelaunayIrradianceIntegration =
                                             let c = verticesNormalized.[eVertices.Z].XYZ
                                             let d = verticesNormalized.[eVertices.W].XYZ
                                             
-                                            (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) > 0.0     
+                                            (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
 
                                         oneNotLd <- oneNotLd || notLD
                                         
-                                        if false then
+                                        if notLD then
                                             // flip edge
 
                                             // left shift vertices and edges of edge to flip
@@ -632,7 +666,7 @@ module EffectApDelaunayIrradianceIntegration =
                                     // integrate
 
                                     
-                                    (*
+                                    
                                     let mutable patchIllumination = 0.0
                                     let mutable weightSum = 0.0
 
@@ -663,10 +697,10 @@ module EffectApDelaunayIrradianceIntegration =
                                     let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
                                     illumination <- illumination + L * brdf * I //* scale // * i.Z  
-                                    *)
+                                    
 
-                                    if oneNotLd then
-                                        illumination <- V4d(1.0, 1.0, 1.0, 0.0)
+                                    //if oneNotLd then
+                                    //    illumination <- V4d(1.0, 1.0, 1.0, 0.0)
 
 
 
@@ -707,7 +741,7 @@ module EffectApDelaunayIrradianceIntegration =
                         
 
             return V4d(illumination.XYZ, v.c.W)
-
+            *)
         }
 
     module Debug =
@@ -751,7 +785,7 @@ module EffectApDelaunayIrradianceIntegration =
 
             let arcSegments = seq {
                                 let mutable lastPoint = p0
-                                for t in 0.0 .. 0.05 .. 1.0 do
+                                for t in 0.0 .. 0.01 .. 1.0 do
                                     let nextPoint = slerp p0 p1 t
                                         
                                     yield (Line3d(lastPoint, nextPoint), color)
@@ -925,12 +959,12 @@ module EffectApDelaunayIrradianceIntegration =
                                                 
                                 j <- j + 1
 
-                        let delVertexData     = QUAD_DATA.getInitVertexData case
-                        let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData case
-                        let delMetaData       = QUAD_DATA.getInitMetaData case
-                        let delFaceData       = QUAD_DATA.getInitFaceData case
-                        let (delStack, delSP) = QUAD_DATA.getInitStackData case
-                        let mutable delSP = delSP
+                        let delVertexData     = QUAD_DATA.getInitVertexDataRaw case
+                        let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeDataRaw case
+                        let delMetaData       = QUAD_DATA.getInitMetaDataRaw case
+                        let delFaceData       = QUAD_DATA.getInitFaceDataRaw case
+                        let (delStack, delSPInit) = QUAD_DATA.getInitStackDataRaw case
+                        let mutable delSP = delSPInit
 
                         ////////////////////////////////////////
                         // transform to a Delaunay triangulation
@@ -958,11 +992,11 @@ module EffectApDelaunayIrradianceIntegration =
                                 let c = verticesNormalized.[eVertices.Z].XYZ
                                 let d = verticesNormalized.[eVertices.W].XYZ
                                             
-                                (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) > 0.0     
+                                (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
 
                             oneNotLd <- oneNotLd || notLD
                                         
-                            if false then
+                            if notLD then
                                 // flip edge
 
                                 // left shift vertices and edges of edge to flip
@@ -1020,15 +1054,16 @@ module EffectApDelaunayIrradianceIntegration =
                         
                         let mutable sg = Sg.empty
 
-                        sg <- Sg.group' [sg; pointSg 0.98 C4b.White (Trafo3d.Identity |> Mod.init)]
+                        sg <- Sg.group' [sg; pointSg 0.98 (C4b(255, 255, 255, 100)) (Trafo3d.Identity |> Mod.init)]
 
                         for i in 0 .. vc - 1 do 
-                            sg <- Sg.group' [sg; pointSg 0.05 C4b.Red (getTrafo (vertices.[i]))]
+                            sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (verticesNormalized.[i]))]
             
                         for i in 0 .. MAX_EDGES - 1 do         
-                            let edgeStart = verticesNormalized.[delVertexData.[i].X]
-                            let edgeEnd   = verticesNormalized.[delVertexData.[i].Y]
-                            sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red (Trafo3d.Identity |> Mod.init)]
+                            if delVertexData.[i].X <> -1 && delVertexData.[i].Z <> -1 then 
+                                let edgeStart = verticesNormalized.[delVertexData.[i].X]
+                                let edgeEnd   = verticesNormalized.[delVertexData.[i].Z]
+                                sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red (Trafo3d.Identity |> Mod.init)]
 
                         sg
 
@@ -1053,15 +1088,13 @@ module EffectApDelaunayIrradianceIntegration =
 
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
 
-            let sceneSg = sceneSg
-
             
-            let sceneSg = 
-                [
-                    sceneSg
-                    Debug.delaunyScene data.lights |> Sg.dynamic
-                ]
-                |> Sg.group'
+            //let sceneSg = 
+            //    [
+            //        sceneSg
+            //        Debug.delaunyScene data.lights |> Sg.dynamic
+            //    ]
+            //    |> Sg.group'
             
 
             sceneSg
@@ -1071,12 +1104,12 @@ module EffectApDelaunayIrradianceIntegration =
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
-                |> Sg.uniform "quadVertices"        (QUAD_DATA.ALL.V  |> Mod.init)
-                |> Sg.uniform "quadNeighbourEdges"  (QUAD_DATA.ALL.E  |> Mod.init)
-                |> Sg.uniform "quadMeta"            (QUAD_DATA.ALL.M  |> Mod.init)
-                |> Sg.uniform "quadFaces"           (QUAD_DATA.ALL.F  |> Mod.init)
-                |> Sg.uniform "quadStack"           (QUAD_DATA.ALL.S  |> Mod.init)
-                |> Sg.uniform "quadStackPointer"    (QUAD_DATA.ALL.SP |> Mod.init)
+                // |> Sg.uniform "quadVertices"        (QUAD_DATA.ALL.V  |> Mod.init)
+                // |> Sg.uniform "quadNeighbourEdges"  (QUAD_DATA.ALL.E  |> Mod.init)
+                // |> Sg.uniform "quadMeta"            (QUAD_DATA.ALL.M  |> Mod.init)
+                // |> Sg.uniform "quadFaces"           (QUAD_DATA.ALL.F  |> Mod.init)
+                // |> Sg.uniform "quadStack"           (QUAD_DATA.ALL.S  |> Mod.init)
+                // |> Sg.uniform "quadStackPointer"    (QUAD_DATA.ALL.SP |> Mod.init)
                 |> setUniformDT data.dt
                 |> setUniformUsePhotometry data.usePhotometry
                 |> Sg.compile data.runtime signature
