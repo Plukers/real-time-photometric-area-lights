@@ -612,6 +612,15 @@ module EffectUtils =
 
         2.0 * if halfSA >= 0.0 then halfSA else halfSA + PI
 
+    [<ReflectedDefinition>]
+    let computeSphericalExcess (va : V3d) (vb : V3d) (vc : V3d) =
+
+        let alpha = Vec.dot (Vec.cross va vb) (Vec.cross vc va) |> acos
+        let betha = Vec.dot (Vec.cross vb vc) (Vec.cross va vb) |> acos
+        let gamma = Vec.dot (Vec.cross vc va) (Vec.cross vb vc) |> acos
+
+        alpha + betha + gamma - PI
+
 
 
 

@@ -93,7 +93,7 @@ module Rendering =
                 |> Map.add RenderMode.StructuredSampling            (ssApproxFb             data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
              // |> Map.add RenderMode.StructuredPoissonSampling     (psIrrApproxFb          data            signature sceneSg |> applyTonemappingOnFb data signature)
                 |> Map.add RenderMode.VoronoiIrradianceSampling     (voronoiIrrIntApproxFb  data            signature sceneSg |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.DelaunyIrradianceSampling     (delIrrIntApproxFb      data            signature sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.DelaunayIrradianceSampling    (delIrrIntApproxFb      data            signature sceneSg |> applyTonemappingOnFb data signature)
                                            
                 |> Map.add RenderMode.FormFactor                    (formFactorFb           data            signature sceneSg)
                 |> Map.add RenderMode.SolidAngle                    (solidAngleFb           data saData     signature sceneSg)

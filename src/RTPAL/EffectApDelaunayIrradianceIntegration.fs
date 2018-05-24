@@ -456,8 +456,6 @@ module EffectApDelaunayIrradianceIntegration =
     let delaunyIrrIntegration (v : Vertex) = 
         fragment {
 
-            return V4d.IIII
-            (*
             ////////////////////////////////////////////////////////
 
             let P = v.wp.XYZ
@@ -539,8 +537,6 @@ module EffectApDelaunayIrradianceIntegration =
                                     // XYZ -> Spherical coords; 
                                     let verticesNormalized = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
 
-                                    let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V3d>() 
-
                                     // X -> luminance, Y -> Weight
                                     let funVal = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_TWO>, V2d>() 
 
@@ -548,7 +544,6 @@ module EffectApDelaunayIrradianceIntegration =
                                     let mutable vc = clippedVc
                                     let mutable offset = 0
                                     if case <> CASE_CORNER then 
-                                        vertices.[0] <- closestPoint
                                         verticesNormalized.[0] <- closestPoint |> Vec.normalize
                                         funVal.[0]   <- sampleIrr t2w addr closestPoint
                                         vc <- vc + 1 
@@ -559,14 +554,12 @@ module EffectApDelaunayIrradianceIntegration =
                                     if Vec.dot (uniform.LForwards.[addr]) (t2w *(closestPoint |> Vec.normalize)) < 0.0 then 
                                     
                                         for i in 0 .. clippedVc - 1 do 
-                                            vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] 
                                             verticesNormalized.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
                                             funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
                                             
                                     else
                                         let mutable j = 0
                                         for i in clippedVc - 1 .. -1 .. 0 do 
-                                            vertices.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc] 
                                             verticesNormalized.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
                                             funVal.[j + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
                                                 
@@ -676,7 +669,7 @@ module EffectApDelaunayIrradianceIntegration =
                                         if face.X <> -1 then
 
                                             
-                                            let area =  computeSolidAngle (vertices.[face.Y]) (vertices.[face.Z]) (vertices.[face.W])
+                                            let area = computeSphericalExcess (verticesNormalized.[face.Y]) (verticesNormalized.[face.Z]) (verticesNormalized.[face.W])
 
                                             patchIllumination <- patchIllumination + area * (funVal.[face.Y].X + funVal.[face.Z].X + funVal.[face.W].X) / 3.0
                                             weightSum <- weightSum + area * (funVal.[face.Y].Y + funVal.[face.Z].Y + funVal.[face.W].Y) / 3.0
@@ -741,7 +734,7 @@ module EffectApDelaunayIrradianceIntegration =
                         
 
             return V4d(illumination.XYZ, v.c.W)
-            *)
+            
         }
 
     module Debug =
@@ -1050,6 +1043,21 @@ module EffectApDelaunayIrradianceIntegration =
 
                         ////////////////////////////////////////////////////////
 
+                        let mutable areaSum = 0.0
+
+                        for f in 0 .. MAX_FACES - 1 do
+                            let face = delFaceData.[f]
+
+                            if face.X <> -1 then
+
+                                            
+                                let area = computeSphericalExcess (verticesNormalized.[face.Y]) (verticesNormalized.[face.Z]) (verticesNormalized.[face.W])
+
+                                areaSum <- areaSum + area 
+
+
+                        printfn "Area Sum: %A" areaSum
+
                         let getTrafo pos = Trafo3d.Translation pos |> Mod.init
                         
                         let mutable sg = Sg.empty
@@ -1086,17 +1094,18 @@ module EffectApDelaunayIrradianceIntegration =
         open Utils.Sg
         open Aardvark.Base.Incremental
 
+
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
 
             
-            //let sceneSg = 
-            //    [
-            //        sceneSg
-            //        Debug.delaunyScene data.lights |> Sg.dynamic
-            //    ]
-            //    |> Sg.group'
-            
+            let sceneSg = 
+                [
+                    sceneSg
+                    Debug.delaunyScene data.lights |> Sg.dynamic
+                ]
+                |> Sg.group'
 
+            
             sceneSg
                 |> setupFbEffects [ 
                         delaunyIrrIntegration |> toEffect
@@ -1104,15 +1113,17 @@ module EffectApDelaunayIrradianceIntegration =
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
-                // |> Sg.uniform "quadVertices"        (QUAD_DATA.ALL.V  |> Mod.init)
-                // |> Sg.uniform "quadNeighbourEdges"  (QUAD_DATA.ALL.E  |> Mod.init)
-                // |> Sg.uniform "quadMeta"            (QUAD_DATA.ALL.M  |> Mod.init)
-                // |> Sg.uniform "quadFaces"           (QUAD_DATA.ALL.F  |> Mod.init)
-                // |> Sg.uniform "quadStack"           (QUAD_DATA.ALL.S  |> Mod.init)
-                // |> Sg.uniform "quadStackPointer"    (QUAD_DATA.ALL.SP |> Mod.init)
                 |> setUniformDT data.dt
                 |> setUniformUsePhotometry data.usePhotometry
+                |> Sg.uniform "quadVertices"        (QUAD_DATA.ALL.V  |> Mod.init)
+                |> Sg.uniform "quadNeighbourEdges"  (QUAD_DATA.ALL.E  |> Mod.init)
+                |> Sg.uniform "quadMeta"            (QUAD_DATA.ALL.M  |> Mod.init)
+                |> Sg.uniform "quadFaces"           (QUAD_DATA.ALL.F  |> Mod.init)
+                |> Sg.uniform "quadStack"           (QUAD_DATA.ALL.S  |> Mod.init)
+                |> Sg.uniform "quadStackPointer"    (QUAD_DATA.ALL.SP |> Mod.init)
                 |> Sg.compile data.runtime signature
+
+
 
         let delIrrIntApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
             delIrrIntApproxRenderTask data signature sceneSg
