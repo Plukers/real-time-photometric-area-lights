@@ -17,13 +17,24 @@ module EffectApDelaunayIrradianceIntegration =
 
 
     [<Literal>]
-    let CASE_CORNER = 0 
+    let CASE_CORNER = 1 
 
     [<Literal>]
-    let CASE_EDGE = 1 
+    let CASE_CORNER_OFFSET = 0 
+
 
     [<Literal>]
-    let CASE_INSIDE = 2 
+    let CASE_EDGE = 2 
+
+    [<Literal>]
+    let CASE_EDGE_OFFSET = 1 
+
+
+    [<Literal>]
+    let CASE_INSIDE = 4
+
+    [<Literal>]
+    let CASE_INSIDE_OFFSET = 2 
 
     [<Literal>]
     let NUM_CASE = 3 // num of possible cases
@@ -402,35 +413,35 @@ module EffectApDelaunayIrradianceIntegration =
                                             ])
 
 
-        let getInitVertexDataRaw case =             
+        let getInitVertexDataRaw caseOffset =             
             let d = Arr<N<MAX_EDGES>, V4i>()
             for i in 0 .. MAX_EDGES - 1 do
-                d.[i] <- ALL.V.[MAX_EDGES * case + i]
+                d.[i] <- ALL.V.[MAX_EDGES * caseOffset + i]
             d
 
-        let getInitNeighbourEdgeDataRaw case =             
+        let getInitNeighbourEdgeDataRaw caseOffset =             
             let d = Arr<N<MAX_EDGES>, V4i>()
             for i in 0 .. MAX_EDGES - 1 do
-                d.[i] <- ALL.E.[MAX_EDGES * case + i]
+                d.[i] <- ALL.E.[MAX_EDGES * caseOffset + i]
             d
 
-        let getInitMetaDataRaw case =             
+        let getInitMetaDataRaw caseOffset =             
             let d = Arr<N<MAX_EDGES>, V2i>()
             for i in 0 .. MAX_EDGES - 1 do
-                d.[i] <- ALL.M.[MAX_EDGES * case + i]
+                d.[i] <- ALL.M.[MAX_EDGES * caseOffset + i]
             d
 
-        let getInitFaceDataRaw case =             
+        let getInitFaceDataRaw caseOffset =             
             let d = Arr<N<MAX_FACES>, V4i>()
             for i in 0 .. MAX_FACES - 1 do
-                d.[i] <- ALL.F.[MAX_FACES * case + i]
+                d.[i] <- ALL.F.[MAX_FACES * caseOffset + i]
             d
 
-        let getInitStackDataRaw case =             
+        let getInitStackDataRaw caseOffset =             
             let s = Arr<N<MAX_EDGES>, int>()
             for i in 0 .. MAX_EDGES - 1 do
-                s.[i] <- ALL.S.[MAX_EDGES * case + i]
-            (s, ALL.SP.[case])
+                s.[i] <- ALL.S.[MAX_EDGES * caseOffset + i]
+            (s, ALL.SP.[caseOffset])
 
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
@@ -537,13 +548,13 @@ module EffectApDelaunayIrradianceIntegration =
                                     ////////////////////////////////////////
                                     // create triangulation
 
-                                    let (case, v1Idx) =
+                                    let (caseOffset, v1Idx) =
                                         if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
-                                            (CASE_CORNER, clampP0Id)
+                                            (CASE_CORNER_OFFSET, clampP0Id)
                                         elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
-                                            (CASE_EDGE, clampP1ID)
+                                            (CASE_EDGE_OFFSET, clampP1ID)
                                         else (*CLAMP_POLYGON_RESULT =  CLAMP_POLYGON_RESULT_NONE *) 
-                                            (CASE_INSIDE, 0)
+                                            (CASE_INSIDE_OFFSET, 0)
                                      
                                      
                                     // XYZ -> Spherical coords; 
@@ -555,7 +566,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     let mutable vc = clippedVc
                                     let mutable offset = 0
-                                    if case <> CASE_CORNER then 
+                                    if caseOffset <> CASE_CORNER_OFFSET then 
                                         verticesNormalized.[0] <- closestPoint |> Vec.normalize
                                         funVal.[0]   <- sampleIrr t2w addr closestPoint
                                         vc <- vc + 1 
@@ -577,11 +588,11 @@ module EffectApDelaunayIrradianceIntegration =
                                                 
                                             j <- j + 1
 
-                                    let delVertexData     = QUAD_DATA.getInitVertexData case
-                                    let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData case
-                                    let delMetaData       = QUAD_DATA.getInitMetaData case
-                                    let delFaceData       = QUAD_DATA.getInitFaceData case
-                                    let (delStack, delSPInit) = QUAD_DATA.getInitStackData case
+                                    let delVertexData     = QUAD_DATA.getInitVertexData caseOffset
+                                    let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData caseOffset
+                                    let delMetaData       = QUAD_DATA.getInitMetaData caseOffset
+                                    let delFaceData       = QUAD_DATA.getInitFaceData caseOffset
+                                    let (delStack, delSPInit) = QUAD_DATA.getInitStackData caseOffset
                                     let mutable delSP = delSPInit
 
                                     ////////////////////////////////////////
@@ -883,16 +894,16 @@ module EffectApDelaunayIrradianceIntegration =
                         ////////////////////////////////////////
                         // create triangulation
 
-                        let (case, v1Idx) =
+                        let (caseOffset, v1Idx) =
                             if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
                                 printfn "CASE_CORNER"
-                                (CASE_CORNER, clampP0Id)
+                                (CASE_CORNER_OFFSET, clampP0Id)
                             elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
                                 printfn "CASE_EDGE"
-                                (CASE_EDGE, clampP1ID)
+                                (CASE_EDGE_OFFSET, clampP1ID)
                             else (*CLAMP_POLYGON_RESULT =  CLAMP_POLYGON_RESULT_NONE *) 
                                 printfn "CASE_INSIDE"
-                                (CASE_INSIDE, 0)
+                                (CASE_INSIDE_OFFSET, 0)
                                      
                                      
                         // XYZ -> Spherical coords; 
@@ -906,7 +917,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                         let mutable vc = clippedVc
                         let mutable offset = 0
-                        if case <> CASE_CORNER then 
+                        if caseOffset <> CASE_CORNER_OFFSET then 
                             vertices.[0] <- closestPoint
                             verticesNormalized.[0] <- closestPoint |> Vec.normalize
                             // funVal.[0]   <- sampleIrr t2w addr closestPoint
@@ -931,11 +942,11 @@ module EffectApDelaunayIrradianceIntegration =
                                                 
                                 j <- j + 1
 
-                        let delVertexData     = QUAD_DATA.getInitVertexDataRaw case
-                        let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeDataRaw case
-                        let delMetaData       = QUAD_DATA.getInitMetaDataRaw case
-                        let delFaceData       = QUAD_DATA.getInitFaceDataRaw case
-                        let (delStack, delSPInit) = QUAD_DATA.getInitStackDataRaw case
+                        let delVertexData     = QUAD_DATA.getInitVertexDataRaw caseOffset
+                        let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeDataRaw caseOffset
+                        let delMetaData       = QUAD_DATA.getInitMetaDataRaw caseOffset
+                        let delFaceData       = QUAD_DATA.getInitFaceDataRaw caseOffset
+                        let (delStack, delSPInit) = QUAD_DATA.getInitStackDataRaw caseOffset
                         let mutable delSP = delSPInit
 
                         ////////////////////////////////////////
@@ -1087,14 +1098,14 @@ module EffectApDelaunayIrradianceIntegration =
 
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
 
-            (*
+            
             let sceneSg = 
                 [
                     sceneSg
                     Debug.delaunyScene data.lights |> Sg.dynamic
                 ]
                 |> Sg.group'
-            *)
+            
             
             sceneSg
                 |> setupFbEffects [ 
