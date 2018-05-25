@@ -549,10 +549,10 @@ module EffectApDelaunayIrradianceIntegration =
                                                 
                                             j <- j + 1
 
-                                    let delVertexData     = QUAD_DATA.getInitVertexData caseOffset
-                                    let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData caseOffset
-                                    let delMetaData       = QUAD_DATA.getInitMetaData caseOffset
-                                    let delFaceData       = QUAD_DATA.getInitFaceData caseOffset
+                                    let delVertexData         = QUAD_DATA.getInitVertexData caseOffset
+                                    let delNEdgeData          = QUAD_DATA.getInitNeighbourEdgeData caseOffset
+                                    let delMetaData           = QUAD_DATA.getInitMetaData caseOffset
+                                    let delFaceData           = QUAD_DATA.getInitFaceData caseOffset
                                     let (delStack, delSPInit) = QUAD_DATA.getInitStackData caseOffset
                                     let mutable delSP = delSPInit
 
