@@ -9,6 +9,7 @@ module EffectApDelaunayIrradianceIntegration =
     open EffectUtils
     open PhotometricLight
 
+
     [<Literal>]
     let MAX_EDGES = 10
 
@@ -403,6 +404,10 @@ module EffectApDelaunayIrradianceIntegration =
                 s.[i] <- ALL.S.[MAX_EDGES * caseOffset + i]
             (s, ALL.SP.[caseOffset])
 
+    [<ReflectedDefinition>]
+    let flipEdge vertices edges meta faceVertices faceEdges edgeId =
+
+        (vertices, edges, meta, faceVertices, faceEdges)
 
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
@@ -558,9 +563,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     ////////////////////////////////////////
                                     // transform to a Delaunay triangulation
-
-                                    let mutable oneNotLd = false
-                                    
+                                                                        
                                     while delSP >= 0 do
 
                                         // get edge Id
@@ -583,9 +586,7 @@ module EffectApDelaunayIrradianceIntegration =
                                             let d = verticesNormalized.[eVertices.W].XYZ
                                             
                                             (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
-
-                                        oneNotLd <- oneNotLd || notLD
-                                        
+                                                                                    
                                         if notLD then
                                             // flip edge
 
@@ -1043,6 +1044,20 @@ module EffectApDelaunayIrradianceIntegration =
 
             )
 
+
+    module Test = 
+        open NUnit.Framework
+        open FsUnit
+
+        
+        
+        [<Test>]
+        let ``Flip Edge``() = 
+            [4, 4, 5] |> should equal [4, 4, 5] 
+            
+        [<Test>]
+        let ``Flip Edge 2``() = 
+            [4, 4, 5] |> should not' (equal [4, 4, 5])
 
     module Rendering =
 

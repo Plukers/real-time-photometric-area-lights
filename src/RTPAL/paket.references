@@ -17,3 +17,7 @@ Aardvark.Service
 Aardvark.Cef.WinForms
 
 Aardvark.Compiler.DomainTypes.MSBuild
+
+NUnit
+NUnit3TestAdapter
+FsUnit
