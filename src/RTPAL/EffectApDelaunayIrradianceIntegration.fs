@@ -11,10 +11,10 @@ module EffectApDelaunayIrradianceIntegration =
 
 
     [<Literal>]
-    let MAX_EDGES = 10
+    let MAX_EDGES = 13
 
     [<Literal>]
-    let MAX_FACES = 5
+    let MAX_FACES = 7
 
 
     [<Literal>]
@@ -41,10 +41,10 @@ module EffectApDelaunayIrradianceIntegration =
     let NUM_CASE = 3 // num of possible cases
 
     [<Literal>]
-    let MAX_EDGES_ALL = 30 // MAX_EDGES * NUM_CASE
+    let MAX_EDGES_ALL = 39 // MAX_EDGES * NUM_CASE
 
     [<Literal>]
-    let MAX_FACES_ALL = 15 // MAX_FACES * NUM_CASE
+    let MAX_FACES_ALL = 21 // MAX_FACES * NUM_CASE
 
 
     [<ReflectedDefinition>]
@@ -404,16 +404,123 @@ module EffectApDelaunayIrradianceIntegration =
                 s.[i] <- ALL.S.[MAX_EDGES * caseOffset + i]
             (s, ALL.SP.[caseOffset])
 
-    [<ReflectedDefinition>]
-    let flipEdge vertices edges meta faceVertices faceEdges edgeId =
-
-        (vertices, edges, meta, faceVertices, faceEdges)
 
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
         [<Normal>]          n       : V3d
         [<Color>]           c       : V4d
     }  
+
+    [<ReflectedDefinition>]
+    let private flipEdge (vertices : V4i []) (edges : V4i []) (meta : V2i []) (faceVertices : V4i []) (faceEdges : V3i []) eId =
+
+        let originalVertices = vertices.[eId]
+        let originalEdges = edges.[eId]
+
+        // unmrak edge
+        meta.[eId] <- V2i(meta.[eId].X, 0)
+
+        // flip edge
+        vertices.[eId] <- V4i(originalVertices.Y, originalVertices.Z, originalVertices.W, originalVertices.X)
+        edges.[eId] <- V4i(originalEdges.Y, originalEdges.Z, originalEdges.W, originalEdges.X)
+
+        // adopt faces
+        let f0Id = IDHash (originalVertices.X) (originalVertices.Y) (originalVertices.Z)
+        let f1Id = IDHash (originalVertices.Z) (originalVertices.W) (originalVertices.X)
+
+        for f in 0 .. MAX_FACES - 1 do
+            if faceVertices.[f].W = f0Id then
+                faceVertices.[f] <- V4i((vertices.[eId].X), (vertices.[eId].Y), (vertices.[eId].Z), (IDHash (vertices.[eId].X) (vertices.[eId].Y) (vertices.[eId].Z)))
+                faceEdges.[f] <- V3i((edges.[eId].X), (edges.[eId].Y), eId)
+
+            if faceVertices.[f].W = f1Id then
+                faceVertices.[f] <- V4i((vertices.[eId].Z), (vertices.[eId].W), (vertices.[eId].X), (IDHash (vertices.[eId].Z) (vertices.[eId].W) (vertices.[eId].X)))
+                faceEdges.[f] <- V3i((edges.[eId].Z), (edges.[eId].W), eId)
+                                            
+        // adapt neighbour edges
+        for ne in 0 .. 3 do
+            let (neId, oppositeEdges, oppositeVertex) = 
+                match ne with
+                | 0 -> (originalEdges.X, originalEdges.ZW, originalVertices.W)
+                | 1 -> (originalEdges.Y, originalEdges.ZW, originalVertices.W)
+                | 2 -> (originalEdges.Z, originalEdges.XY, originalVertices.Y)
+                | _ -> (originalEdges.W, originalEdges.XY, originalVertices.Y)
+
+                                                    
+            if eId = edges.[neId].X then
+                edges.[neId] <- V4i(oppositeEdges.X, eId, edges.[neId].Z, edges.[neId].W)
+                vertices.[neId] <- V4i(vertices.[neId].X, oppositeVertex, vertices.[neId].Z, vertices.[neId].W)
+            elif eId = edges.[neId].Y then
+                edges.[neId] <- V4i(eId, oppositeEdges.Y, edges.[neId].Z, edges.[neId].W)
+                vertices.[neId] <- V4i(vertices.[neId].X, oppositeVertex, vertices.[neId].Z, vertices.[neId].W)
+            elif eId = edges.[neId].Z then
+                edges.[neId] <- V4i(edges.[neId].X, edges.[neId].Y, oppositeEdges.X, eId)
+                vertices.[neId] <- V4i(vertices.[neId].X, vertices.[neId].Y, vertices.[neId].Z, oppositeVertex)
+            else (* eId = edges.[neId].W *)
+                edges.[neId] <- V4i(edges.[neId].X, edges.[neId].Y, eId, oppositeEdges.Y)
+                vertices.[neId] <- V4i(vertices.[neId].X, vertices.[neId].Y, vertices.[neId].Z, oppositeVertex)
+
+            // if inside and not marked -> mark it
+            if meta.[neId].X = 1 && meta.[neId].Y = 0 then
+                meta.[neId] <- V2i(1, 1)
+
+
+        (vertices, edges, meta, faceVertices, faceEdges)
+
+
+    // Inserts vertex with Id = vId into face with faceId. FaceId is position in Array, not faceHash
+    [<ReflectedDefinition>]
+    let private insertVertexIntoFace (vertices : V4i []) (edges : V4i []) (meta : V2i []) (faceVertices : V4i []) (faceEdges : V3i []) nextFreeEdgeAddr nextFreeFaceAddr faceId vId =
+        
+        let fV = faceVertices.[faceId]
+        let fE = faceEdges.[faceId]
+
+
+        let mutable nextFreeFaceAddr = nextFreeFaceAddr
+
+        for e in 0 .. 2 do
+            let newEdgeId = nextFreeEdgeAddr + e
+
+            // insert new edge
+            vertices.[newEdgeId] <- V4i(fV.[(e + 0) % 3], fV.[(e + 1) % 3], vId, fV.[(e + 2) % 3])
+            edges.[newEdgeId] <- V4i(fE.[(e + 0) % 3], nextFreeEdgeAddr + (e + 1) % 3, nextFreeEdgeAddr + (e + 2) % 3, fE.[(e + 2) % 3])
+            meta.[newEdgeId] <- V2i(1, 0)
+
+            // insert new face
+            faceVertices.[nextFreeFaceAddr] <- V4i(vertices.[newEdgeId].X, vertices.[newEdgeId].Y, vertices.[newEdgeId].Z, (IDHash vertices.[newEdgeId].X vertices.[newEdgeId].Y vertices.[newEdgeId].Z))
+            faceEdges.[nextFreeFaceAddr] <- V3i(edges.[newEdgeId].X, edges.[newEdgeId].Y, newEdgeId)
+            nextFreeFaceAddr <- nextFreeFaceAddr + 1
+
+            // update outside edge
+            let currentOpposite =
+                match (e + 2) % 3 with
+                | 0 -> fV.X
+                | 1 -> fV.Y
+                | _ -> fV.Z
+
+
+            let updateEdgeId = 
+                match e with
+                | 0 -> fE.X
+                | 1 -> fE.Y
+                | _ -> fE.Z
+
+            if vertices.[updateEdgeId].Y = currentOpposite then                
+                vertices.[updateEdgeId] <- V4i(vertices.[updateEdgeId].X, vId, vertices.[updateEdgeId].Z, vertices.[updateEdgeId].W)
+                edges.[updateEdgeId] <- V4i(nextFreeEdgeAddr + (e + 1) % 3, newEdgeId, edges.[updateEdgeId].Z, edges.[updateEdgeId].W)
+
+            else (* vertices.[updateEdgeId].W = currentOpposite *)
+                vertices.[updateEdgeId] <- V4i(vertices.[updateEdgeId].X, vertices.[updateEdgeId].Y, vertices.[updateEdgeId].Z, vId)
+                edges.[updateEdgeId] <- V4i(edges.[updateEdgeId].X, edges.[updateEdgeId].Y, nextFreeEdgeAddr + (e + 1) % 3, newEdgeId)
+
+            // flip new edge
+            if meta.[updateEdgeId].X = 1 && meta.[updateEdgeId].Y = 0 then
+                meta.[updateEdgeId] <- V2i(1, 1)
+    
+        // remove face where vertex was inserted
+        faceVertices.[faceId] <- V4i(-1)
+
+        (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr + 3, nextFreeFaceAddr)
 
     [<ReflectedDefinition>]
     let private sampleIrr (t2w : M33d) (addr : int) (p : V3d) = 
@@ -1049,16 +1156,251 @@ module EffectApDelaunayIrradianceIntegration =
         open NUnit.Framework
         open FsUnit
 
-        
-        
-        [<Test>]
-        let ``Flip Edge``() = 
-            [4, 4, 5] |> should equal [4, 4, 5] 
-            
-        [<Test>]
-        let ``Flip Edge 2``() = 
-            [4, 4, 5] |> should not' (equal [4, 4, 5])
 
+        module FlipTest =
+
+            module Before = 
+
+                let V = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V4i( 0, 1, 2, 3)
+                                | 1 -> yield V4i( 0,-1, 1, 2)
+                                | 2 -> yield V4i( 1,-1, 2, 0)
+                                | 3 -> yield V4i( 2,-1, 3, 0)
+                                | 4 -> yield V4i( 3,-1, 0, 2)
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let E = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V4i( 1, 2, 3, 4)
+                                | 1 -> yield V4i(-1,-1, 2, 0)
+                                | 2 -> yield V4i(-1,-1, 0, 1)
+                                | 3 -> yield V4i(-1,-1, 4, 0)
+                                | 4 -> yield V4i(-1,-1, 0, 3)
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let M = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V2i(1, 1)
+                                | 1 -> yield V2i(0, 0)
+                                | 2 -> yield V2i(0, 0)
+                                | 3 -> yield V2i(0, 0)
+                                | 4 -> yield V2i(0, 0)
+                                | _ -> yield V2i(-1)
+                        |]
+
+                let FV = [| 
+                            for i in 0 .. MAX_FACES - 1 do
+                                match i with
+                                | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2))
+                                | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3))
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let FE = [| 
+                            for i in 0 .. MAX_FACES - 1 do
+                                match i with
+                                | 0 -> yield V3i( 1, 2, 0)
+                                | 1 -> yield V3i( 0, 3, 4)
+                                | _ -> yield V3i(-1)
+                        |]
+            
+            module After = 
+
+                let V = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V4i( 1, 2, 3, 0)
+                                | 1 -> yield V4i( 0,-1, 1, 3)
+                                | 2 -> yield V4i( 1,-1, 2, 3)
+                                | 3 -> yield V4i( 2,-1, 3, 1)
+                                | 4 -> yield V4i( 3,-1, 0, 1)
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let E = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V4i( 2, 3, 4, 1)
+                                | 1 -> yield V4i(-1,-1, 0, 4)
+                                | 2 -> yield V4i(-1,-1, 3, 0)
+                                | 3 -> yield V4i(-1,-1, 0, 2)
+                                | 4 -> yield V4i(-1,-1, 1, 0)
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let M = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V2i(1, 0)
+                                | 1 -> yield V2i(0, 0)
+                                | 2 -> yield V2i(0, 0)
+                                | 3 -> yield V2i(0, 0)
+                                | 4 -> yield V2i(0, 0)
+                                | _ -> yield V2i(-1)
+                        |]
+
+                let FV = [| 
+                            for i in 0 .. MAX_FACES - 1 do
+                                match i with
+                                | 0 -> yield V4i(1, 2, 3, (IDHash 1 2 3))
+                                | 1 -> yield V4i(3, 0, 1, (IDHash 3 0 1))
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let FE = [| 
+                            for i in 0 .. MAX_FACES - 1 do
+                                match i with
+                                | 0 -> yield V3i( 2, 3, 0)
+                                | 1 -> yield V3i( 4, 1, 0)
+                                | _ -> yield V3i(-1)
+                        |]
+        
+            [<Test>]
+            let ``Flip Edge``() = 
+
+                let (vertices, edges, meta, faceVertices, faceEdges) = 0 |> flipEdge (Before.V) (Before.E) (Before.M) (Before.FV) (Before.FE)
+
+
+                Assert.Multiple( fun _ ->
+                    vertices     |> should equal (After.V)
+                    edges        |> should equal (After.E)
+                    meta         |> should equal (After.M)
+                    faceVertices |> should equal (After.FV)
+                    faceEdges    |> should equal (After.FE)
+                )
+
+        module InsertVertex =
+
+            module Before = 
+
+                let V = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V4i( 0,-1, 1, 2)
+                                | 1 -> yield V4i( 1,-1, 2, 0)
+                                | 2 -> yield V4i( 2,-1, 0, 1)
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let E = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V4i(-1,-1, 1, 2)
+                                | 1 -> yield V4i(-1,-1, 2, 0)
+                                | 2 -> yield V4i(-1,-1, 0, 1)
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let M = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V2i(1, 0)
+                                | 1 -> yield V2i(1, 0)
+                                | 2 -> yield V2i(0, 0)
+                                | _ -> yield V2i(-1)
+                        |]
+
+                let FV = [| 
+                            for i in 0 .. MAX_FACES - 1 do
+                                match i with
+                                | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2))
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let FE = [| 
+                            for i in 0 .. MAX_FACES - 1 do
+                                match i with
+                                | 0 -> yield V3i( 0, 1, 2)
+                                | _ -> yield V3i(-1)
+                        |]
+                    
+                let nextFreeFaceAddr = 1
+                let nextFreeEdgeAddr = 3
+            
+            module After = 
+
+                let V = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V4i( 0,-1, 1, 3)
+                                | 1 -> yield V4i( 1,-1, 2, 3)
+                                | 2 -> yield V4i( 2,-1, 0, 3)
+                                | 3 -> yield V4i( 0, 1, 3, 2)
+                                | 4 -> yield V4i( 1, 2, 3, 0)
+                                | 5 -> yield V4i( 2, 0, 3, 1)
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let E = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V4i(-1,-1, 4, 3)
+                                | 1 -> yield V4i(-1,-1, 5, 4)
+                                | 2 -> yield V4i(-1,-1, 3, 5)
+                                | 3 -> yield V4i( 0, 4, 5, 2)
+                                | 4 -> yield V4i( 1, 5, 3, 0)
+                                | 5 -> yield V4i( 2, 3, 4, 1)
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let M = [| 
+                            for i in 0 .. MAX_EDGES - 1 do
+                                match i with
+                                | 0 -> yield V2i(1, 1)
+                                | 1 -> yield V2i(1, 1)
+                                | 2 -> yield V2i(0, 0)
+                                | 3 -> yield V2i(1, 0)
+                                | 4 -> yield V2i(1, 0)
+                                | 5 -> yield V2i(1, 0)
+                                | _ -> yield V2i(-1)
+                        |]
+
+                let FV = [| 
+                            for i in 0 .. MAX_FACES - 1 do
+                                match i with
+                                | 0 -> yield V4i(-1)
+                                | 1 -> yield V4i(0, 1, 3, (IDHash 0 1 3))
+                                | 2 -> yield V4i(1, 2, 3, (IDHash 1 2 3))
+                                | 3 -> yield V4i(2, 0, 3, (IDHash 2 0 3))
+                                | _ -> yield V4i(-1)
+                        |]
+
+                let FE = [| 
+                            for i in 0 .. MAX_FACES - 1 do
+                                match i with
+                                | 0 -> yield V3i( 0, 1, 2)
+                                | 1 -> yield V3i( 0, 4, 3)
+                                | 2 -> yield V3i( 1, 5, 4)
+                                | 3 -> yield V3i( 2, 3, 5)
+                                | _ -> yield V3i(-1)
+                        |]
+
+                let nextFreeFaceAddr = 4
+                let nextFreeEdgeAddr = 6
+        
+            [<Test>]
+            let ``Insert Vertex``() = 
+
+                let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = 3 |> insertVertexIntoFace (Before.V) (Before.E) (Before.M) (Before.FV) (Before.FE) (Before.nextFreeEdgeAddr) (Before.nextFreeFaceAddr) 0 
+
+
+                Assert.Multiple( fun _ ->
+                    vertices         |> should equal (After.V)
+                    edges            |> should equal (After.E)
+                    meta             |> should equal (After.M)
+                    faceVertices     |> should equal (After.FV)
+                    faceEdges        |> should equal (After.FE)
+                    nextFreeEdgeAddr |> should equal (After.nextFreeEdgeAddr)
+                    nextFreeFaceAddr |> should equal (After.nextFreeFaceAddr)
+                )
+
+               
     module Rendering =
 
         open Aardvark.SceneGraph
