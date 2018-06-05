@@ -532,7 +532,7 @@ module EffectApDelaunayIrradianceIntegration =
             | _ -> nextFreeEdgeAddr + edgeLocalId - 1
         
         [<ReflectedDefinition>]
-        let private insertEdge (vertices : V4i []) (edges : V4i []) (meta : V2i []) (faceVertices : V4i []) (faceEdges : V3i []) nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId (splitEdgeV : int []) (splitEdgeE : int []) (splitEdgeM : int []) onlyEdges edgeLocalId = 
+        let private insertEdge (vertices : V4i []) (edges : V4i []) (meta : V2i []) (faceVertices : V4i []) (faceEdges : V3i []) nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId (splitEdgeV : int []) (splitEdgeE : int []) (splitEdgeM : int []) onlyEdges currentVertex edgeLocalId = 
 
             let mapLocalToGlobalId = mapLocalToGlobalId splitEdgeId nextFreeEdgeAddr
 
@@ -545,27 +545,27 @@ module EffectApDelaunayIrradianceIntegration =
                 let nextGlobalId = mapLocalToGlobalId ((edgeLocalId + 1) % 4)
 
                 // insert new face
-                faceVertices.[nextFreeFaceAddr] <- V4i(splitEdgeV.[edgeLocalId], splitEdgeV.[(edgeLocalId + 1) % 4], vId, IDHash (splitEdgeV.[edgeLocalId]) (splitEdgeV.[(edgeLocalId + 1) % 4]) vId)
-                faceEdges.[nextFreeFaceAddr] <- V3i(splitEdgeE.[edgeLocalId], nextGlobalId, thisGlobalId)
+                faceVertices.[nextFreeFaceAddr] <- V4i(splitEdgeV.[currentVertex], splitEdgeV.[(currentVertex + 1) % 4], vId, IDHash (splitEdgeV.[currentVertex]) (splitEdgeV.[(currentVertex + 1) % 4]) vId)
+                faceEdges.[nextFreeFaceAddr] <- V3i(splitEdgeE.[currentVertex], nextGlobalId, thisGlobalId)
                 nextFreeFaceAddr <- nextFreeFaceAddr + 1
 
                 // update splitEdgeE[eLocalId]
                 // find Face of edge0.E[0] where opposite is edge0.V[2]
 
-                if vertices.[splitEdgeE.[edgeLocalId]].Y = splitEdgeV.[2] then
-                    vertices.[splitEdgeE.[edgeLocalId]] <- V4i(vertices.[splitEdgeE.[edgeLocalId]].X, vId, vertices.[splitEdgeE.[edgeLocalId]].Z, vertices.[splitEdgeE.[edgeLocalId]].W)
-                    edges.[splitEdgeE.[edgeLocalId]] <- V4i(nextGlobalId, thisGlobalId, edges.[splitEdgeE.[edgeLocalId]].Z, edges.[splitEdgeE.[edgeLocalId]].W)
+                if vertices.[splitEdgeE.[currentVertex]].Y = splitEdgeV.[2] then
+                    vertices.[splitEdgeE.[currentVertex]] <- V4i(vertices.[splitEdgeE.[currentVertex]].X, vId, vertices.[splitEdgeE.[currentVertex]].Z, vertices.[splitEdgeE.[currentVertex]].W)
+                    edges.[splitEdgeE.[currentVertex]] <- V4i(nextGlobalId, thisGlobalId, edges.[splitEdgeE.[currentVertex]].Z, edges.[splitEdgeE.[currentVertex]].W)
                 else
-                    vertices.[splitEdgeE.[edgeLocalId]] <- V4i(vertices.[splitEdgeE.[edgeLocalId]].X, vertices.[splitEdgeE.[edgeLocalId]].Y, vertices.[splitEdgeE.[edgeLocalId]].Z, vId)
-                    edges.[splitEdgeE.[edgeLocalId]] <- V4i(edges.[splitEdgeE.[edgeLocalId]].X, edges.[splitEdgeE.[edgeLocalId]].Y, nextGlobalId, thisGlobalId)
+                    vertices.[splitEdgeE.[currentVertex]] <- V4i(vertices.[splitEdgeE.[currentVertex]].X, vertices.[splitEdgeE.[currentVertex]].Y, vertices.[splitEdgeE.[currentVertex]].Z, vId)
+                    edges.[splitEdgeE.[currentVertex]] <- V4i(edges.[splitEdgeE.[currentVertex]].X, edges.[splitEdgeE.[currentVertex]].Y, nextGlobalId, thisGlobalId)
 
                 // flip new edge
-                if meta.[splitEdgeV.[edgeLocalId]].X = 1 && meta.[splitEdgeV.[edgeLocalId]].Y = 0 then
-                    meta.[splitEdgeV.[edgeLocalId]] <- V2i(1, 1)
+                if meta.[splitEdgeV.[currentVertex]].X = 1 && meta.[splitEdgeV.[currentVertex]].Y = 0 then
+                    meta.[splitEdgeV.[currentVertex]] <- V2i(1, 1)
 
 
-            vertices.[thisGlobalId] <- V4i(splitEdgeV.[edgeLocalId], splitEdgeV.[(edgeLocalId + 1) % 4], vId, splitEdgeV.[(edgeLocalId + 3) % 4])
-            edges.[thisGlobalId] <- V4i(splitEdgeE.[edgeLocalId], mapLocalToGlobalId ((edgeLocalId + 1) % 4), mapLocalToGlobalId ((edgeLocalId + 3) % 4), splitEdgeE.[(edgeLocalId + 3) % 4])
+            vertices.[thisGlobalId] <- V4i(splitEdgeV.[currentVertex], splitEdgeV.[(currentVertex + 1) % 4], vId, splitEdgeV.[(currentVertex + 3) % 4])
+            edges.[thisGlobalId] <- V4i(splitEdgeE.[currentVertex], mapLocalToGlobalId ((currentVertex + 1) % 4), mapLocalToGlobalId ((currentVertex + 3) % 4), splitEdgeE.[(currentVertex + 3) % 4])
             meta.[thisGlobalId] <- V2i(1, 0)
 
             (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr)
@@ -578,12 +578,12 @@ module EffectApDelaunayIrradianceIntegration =
 
             // insert e0 
             let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE splitEdgeM
-            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' false nextFreeLocalId
+            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' false (localOppositeVertexId - 1) nextFreeLocalId
             nextFreeLocalId <- nextFreeLocalId + 1
 
             // insert e1
             let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE splitEdgeM
-            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' false nextFreeLocalId
+            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' false localOppositeVertexId nextFreeLocalId
             nextFreeLocalId <- nextFreeLocalId + 1
    
             let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = 
@@ -593,7 +593,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                     // insert e2 
                     let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE splitEdgeM
-                    let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' true nextFreeLocalId
+                    let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' true (localOppositeVertexId + 1) nextFreeLocalId
                     nextFreeLocalId <- nextFreeLocalId + 1
 
                     (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr)
@@ -1705,33 +1705,33 @@ module EffectApDelaunayIrradianceIntegration =
                 let V = [| 
                             for i in 0 .. MAX_EDGES - 1 do
                                 match i with
-                                | 9 -> yield V4i( 3,-1, 9, 7)
+                                |10 -> yield V4i( 3,-1, 9, 7)
                                 | 5 -> yield V4i( 5,-1, 7, 9)
                                 | 8 -> yield V4i( 7,-1, 3, 9)
                                 | 4 -> yield V4i( 5, 7, 9,-1)
-                                |10 -> yield V4i( 7, 3, 9, 5)
+                                | 9 -> yield V4i( 7, 3, 9, 5)
                                 | _ -> yield V4i(-1)
                         |]
 
                 let E = [| 
                             for i in 0 .. MAX_EDGES - 1 do
                                 match i with
-                                | 9 -> yield V4i(-1,-1,10, 8)
+                                |10 -> yield V4i(-1,-1,10, 8)
                                 | 5 -> yield V4i(-1,-1,10, 9)
                                 | 8 -> yield V4i(-1,-1, 4,10)
                                 | 4 -> yield V4i( 5,10,-1,-1)
-                                |10 -> yield V4i( 8, 4, 9, 5)
+                                | 9 -> yield V4i( 8, 4, 9, 5)
                                 | _ -> yield V4i(-1)
                         |]
 
                 let M = [| 
                             for i in 0 .. MAX_EDGES - 1 do
                                 match i with
-                                | 9 -> yield V2i(0, 0)
+                                |10 -> yield V2i(0, 0)
                                 | 5 -> yield V2i(1, 1)
                                 | 8 -> yield V2i(1, 1)
                                 | 4 -> yield V2i(0, 0)
-                                |10 -> yield V2i(1, 0)
+                                | 9 -> yield V2i(1, 0)
                                 | _ -> yield V2i(-1)
                         |]
 
