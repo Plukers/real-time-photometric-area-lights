@@ -793,7 +793,7 @@ module EffectApDelaunayIrradianceIntegration =
                                     let mutable vc = clippedVc
                                     let mutable offset = 0
                                     if caseOffset <> CASE_CORNER_OFFSET then 
-                                        verticesNormalized.[0] <- closestPoint |> Vec.normalize
+                                        verticesNormalized.[0] <- (closestPoint +  mrp * 1e-9) |> Vec.normalize
                                         funVal.[0]   <- sampleIrr t2w addr closestPoint
                                         vc <- vc + 1 
                                         offset <- 1
@@ -827,7 +827,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     // insert additional vertices
 
-                                    
+                                    (*
                                     let additionalVertex = mrp
                                     let additionalVertexDir = mrpDir
 
@@ -853,8 +853,8 @@ module EffectApDelaunayIrradianceIntegration =
 
                                             if dotXN >= -1e-9 && dotYN >= -1e-9 && dotZN >= -1e-9 then
                                                 
-                                                match (dotXN < epm, dotYN < epm, dotZN < epm) with
-                                                | (x, y, z) when (x && y) || (x && y) || (y && z) -> insertCase <- NO_INSERT
+                                                match (dotXN < eps, dotYN < eps, dotZN < eps) with
+                                                | (x, y, z) when (x && y) || (x && z) || (y && z) -> insertCase <- NO_INSERT
                                                 | (x, _, _) when x -> 
                                                     insertCase <- SPLIT_EDGE
                                                     insertParameter <- delFaceEdgeData.[f].X
@@ -898,7 +898,7 @@ module EffectApDelaunayIrradianceIntegration =
                                         delNextFreeEdgeAddr <- nextFreeEdgeAddr
                                         delNextFreeFaceAddr <- nextFreeFaceAddr
                                     | _ -> ()
-
+                                    *)
 
                                     // execute edge flip algorithm
 
@@ -1257,8 +1257,8 @@ module EffectApDelaunayIrradianceIntegration =
 
                                 if dotXN >= -1e-9 && dotYN >= -1e-9 && dotZN >= -1e-9 then
                                                 
-                                    match (dotXN < epm, dotYN < epm, dotZN < epm) with
-                                    | (x, y, z) when (x && y) || (x && y) || (y && z) -> insertCase <- NO_INSERT
+                                    match (dotXN < eps, dotYN < eps, dotZN < eps) with
+                                    | (x, y, z) when (x && y) || (x && z) || (y && z) -> insertCase <- NO_INSERT
                                     | (x, _, _) when x -> 
                                         insertCase <- SPLIT_EDGE
                                         insertParameter <- delFaceEdgeData.[f].X
