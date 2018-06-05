@@ -560,13 +560,21 @@ module EffectApDelaunayIrradianceIntegration =
                     edges.[splitEdgeE.[currentVertex]] <- V4i(edges.[splitEdgeE.[currentVertex]].X, edges.[splitEdgeE.[currentVertex]].Y, nextGlobalId, thisGlobalId)
 
                 // flip new edge
-                if meta.[splitEdgeV.[currentVertex]].X = 1 && meta.[splitEdgeV.[currentVertex]].Y = 0 then
-                    meta.[splitEdgeV.[currentVertex]] <- V2i(1, 1)
+                if meta.[splitEdgeE.[currentVertex]].X = 1 && meta.[splitEdgeE.[currentVertex]].Y = 0 then
+                    meta.[splitEdgeE.[currentVertex]] <- V2i(1, 1)
 
 
             vertices.[thisGlobalId] <- V4i(splitEdgeV.[currentVertex], splitEdgeV.[(currentVertex + 1) % 4], vId, splitEdgeV.[(currentVertex + 3) % 4])
-            edges.[thisGlobalId] <- V4i(splitEdgeE.[currentVertex], mapLocalToGlobalId ((currentVertex + 1) % 4), mapLocalToGlobalId ((currentVertex + 3) % 4), splitEdgeE.[(currentVertex + 3) % 4])
-            meta.[thisGlobalId] <- V2i(1, 0)
+
+            if splitEdgeV.[(currentVertex + 3) % 4] = -1 then
+                edges.[thisGlobalId] <- V4i(splitEdgeE.[currentVertex], mapLocalToGlobalId ((edgeLocalId + 1) % 4), -1, splitEdgeE.[(currentVertex + 3) % 4])
+                meta.[thisGlobalId] <- V2i(0, 0)
+            elif splitEdgeV.[(currentVertex + 1) % 4] = -1 then
+                edges.[thisGlobalId] <- V4i(splitEdgeE.[currentVertex], -1, mapLocalToGlobalId ((edgeLocalId + 3) % 4), splitEdgeE.[(currentVertex + 3) % 4])
+                meta.[thisGlobalId] <- V2i(0, 0)
+            else
+                edges.[thisGlobalId] <- V4i(splitEdgeE.[currentVertex], mapLocalToGlobalId ((edgeLocalId + 1) % 4), mapLocalToGlobalId ((edgeLocalId + 3) % 4), splitEdgeE.[(currentVertex + 3) % 4])
+                meta.[thisGlobalId] <- V2i(1, 0)
 
             (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr)
         
@@ -593,7 +601,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                     // insert e2 
                     let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE splitEdgeM
-                    let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' true (localOppositeVertexId + 1) nextFreeLocalId
+                    let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' true ((localOppositeVertexId + 1) % 4) nextFreeLocalId
                     nextFreeLocalId <- nextFreeLocalId + 1
 
                     (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr)
@@ -1705,33 +1713,33 @@ module EffectApDelaunayIrradianceIntegration =
                 let V = [| 
                             for i in 0 .. MAX_EDGES - 1 do
                                 match i with
-                                |10 -> yield V4i( 3,-1, 9, 7)
+                                | 4 -> yield V4i( 5, 7, 9,-1)
                                 | 5 -> yield V4i( 5,-1, 7, 9)
                                 | 8 -> yield V4i( 7,-1, 3, 9)
-                                | 4 -> yield V4i( 5, 7, 9,-1)
                                 | 9 -> yield V4i( 7, 3, 9, 5)
+                                |10 -> yield V4i( 3,-1, 9, 7)
                                 | _ -> yield V4i(-1)
                         |]
 
                 let E = [| 
                             for i in 0 .. MAX_EDGES - 1 do
                                 match i with
-                                |10 -> yield V4i(-1,-1,10, 8)
-                                | 5 -> yield V4i(-1,-1,10, 9)
-                                | 8 -> yield V4i(-1,-1, 4,10)
-                                | 4 -> yield V4i( 5,10,-1,-1)
-                                | 9 -> yield V4i( 8, 4, 9, 5)
+                                | 4 -> yield V4i( 5, 9,-1,-1)
+                                | 5 -> yield V4i(-1,-1, 9, 4)
+                                | 8 -> yield V4i(-1,-1,10, 9)                                
+                                | 9 -> yield V4i( 8,10, 4, 5)
+                                |10 -> yield V4i(-1,-1, 9, 8)
                                 | _ -> yield V4i(-1)
                         |]
 
                 let M = [| 
                             for i in 0 .. MAX_EDGES - 1 do
                                 match i with
-                                |10 -> yield V2i(0, 0)
+                                | 4 -> yield V2i(0, 0)
                                 | 5 -> yield V2i(1, 1)
                                 | 8 -> yield V2i(1, 1)
-                                | 4 -> yield V2i(0, 0)
                                 | 9 -> yield V2i(1, 0)
+                                |10 -> yield V2i(0, 0)
                                 | _ -> yield V2i(-1)
                         |]
 
@@ -1748,8 +1756,8 @@ module EffectApDelaunayIrradianceIntegration =
                             for i in 0 .. MAX_FACES - 1 do
                                 match i with
                                 | 0 -> yield V3i( 4, 5, 8)
-                                | 1 -> yield V3i( 5,10, 9)
-                                | 2 -> yield V3i( 8, 4,10)
+                                | 1 -> yield V3i( 5, 9, 4)
+                                | 2 -> yield V3i( 8,10, 9)
                                 | _ -> yield V3i(-1)
                         |]
                     
