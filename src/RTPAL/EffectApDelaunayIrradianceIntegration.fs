@@ -14,7 +14,7 @@ module EffectApDelaunayIrradianceIntegration =
     let MAX_EDGES = 13
 
     [<Literal>]
-    let MAX_FACES = 7
+    let MAX_FACES = 10
 
 
     [<Literal>]
@@ -44,7 +44,7 @@ module EffectApDelaunayIrradianceIntegration =
     let MAX_EDGES_ALL = 39 // MAX_EDGES * NUM_CASE
 
     [<Literal>]
-    let MAX_FACES_ALL = 21 // MAX_FACES * NUM_CASE
+    let MAX_FACES_ALL = 30 // MAX_FACES * NUM_CASE
 
 
     [<ReflectedDefinition>]
@@ -607,30 +607,25 @@ module EffectApDelaunayIrradianceIntegration =
             let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE false localOppositeVertexId nextFreeLocalId
             nextFreeLocalId <- nextFreeLocalId + 1
    
-            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = 
-                if splitEdgeV.[(localOppositeVertexId + 2) % 4] = -1 then   
+            if splitEdgeV.[(localOppositeVertexId + 2) % 4] = -1 then   
 
-                    meta.[(mapLocalToGlobalId splitEdgeId nextFreeEdgeAddr (localOppositeVertexId - 1))] <- V2i(0,0)
+                meta.[(mapLocalToGlobalId splitEdgeId nextFreeEdgeAddr (localOppositeVertexId - 1))] <- V2i(0,0)
 
-                    // insert e2 
-                    let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE true ((localOppositeVertexId + 1) % 4) nextFreeLocalId
-                    nextFreeLocalId <- nextFreeLocalId + 1
+                // insert e2 
+                let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE true ((localOppositeVertexId + 1) % 4) nextFreeLocalId
+                nextFreeLocalId <- nextFreeLocalId + 1
 
-                    (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr)
-                else 
-                    (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr)
-
-            let fhash = IDHash (splitEdgeV.[(localOppositeVertexId - 1) % 4]) (splitEdgeV.[localOppositeVertexId]) (splitEdgeV.[(localOppositeVertexId + 1) % 4])
-            for i in 0 .. MAX_FACES - 1 do
-                if faceVertices.[i].W = fhash then
-                    faceVertices.[i] <- V4i(-1)
-
-            (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr, nextFreeLocalId)
+                (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr, nextFreeLocalId)
+            else 
+                (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr, nextFreeLocalId)
 
         // Splits edgy edgeId by inseting vertex with Id = vId 
         [<ReflectedDefinition>]
         let spliteEdge (vertices : Arr<N<MAX_EDGES>, V4i>) (edges : Arr<N<MAX_EDGES>, V4i>) (meta : Arr<N<MAX_EDGES>, V2i>) (faceVertices : Arr<N<MAX_FACES>, V4i>) (faceEdges : Arr<N<MAX_FACES>, V3i>) nextFreeEdgeAddr nextFreeFaceAddr edgeId vId =
         
+            let fhash1 = IDHash (vertices.[edgeId].X) (vertices.[edgeId].Y) (vertices.[edgeId].Z)
+            let fhash2 = IDHash (vertices.[edgeId].Z) (vertices.[edgeId].W) (vertices.[edgeId].X)
+            
             let splitEdgeV = Arr<N<4>, int>([| vertices.[edgeId].X; vertices.[edgeId].Y; vertices.[edgeId].Z; vertices.[edgeId].W |])
             let splitEdgeE = Arr<N<4>, int>([| edges.[edgeId].X; edges.[edgeId].Y; edges.[edgeId].Z; edges.[edgeId].W |])
             let splitEdgeM = Arr<N<2>, int>([| meta.[edgeId].X; meta.[edgeId].Y |])
@@ -647,6 +642,11 @@ module EffectApDelaunayIrradianceIntegration =
                     updateFace vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId edgeId splitEdgeV splitEdgeE splitEdgeM nextFreeLocalId 3 
                 else
                     (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr, nextFreeLocalId)
+
+
+            for i in 0 .. MAX_FACES - 1 do
+                if faceVertices.[i].W = fhash1 || faceVertices.[i].W = fhash2 then
+                    faceVertices.[i] <- V4i(-1)
 
             (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr + (if nextFreeLocalId > 0 then nextFreeLocalId - 1 else 0), nextFreeFaceAddr)
 
@@ -827,78 +827,67 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     // insert additional vertices
 
-                                    (*
+                                    
                                     let additionalVertex = mrp
                                     let additionalVertexDir = mrpDir
 
-                                    let NO_INSERT = 0
-                                    let SPLIT_EDGE = 1
-                                    let INSERT_VERTEX = 2
+                                    if Vec.dot additionalVertexDir verticesNormalized.[0] > 1e-9 then
 
-                                    let mutable insertCase = NO_INSERT
-                                    let mutable insertParameter = -1
-                                    
-                                    for f in 0 .. MAX_FACES - 1 do
-                                        let face = delFaceVertexData.[f]
+                                        let mutable  foundFace = false
+                        
+                                        for f in 0 .. MAX_FACES - 1 do
+                                            if not foundFace && delFaceVertexData.[f].W <> -1 then 
+                            
+                                                let face = delFaceVertexData.[f]
+                                                                                        
+                                                let dotZN = Vec.cross (verticesNormalized.[face.X]) (verticesNormalized.[face.Z]) |> Vec.normalize |> Vec.dot additionalVertexDir 
+                                                let dotYN = Vec.cross (verticesNormalized.[face.Z]) (verticesNormalized.[face.Y]) |> Vec.normalize |> Vec.dot additionalVertexDir 
+                                                let dotXN = Vec.cross (verticesNormalized.[face.Y]) (verticesNormalized.[face.X]) |> Vec.normalize |> Vec.dot additionalVertexDir 
 
-                                        if face.W <> -1 then
-                                            let zN = Vec.cross (verticesNormalized.[face.X]) (verticesNormalized.[face.Z]) |> Vec.normalize
-                                            let xN = Vec.cross (verticesNormalized.[face.Y]) (verticesNormalized.[face.X]) |> Vec.normalize
-                                            let yN = Vec.cross (verticesNormalized.[face.Z]) (verticesNormalized.[face.Y]) |> Vec.normalize
-
-                                            
-                                            let dotZN = Vec.dot additionalVertexDir zN
-                                            let dotYN = Vec.dot additionalVertexDir yN
-                                            let dotXN = Vec.dot additionalVertexDir xN
-
-                                            if dotXN >= -1e-9 && dotYN >= -1e-9 && dotZN >= -1e-9 then
+                                                if dotXN >= -1e-9 && dotYN >= -1e-9 && dotZN >= -1e-9 then 
                                                 
-                                                match (dotXN < eps, dotYN < eps, dotZN < eps) with
-                                                | (x, y, z) when (x && y) || (x && z) || (y && z) -> insertCase <- NO_INSERT
-                                                | (x, _, _) when x -> 
-                                                    insertCase <- SPLIT_EDGE
-                                                    insertParameter <- delFaceEdgeData.[f].X
-                                                | (_, y, _) when y -> 
-                                                    insertCase <- SPLIT_EDGE
-                                                    insertParameter <- delFaceEdgeData.[f].Y
-                                                | (_, _, z) when z -> 
-                                                    insertCase <- SPLIT_EDGE
-                                                    insertParameter <- delFaceEdgeData.[f].Z
-                                                | _ -> 
-                                                    insertCase <- INSERT_VERTEX
-                                                    insertParameter <- f
+                                                    foundFace <- true
 
-                                    
-                                    match insertCase with 
-                                    | case when case = SPLIT_EDGE -> 
-                                        verticesNormalized.[vc] <- additionalVertexDir
-                                        funVal.[vc]   <- sampleIrr t2w addr additionalVertex
-                                        vc <- vc + 1 
+                                                    let x = dotXN < eps
+                                                    let y = dotYN < eps
+                                                    let z = dotZN < eps
+
+                                                    if (x && y) || (x && z) || (y && z) then
+                                                        ()
+                                                    elif x || y || z then
+
+                                                        let edgeToSplit = 
+                                                            if x then delFaceEdgeData.[f].X
+                                                            elif y then delFaceEdgeData.[f].Y
+                                                            else delFaceEdgeData.[f].Z
+
+                                                        verticesNormalized.[vc] <- additionalVertexDir
+                                                        funVal.[vc]   <- sampleIrr t2w addr additionalVertex
+                                                        vc <- vc + 1 
                                         
-                                        let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr insertParameter
-                                        delVertexData       <- vertices
-                                        delNEdgeData        <- edges
-                                        delMetaData         <- meta
-                                        delFaceVertexData   <- faceVertices
-                                        delFaceEdgeData     <- faceEdges
-                                        delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                                        delNextFreeFaceAddr <- nextFreeFaceAddr
+                                                        let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr edgeToSplit
+                                                        delVertexData       <- vertices
+                                                        delNEdgeData        <- edges
+                                                        delMetaData         <- meta
+                                                        delFaceVertexData   <- faceVertices
+                                                        delFaceEdgeData     <- faceEdges
+                                                        delNextFreeEdgeAddr <- nextFreeEdgeAddr
+                                                        delNextFreeFaceAddr <- nextFreeFaceAddr
+                                                    
+                                                    else
+                                                        verticesNormalized.[vc] <- additionalVertexDir
+                                                        funVal.[vc]   <- sampleIrr t2w addr additionalVertex
+                                                        vc <- vc + 1 
 
-                                    | case when case = INSERT_VERTEX -> 
-                                        verticesNormalized.[vc] <- additionalVertexDir
-                                        funVal.[vc] <- sampleIrr t2w addr additionalVertex
-                                        vc <- vc + 1 
-
-                                        let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.insertVertexIntoFace delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr insertParameter
-                                        delVertexData       <- vertices
-                                        delNEdgeData        <- edges
-                                        delMetaData         <- meta
-                                        delFaceVertexData   <- faceVertices
-                                        delFaceEdgeData     <- faceEdges
-                                        delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                                        delNextFreeFaceAddr <- nextFreeFaceAddr
-                                    | _ -> ()
-                                    *)
+                                                        let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.insertVertexIntoFace delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr f
+                                                        delVertexData       <- vertices
+                                                        delNEdgeData        <- edges
+                                                        delMetaData         <- meta
+                                                        delFaceVertexData   <- faceVertices
+                                                        delFaceEdgeData     <- faceEdges
+                                                        delNextFreeEdgeAddr <- nextFreeEdgeAddr
+                                                        delNextFreeFaceAddr <- nextFreeFaceAddr
+                                        
 
                                     // execute edge flip algorithm
 
@@ -1233,74 +1222,64 @@ module EffectApDelaunayIrradianceIntegration =
 
                         // insert additional vertices
 
-                        let additionalVertex = mrpDir
+                        let additionalVertexDir = mrpDir
 
-                        let NO_INSERT = 0
-                        let SPLIT_EDGE = 1
-                        let INSERT_VERTEX = 2
+                        if Vec.dot additionalVertexDir verticesNormalized.[0] > 1e-9 then
 
-                        let mutable insertCase = NO_INSERT
-                        let mutable insertParameter = -1
-                                    
-                        for f in 0 .. MAX_FACES - 1 do
-                            let face = delFaceVertexData.[f]
+                            let mutable  foundFace = false
+                        
+                            for f in 0 .. MAX_FACES - 1 do
+                                if not foundFace && delFaceVertexData.[f].W <> -1 then 
+                            
+                                    let face = delFaceVertexData.[f]
+                                                                                        
+                                    let dotZN = Vec.cross (verticesNormalized.[face.X]) (verticesNormalized.[face.Z]) |> Vec.normalize |> Vec.dot additionalVertexDir 
+                                    let dotYN = Vec.cross (verticesNormalized.[face.Z]) (verticesNormalized.[face.Y]) |> Vec.normalize |> Vec.dot additionalVertexDir 
+                                    let dotXN = Vec.cross (verticesNormalized.[face.Y]) (verticesNormalized.[face.X]) |> Vec.normalize |> Vec.dot additionalVertexDir 
 
-                            if face.W <> -1 then
-                                let zN = Vec.cross (verticesNormalized.[face.X]) (verticesNormalized.[face.Z]) |> Vec.normalize
-                                let xN = Vec.cross (verticesNormalized.[face.Y]) (verticesNormalized.[face.X]) |> Vec.normalize
-                                let yN = Vec.cross (verticesNormalized.[face.Z]) (verticesNormalized.[face.Y]) |> Vec.normalize
-
-                                            
-                                let dotZN = Vec.dot additionalVertex zN
-                                let dotYN = Vec.dot additionalVertex yN
-                                let dotXN = Vec.dot additionalVertex xN
-
-                                if dotXN >= -1e-9 && dotYN >= -1e-9 && dotZN >= -1e-9 then
+                                    if dotXN >= -1e-9 && dotYN >= -1e-9 && dotZN >= -1e-9 then
                                                 
-                                    match (dotXN < eps, dotYN < eps, dotZN < eps) with
-                                    | (x, y, z) when (x && y) || (x && z) || (y && z) -> insertCase <- NO_INSERT
-                                    | (x, _, _) when x -> 
-                                        insertCase <- SPLIT_EDGE
-                                        insertParameter <- delFaceEdgeData.[f].X
-                                    | (_, y, _) when y -> 
-                                        insertCase <- SPLIT_EDGE
-                                        insertParameter <- delFaceEdgeData.[f].Y
-                                    | (_, _, z) when z -> 
-                                        insertCase <- SPLIT_EDGE
-                                        insertParameter <- delFaceEdgeData.[f].Z
-                                    | _ -> 
-                                        insertCase <- INSERT_VERTEX
-                                        insertParameter <- f
+                                        foundFace <- true
+
+                                        let x = dotXN < eps
+                                        let y = dotYN < eps
+                                        let z = dotZN < eps
+
+                                        if (x && y) || (x && z) || (y && z) then
+                                            ()
+                                        elif x || y || z then
+
+                                            let edgeToSplit = 
+                                                if x then delFaceEdgeData.[f].X
+                                                elif y then delFaceEdgeData.[f].Y
+                                                else delFaceEdgeData.[f].Z
+
+                                            verticesNormalized.[vc] <- additionalVertexDir
+                                            vc <- vc + 1 
+                                        
+                                            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr edgeToSplit
+                                            delVertexData       <- vertices
+                                            delNEdgeData        <- edges
+                                            delMetaData         <- meta
+                                            delFaceVertexData   <- faceVertices
+                                            delFaceEdgeData     <- faceEdges
+                                            delNextFreeEdgeAddr <- nextFreeEdgeAddr
+                                            delNextFreeFaceAddr <- nextFreeFaceAddr
+                                                    
+                                        else
+                                            verticesNormalized.[vc] <- additionalVertexDir
+                                            vc <- vc + 1 
+
+                                            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.insertVertexIntoFace delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr f
+                                            delVertexData       <- vertices
+                                            delNEdgeData        <- edges
+                                            delMetaData         <- meta
+                                            delFaceVertexData   <- faceVertices
+                                            delFaceEdgeData     <- faceEdges
+                                            delNextFreeEdgeAddr <- nextFreeEdgeAddr
+                                            delNextFreeFaceAddr <- nextFreeFaceAddr
 
                                     
-                        match insertCase with 
-                        | case when case = SPLIT_EDGE -> 
-                            verticesNormalized.[vc] <- additionalVertex
-                            vc <- vc + 1 
-                                        
-                            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = 4 |> DataMutation.spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr insertParameter
-                            delVertexData       <- vertices
-                            delNEdgeData        <- edges
-                            delMetaData         <- meta
-                            delFaceVertexData   <- faceVertices
-                            delFaceEdgeData     <- faceEdges
-                            delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                            delNextFreeFaceAddr <- nextFreeFaceAddr
-
-                        | case when case = INSERT_VERTEX -> 
-                            verticesNormalized.[vc] <- additionalVertex
-                            vc <- vc + 1 
-
-                            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.insertVertexIntoFace delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr insertParameter
-                            delVertexData       <- vertices
-                            delNEdgeData        <- edges
-                            delMetaData         <- meta
-                            delFaceVertexData   <- faceVertices
-                            delFaceEdgeData     <- faceEdges
-                            delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                            delNextFreeFaceAddr <- nextFreeFaceAddr
-                        | _ -> ()
-
 
                         // execute edge flip algorithm
 
@@ -1379,7 +1358,11 @@ module EffectApDelaunayIrradianceIntegration =
                         sg <- Sg.group' [sg; pointSg 0.98 (C4b(255, 255, 255, 100)) (Trafo3d.Identity |> Mod.init)]
 
                         for i in 0 .. vc - 1 do 
-                            sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (verticesNormalized.[i]))]
+                            match i with
+                            | 0 ->  sg <- Sg.group' [sg; pointSg 0.005 C4b.Blue (getTrafo (verticesNormalized.[i]))]
+                            | v when v = (vc - 1) -> sg <- Sg.group' [sg; pointSg 0.005 C4b.Green (getTrafo (verticesNormalized.[i]))]
+                            | _ -> sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (verticesNormalized.[i]))]
+                            
             
                         
                         printfn "Vertices %A : %A" vc verticesNormalized
