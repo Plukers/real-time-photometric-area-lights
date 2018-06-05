@@ -851,7 +851,7 @@ module EffectApDelaunayIrradianceIntegration =
                                             let dotYN = Vec.dot additionalVertexDir yN
                                             let dotXN = Vec.dot additionalVertexDir xN
 
-                                            if dotXN > 0.0 && dotYN > 0.0 && dotZN > 0.0 then
+                                            if dotXN >= -1e-9 && dotYN >= -1e-9 && dotZN >= -1e-9 then
                                                 
                                                 match (dotXN < epm, dotYN < epm, dotZN < epm) with
                                                 | (x, y, z) when (x && y) || (x && y) || (y && z) -> insertCase <- NO_INSERT
@@ -987,7 +987,6 @@ module EffectApDelaunayIrradianceIntegration =
                         
 
             return V4d(illumination.XYZ, v.c.W)
-            
         }
 
     module Debug =
@@ -1256,7 +1255,7 @@ module EffectApDelaunayIrradianceIntegration =
                                 let dotYN = Vec.dot additionalVertex yN
                                 let dotXN = Vec.dot additionalVertex xN
 
-                                if dotXN > 0.0 && dotYN > 0.0 && dotZN > 0.0 then
+                                if dotXN >= -1e-9 && dotYN >= -1e-9 && dotZN >= -1e-9 then
                                                 
                                     match (dotXN < epm, dotYN < epm, dotZN < epm) with
                                     | (x, y, z) when (x && y) || (x && y) || (y && z) -> insertCase <- NO_INSERT

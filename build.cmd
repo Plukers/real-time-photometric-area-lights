@@ -14,6 +14,10 @@ if errorlevel 1 (
   exit /b %errorlevel%
 )
 
+.paket\paket.exe restore
+if errorlevel 1 (
+  exit /b %errorlevel%
+)
 
 SET FSI_PATH=packages\build\FAKE\tools\Fake.exe
 
