@@ -144,110 +144,109 @@ module EffectApDelaunayIrradianceIntegration =
             // vertex0 (v0), opposite0 (o0), vertex1 (v1), opposite1 (o1)
             let V = [|
                     // CASE_CORNER
-                        // outer
-                        V4i(0, -1, 1, 2) // 0
-                        V4i(1, -1, 2, 0) // 1
-                        V4i(2, -1, 3, 0) // 2
-                        V4i(3, -1, 0, 2) // 3
-                                                
-                        // inner
-                        V4i(0, 1, 2, 3) // 4
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            // outer
+                            | 0 -> yield V4i(0, -1, 1, 2) 
+                            | 1 -> yield V4i(1, -1, 2, 0) 
+                            | 2 -> yield V4i(2, -1, 3, 0) 
+                            | 3 -> yield V4i(3, -1, 0, 2) 
+                            
+                            // inner
+                            | 4 -> yield V4i(0, 1, 2, 3)
+                            
+                            // fill up
+                            | _ -> yield V4i(-1)
 
-                        // fill up
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
 
                     // CASE_EDGE
-                        // outer
-                        V4i(0, -1, 1, 2) // 0
-                        V4i(1, -1, 2, 0) // 1
-                        V4i(2, -1, 3, 0) // 2
-                        V4i(3, -1, 4, 0) // 3
-                        V4i(4, -1, 0, 3) // 4
-
-                        // inner
-                        V4i(0, 1, 2, 3) // 5
-                        V4i(0, 2, 3, 4) // 6
-
-                        // fill up
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            // outer
+                            | 0 -> yield V4i(0, -1, 1, 2) 
+                            | 1 -> yield V4i(1, -1, 2, 0) 
+                            | 2 -> yield V4i(2, -1, 3, 0) 
+                            | 3 -> yield V4i(3, -1, 4, 0) 
+                            | 4 -> yield V4i(4, -1, 0, 3) 
+                            
+                            // inner
+                            | 5 -> yield V4i(0, 1, 2, 3) 
+                            | 6 -> yield V4i(0, 2, 3, 4) 
+                            
+                            // fill up
+                            | _ -> yield V4i(-1)
 
                     // CASE_INSIDE
-                        // outer
-                        V4i(1, -1, 2, 0) // 0
-                        V4i(2, -1, 3, 0) // 1
-                        V4i(3, -1, 4, 0) // 2
-                        V4i(4, -1, 1, 0) // 3
-
-                        // inner
-                        V4i(0, 4, 1, 2) // 4
-                        V4i(0, 1, 2, 3) // 5
-                        V4i(0, 2, 3, 4) // 6
-                        V4i(0, 3, 4, 1) // 7
-
-                        // fill up
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            // outer
+                            | 0 -> yield V4i(1, -1, 2, 0) // 0
+                            | 1 -> yield V4i(2, -1, 3, 0) // 1
+                            | 2 -> yield V4i(3, -1, 4, 0) // 2
+                            | 3 -> yield V4i(4, -1, 1, 0) // 3
+                            
+                            // inner
+                            | 4 -> yield V4i(0, 4, 1, 2) // 4
+                            | 5 -> yield V4i(0, 1, 2, 3) // 5
+                            | 6 -> yield V4i(0, 2, 3, 4) // 6
+                            | 7 -> yield V4i(0, 3, 4, 1) // 7
+                            
+                            // fill up
+                            | _ -> yield V4i(-1)
                     |]
 
             // edges
             // v0 -> o0, o0 -> v1, v1 -> o1, o1 -> v0
             let E = [|
                     // CASE_CORNER
-                        // outer
-                        V4i(-1, -1, 1, 4) // 0
-                        V4i(-1, -1, 4, 0) // 1
-                        V4i(-1, -1, 3, 4) // 2
-                        V4i(-1, -1, 4, 2) // 3
-                                                
-                        // 
-                        V4i(0, 1, 2, 3) // 4
-
-                        // fill up
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            // outer
+                            | 0 -> yield V4i(-1, -1, 1, 4) 
+                            | 1 -> yield V4i(-1, -1, 4, 0) 
+                            | 2 -> yield V4i(-1, -1, 3, 4) 
+                            | 3 -> yield V4i(-1, -1, 4, 2) 
+                            
+                            // inner
+                            | 4 -> yield V4i(0, 1, 2, 3)
+                            
+                            // fill up
+                            | _ -> yield V4i(-1)
                                                 
                     // CASE_EDGE
-                        // outer
-                        V4i(-1, -1, 1, 5) // 0
-                        V4i(-1, -1, 5, 0) // 1
-                        V4i(-1, -1, 6, 5) // 2
-                        V4i(-1, -1, 4, 6) // 3
-                        V4i(-1, -1, 6, 3) // 4
-
-                        // inner
-                        V4i(0, 1, 2, 6) // 5
-                        V4i(5, 2, 3, 4) // 6
-
-                        // fill up
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            // outer
+                            | 0 -> yield V4i(-1, -1, 1, 5)
+                            | 1 -> yield V4i(-1, -1, 5, 0)
+                            | 2 -> yield V4i(-1, -1, 6, 5)
+                            | 3 -> yield V4i(-1, -1, 4, 6)
+                            | 4 -> yield V4i(-1, -1, 6, 3)
+                            
+                            // inner
+                            | 5 -> yield V4i(0, 1, 2, 6)
+                            | 6 -> yield V4i(5, 2, 3, 4)
+                            
+                            // fill up
+                            | _ -> yield V4i(-1)
 
                     // CASE_INSIDE
-                        // outer
-                        V4i(-1, -1, 5, 4) // 0
-                        V4i(-1, -1, 6, 5) // 1
-                        V4i(-1, -1, 7, 6) // 2
-                        V4i(-1, -1, 4, 7) // 3
-
-                        // inner
-                        V4i(7, 3, 0, 5) // 4
-                        V4i(4, 0, 1, 6) // 5
-                        V4i(5, 1, 2, 7) // 6
-                        V4i(6, 2, 3, 4) // 7
-
-                        // fill up
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            // outer
+                            | 0 -> yield V4i(-1, -1, 5, 4) 
+                            | 1 -> yield V4i(-1, -1, 6, 5) 
+                            | 2 -> yield V4i(-1, -1, 7, 6) 
+                            | 3 -> yield V4i(-1, -1, 4, 7) 
+                            
+                            // inner
+                            | 4 -> yield V4i(7, 3, 0, 5)
+                            | 5 -> yield V4i(4, 0, 1, 6)
+                            | 6 -> yield V4i(5, 1, 2, 7)
+                            | 7 -> yield V4i(6, 2, 3, 4)
+                            
+                            // fill up
+                            | _ -> yield V4i(-1)
                     |]
 
             // meta    
@@ -255,118 +254,121 @@ module EffectApDelaunayIrradianceIntegration =
             // 1 = true, 0 = false
             let M = [|
                     // CASE_CORNER
-                        // outer
-                        V2i(0, 0) // 0
-                        V2i(0, 0) // 1
-                        V2i(0, 0) // 2
-                        V2i(0, 0) // 3
-                                                
-                        // inner
-                        V2i(1, 1) // 4
-
-                        // fill up
-                        V2i(-1, -1) 
-                        V2i(-1, -1)
-                        V2i(-1, -1) 
-                        V2i(-1, -1)
-                        V2i(-1, -1)
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            // outer
+                            | 0 -> yield V2i(0, 0) 
+                            | 1 -> yield V2i(0, 0) 
+                            | 2 -> yield V2i(0, 0) 
+                            | 3 -> yield V2i(0, 0) 
+                            
+                            // inner
+                            | 4 -> yield V2i(1, 0) 
+                            
+                            // fill up
+                            | _ -> yield V2i(-1) 
                                                 
                     // CASE_EDGE
-                        // outer
-                        V2i(0, 0) // 0
-                        V2i(0, 0) // 1
-                        V2i(0, 0) // 2
-                        V2i(0, 0) // 3
-                        V2i(0, 0) // 4
-
-                        // inner
-                        V2i(1, 1) // 5
-                        V2i(1, 1) // 6
-
-                        // fill up
-                        V2i(-1, -1) 
-                        V2i(-1, -1)
-                        V2i(-1, -1)
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            // outer
+                            | 0 -> yield V2i(0, 0) 
+                            | 1 -> yield V2i(0, 0) 
+                            | 2 -> yield V2i(0, 0) 
+                            | 3 -> yield V2i(0, 0) 
+                            | 4 -> yield V2i(0, 0) 
+                            
+                            // inner
+                            | 5 -> yield V2i(1, 0)
+                            | 6 -> yield V2i(1, 0)
+                            
+                            // fill up
+                            | _ -> yield V2i(-1) 
 
                     // CASE_INSIDE
-                        // outer
-                        V2i(0, 0) // 0
-                        V2i(0, 0) // 1
-                        V2i(0, 0) // 2
-                        V2i(0, 0) // 3
-
-                        // inner
-                        V2i(1, 1) // 4
-                        V2i(1, 1) // 5
-                        V2i(1, 1) // 6
-                        V2i(1, 1) // 7
-
-                        // fill up
-                        V2i(-1, -1)
-                        V2i(-1, -1)
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            // outer
+                            | 0 -> yield V2i(0, 0)
+                            | 1 -> yield V2i(0, 0)
+                            | 2 -> yield V2i(0, 0)
+                            | 3 -> yield V2i(0, 0)
+                            
+                            // inner
+                            | 4 -> yield V2i(1, 0) 
+                            | 5 -> yield V2i(1, 0) 
+                            | 6 -> yield V2i(1, 0) 
+                            | 7 -> yield V2i(1, 0) 
+                            
+                            // fill up
+                            | _ -> yield V2i(-1) 
                     |]
             
-            // faces
-            // (IDHash v0 v1 v2), v0, v1, v2
+            // faces vertices
+            // v0, v1, v2, (IDHash v0 v1 v2)
             // v0 should be the smallest ID, v0, v1, v2 ordered counter clockwise
-            let F = [|
+            let FV = [|
                     // CASE_CORNER
-                        V4i((IDHash 0 1 2), 0, 1, 2) 
-                        V4i((IDHash 0 2 3), 0, 2, 3) 
-
-                        // fill 
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
+                        for i in 0 .. MAX_FACES - 1 do
+                            match i with
+                            | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2)) 
+                            | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
+                            
+                            // fill 
+                            | _ -> yield V4i(-1)
                                                 
                     // CASE_EDGE
-                        V4i((IDHash 0 1 2), 0, 1, 2) 
-                        V4i((IDHash 0 2 3), 0, 2, 3) 
-                        V4i((IDHash 0 3 4), 0, 3, 4) 
-
-                        // fill 
-                        V4i(-1, -1, -1, -1)
-                        V4i(-1, -1, -1, -1)
+                        for i in 0 .. MAX_FACES - 1 do
+                            match i with
+                            | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2)) 
+                            | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
+                            | 2 -> yield V4i(0, 3, 4, (IDHash 0 3 4)) 
+                            
+                            // fill 
+                            | _ -> yield V4i(-1)
 
                     // CASE_INSIDE
-                        V4i((IDHash 0 1 2), 0, 1, 2) 
-                        V4i((IDHash 0 2 3), 0, 2, 3) 
-                        V4i((IDHash 0 3 4), 0, 3, 4) 
-                        V4i((IDHash 0 4 1), 0, 4, 1) 
-
-                        // fill up
-                        V4i(-1, -1, -1, -1)
+                        for i in 0 .. MAX_FACES - 1 do
+                            match i with
+                            | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2)) 
+                            | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
+                            | 2 -> yield V4i(0, 3, 4, (IDHash 0 3 4)) 
+                            | 3 -> yield V4i(0, 4, 1, (IDHash 0 4 1)) 
+                            
+                            // fill up
+                            | _ -> yield V4i(-1)
                     |]
 
-            // stack of marked edges
-            let S = [|
+            let FE = [|
                     // CASE_CORNER
-                        4 // 0
-                        -1;-1;-1;-1;-1;-1;-1;-1;-1
+                        for i in 0 .. MAX_FACES - 1 do
+                            match i with
+                            | 0 -> yield V3i(0, 1, 4) 
+                            | 1 -> yield V3i(4, 2, 3) 
+                            
+                            // fill 
+                            | _ -> yield V3i(-1)
                                                 
                     // CASE_EDGE
-                        5 // 0
-                        6 // 1 
-                        -1;-1;-1;-1;-1;-1;-1;-1
+                        for i in 0 .. MAX_FACES - 1 do
+                            match i with
+                            | 0 -> yield V3i(0, 1, 5) 
+                            | 1 -> yield V3i(5, 2, 6) 
+                            | 2 -> yield V3i(6, 3, 4) 
+                            
+                            // fill 
+                            | _ -> yield V3i(-1)
 
                     // CASE_INSIDE
-                        4 // 0
-                        5 // 1
-                        6 // 2 
-                        7 // 3
-                        -1;-1;-1;-1;-1;-1
-                    |]
-
-            // stack pointer
-            let SP = [|
-                    // CASE_CORNER
-                        0
-
-                    // CASE_EDGE
-                        1
-
-                    // CASE_INSIDE
-                        3
+                        for i in 0 .. MAX_FACES - 1 do
+                            match i with
+                            | 0 -> yield V3i(4, 0, 5) 
+                            | 1 -> yield V3i(5, 1, 6) 
+                            | 2 -> yield V3i(6, 2, 7) 
+                            | 3 -> yield V3i(7, 3, 4) 
+                            
+                            // fill up
+                            | _ -> yield V3i(-1)
                     |]
 
         [<ReflectedDefinition>]
@@ -391,18 +393,18 @@ module EffectApDelaunayIrradianceIntegration =
             d
 
         [<ReflectedDefinition>]
-        let getInitFaceData caseOffset =             
+        let getInitFaceVertexData caseOffset =             
             let d = Arr<N<MAX_FACES>, V4i>()
             for i in 0 .. MAX_FACES - 1 do
-                d.[i] <- ALL.F.[MAX_FACES * caseOffset + i]
+                d.[i] <- ALL.FV.[MAX_FACES * caseOffset + i]
             d
 
         [<ReflectedDefinition>]
-        let getInitStackData caseOffset =             
-            let s = Arr<N<MAX_EDGES>, int>()
-            for i in 0 .. MAX_EDGES - 1 do
-                s.[i] <- ALL.S.[MAX_EDGES * caseOffset + i]
-            (s, ALL.SP.[caseOffset])
+        let getInitFaceEdgeData caseOffset =             
+            let d = Arr<N<MAX_FACES>, V3i>()
+            for i in 0 .. MAX_FACES - 1 do
+                d.[i] <- ALL.FE.[MAX_FACES * caseOffset + i]
+            d
 
 
     type Vertex = {
@@ -414,7 +416,7 @@ module EffectApDelaunayIrradianceIntegration =
     module DataMutation =
 
         [<ReflectedDefinition>]
-        let flipEdge (vertices : V4i []) (edges : V4i []) (meta : V2i []) (faceVertices : V4i []) (faceEdges : V3i []) eId =
+        let flipEdge (vertices : Arr<N<MAX_EDGES>, V4i>) (edges : Arr<N<MAX_EDGES>, V4i>) (meta : Arr<N<MAX_EDGES>, V2i>) (faceVertices : Arr<N<MAX_FACES>, V4i>) (faceEdges : Arr<N<MAX_FACES>, V3i>) (stack : Arr<N<MAX_EDGES>, int>) (sp : int) eId =
 
             let originalVertices = vertices.[eId]
             let originalEdges = edges.[eId]
@@ -438,7 +440,10 @@ module EffectApDelaunayIrradianceIntegration =
                 if faceVertices.[f].W = f1Id then
                     faceVertices.[f] <- V4i((vertices.[eId].Z), (vertices.[eId].W), (vertices.[eId].X), (IDHash (vertices.[eId].Z) (vertices.[eId].W) (vertices.[eId].X)))
                     faceEdges.[f] <- V3i((edges.[eId].Z), (edges.[eId].W), eId)
-                                            
+              
+             
+            let mutable sp = sp
+
             // adapt neighbour edges
             for ne in 0 .. 3 do
                 let (neId, oppositeEdges, oppositeVertex) = 
@@ -464,15 +469,17 @@ module EffectApDelaunayIrradianceIntegration =
 
                 // if inside and not marked -> mark it
                 if meta.[neId].X = 1 && meta.[neId].Y = 0 then
+                    sp <- sp + 1
+                    stack.[sp] <- neId
                     meta.[neId] <- V2i(1, 1)
 
 
-            (vertices, edges, meta, faceVertices, faceEdges)
+            (vertices, edges, meta, faceVertices, faceEdges, stack, sp)
 
 
         // Inserts vertex with Id = vId into face with faceId. FaceId is position in Array, not faceHash
         [<ReflectedDefinition>]
-        let insertVertexIntoFace (vertices : V4i []) (edges : V4i []) (meta : V2i []) (faceVertices : V4i []) (faceEdges : V3i []) nextFreeEdgeAddr nextFreeFaceAddr faceId vId =
+        let insertVertexIntoFace (vertices : Arr<N<MAX_EDGES>, V4i>) (edges : Arr<N<MAX_EDGES>, V4i>) (meta : Arr<N<MAX_EDGES>, V2i>) (faceVertices : Arr<N<MAX_FACES>, V4i>) (faceEdges : Arr<N<MAX_FACES>, V3i>) nextFreeEdgeAddr nextFreeFaceAddr faceId vId =
         
             let fV = faceVertices.[faceId]
             let fE = faceEdges.[faceId]
@@ -532,7 +539,7 @@ module EffectApDelaunayIrradianceIntegration =
             | _ -> nextFreeEdgeAddr + edgeLocalId - 1
         
         [<ReflectedDefinition>]
-        let private insertEdge (vertices : V4i []) (edges : V4i []) (meta : V2i []) (faceVertices : V4i []) (faceEdges : V3i []) nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId (splitEdgeV : int []) (splitEdgeE : int []) (splitEdgeM : int []) onlyEdges currentVertex edgeLocalId = 
+        let private insertEdge (vertices : Arr<N<MAX_EDGES>, V4i>) (edges : Arr<N<MAX_EDGES>, V4i>) (meta : Arr<N<MAX_EDGES>, V2i>) (faceVertices : Arr<N<MAX_FACES>, V4i>) (faceEdges : Arr<N<MAX_FACES>, V3i>) nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId (splitEdgeV :  Arr<N<4>, int>) (splitEdgeE :  Arr<N<4>, int>) onlyEdges currentVertex edgeLocalId = 
 
             let mapLocalToGlobalId = mapLocalToGlobalId splitEdgeId nextFreeEdgeAddr
 
@@ -579,18 +586,18 @@ module EffectApDelaunayIrradianceIntegration =
             (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr)
         
         [<ReflectedDefinition>]
-        let private  updateFace (vertices : V4i []) (edges : V4i []) (meta : V2i []) (faceVertices : V4i []) (faceEdges : V3i []) nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId (splitEdgeV : int []) (splitEdgeE : int []) (splitEdgeM : int []) nextFreeLocalId  localOppositeVertexId  = 
+        let private  updateFace (vertices : Arr<N<MAX_EDGES>, V4i>) (edges : Arr<N<MAX_EDGES>, V4i>) (meta : Arr<N<MAX_EDGES>, V2i>) (faceVertices : Arr<N<MAX_FACES>, V4i>) (faceEdges : Arr<N<MAX_FACES>, V3i>) nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId (splitEdgeV :  Arr<N<4>, int>) (splitEdgeE :  Arr<N<4>, int>) (splitEdgeM :  Arr<N<2>, int>) nextFreeLocalId  localOppositeVertexId  = 
             //face = corresponding face to splitEdge.V[localOppositeVertexId]
 
             let mutable nextFreeLocalId = nextFreeLocalId
 
             // insert e0 
-            let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE splitEdgeM
+            let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE 
             let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' false (localOppositeVertexId - 1) nextFreeLocalId
             nextFreeLocalId <- nextFreeLocalId + 1
 
             // insert e1
-            let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE splitEdgeM
+            let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE
             let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' false localOppositeVertexId nextFreeLocalId
             nextFreeLocalId <- nextFreeLocalId + 1
    
@@ -600,7 +607,7 @@ module EffectApDelaunayIrradianceIntegration =
                     meta.[(mapLocalToGlobalId splitEdgeId nextFreeEdgeAddr (localOppositeVertexId - 1))] <- V2i(0,0)
 
                     // insert e2 
-                    let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE splitEdgeM
+                    let insertEdge' = insertEdge vertices edges meta faceVertices faceEdges nextFreeEdgeAddr nextFreeFaceAddr vId splitEdgeId splitEdgeV splitEdgeE
                     let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr) = insertEdge' true ((localOppositeVertexId + 1) % 4) nextFreeLocalId
                     nextFreeLocalId <- nextFreeLocalId + 1
 
@@ -617,11 +624,11 @@ module EffectApDelaunayIrradianceIntegration =
 
         // Splits edgy edgeId by inseting vertex with Id = vId 
         [<ReflectedDefinition>]
-        let spliteEdge (vertices : V4i []) (edges : V4i []) (meta : V2i []) (faceVertices : V4i []) (faceEdges : V3i []) nextFreeEdgeAddr nextFreeFaceAddr edgeId vId =
+        let spliteEdge (vertices : Arr<N<MAX_EDGES>, V4i>) (edges : Arr<N<MAX_EDGES>, V4i>) (meta : Arr<N<MAX_EDGES>, V2i>) (faceVertices : Arr<N<MAX_FACES>, V4i>) (faceEdges : Arr<N<MAX_FACES>, V3i>) nextFreeEdgeAddr nextFreeFaceAddr edgeId vId =
         
-            let splitEdgeV = [| vertices.[edgeId].X; vertices.[edgeId].Y; vertices.[edgeId].Z; vertices.[edgeId].W |]
-            let splitEdgeE = [| edges.[edgeId].X; edges.[edgeId].Y; edges.[edgeId].Z; edges.[edgeId].W |]
-            let splitEdgeM = [| meta.[edgeId].X; meta.[edgeId].Y |]
+            let splitEdgeV = Arr<N<4>, int>([| vertices.[edgeId].X; vertices.[edgeId].Y; vertices.[edgeId].Z; vertices.[edgeId].W |])
+            let splitEdgeE = Arr<N<4>, int>([| edges.[edgeId].X; edges.[edgeId].Y; edges.[edgeId].Z; edges.[edgeId].W |])
+            let splitEdgeM = Arr<N<2>, int>([| meta.[edgeId].X; meta.[edgeId].Y |])
 
             let (vertices, edges, meta, faceVertices, faceEdges, nextFreeFaceAddr, nextFreeLocalId) = 
                 if vertices.[edgeId].Y <> -1 then
@@ -778,91 +785,60 @@ module EffectApDelaunayIrradianceIntegration =
                                                 
                                             j <- j + 1
 
-                                    let delVertexData         = QUAD_DATA.getInitVertexData caseOffset
-                                    let delNEdgeData          = QUAD_DATA.getInitNeighbourEdgeData caseOffset
-                                    let delMetaData           = QUAD_DATA.getInitMetaData caseOffset
-                                    let delFaceData           = QUAD_DATA.getInitFaceData caseOffset
-                                    let (delStack, delSPInit) = QUAD_DATA.getInitStackData caseOffset
-                                    let mutable delSP = delSPInit
+                                    let mutable delVertexData       = caseOffset |> QUAD_DATA.getInitVertexData
+                                    let mutable delNEdgeData        = caseOffset |> QUAD_DATA.getInitNeighbourEdgeData 
+                                    let mutable delMetaData         = caseOffset |> QUAD_DATA.getInitMetaData 
+                                    let mutable delFaceVertexData   = caseOffset |> QUAD_DATA.getInitFaceVertexData 
+                                    let mutable delFaceEdgeData     = caseOffset |> QUAD_DATA.getInitFaceEdgeData 
+
+
+
+                                    let mutable stack = Arr<N<MAX_EDGES>, int>()
+                                    let mutable SP = -1
+
+                                    for i in 0 .. MAX_EDGES - 1 do
+                                        if delMetaData.[i].X = 1 then
+                                            SP <- SP + 1
+                                            stack.[SP] <- i
+                                            delMetaData.[i] <- V2i(1, 1)
+
 
                                     ////////////////////////////////////////
                                     // transform to a Delaunay triangulation
                                                                         
-                                    while delSP >= 0 do
+                                    while SP >= 0 do
 
                                         // get edge Id
-                                        let eId = delStack.[delSP]
+                                        let eId = stack.[SP]
 
                                         // unmark edge
                                         delMetaData.[eId] <- V2i(delMetaData.[eId].X, 0)
-                                        delSP <- delSP - 1
+                                        SP <- SP - 1
                                         
                                         let eVertices = delVertexData.[eId]
-                                        let eNEdges = delNEdgeData.[eId]
 
                                         // test if edge is locally delaunay
                                             // true if flip, false otherwise
     
                                         let notLD = 
-                                            let a = verticesNormalized.[eVertices.X].XYZ
-                                            let b = verticesNormalized.[eVertices.Y].XYZ
-                                            let c = verticesNormalized.[eVertices.Z].XYZ
-                                            let d = verticesNormalized.[eVertices.W].XYZ
+                                            let a = verticesNormalized.[delVertexData.[eId].X].XYZ
+                                            let b = verticesNormalized.[delVertexData.[eId].Y].XYZ
+                                            let c = verticesNormalized.[delVertexData.[eId].Z].XYZ
+                                            let d = verticesNormalized.[delVertexData.[eId].W].XYZ
                                             
                                             (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
                                                                                     
                                         if notLD then
                                             // flip edge
 
-                                            // left shift vertices and edges of edge to flip
-                                            delVertexData.[eId] <- V4i(eVertices.Y, eVertices.Z, eVertices.W, eVertices.X)
-                                            delNEdgeData.[eId] <- V4i(eNEdges.Y, eNEdges.Z, eNEdges.W, eNEdges.X)
-
-                                            // adopt faces
-                                            let ef0Id = IDHash (eVertices.X) (eVertices.Y) (eVertices.Z)
-                                            let ef1Id = IDHash (eVertices.Z) (eVertices.W) (eVertices.X)
-
-                                            for f in 0 .. MAX_FACES - 1 do
-                                                let face = delFaceData.[f]
-
-                                                if face.X = ef0Id then
-                                                    let fId = IDHash (delVertexData.[eId].X) (delVertexData.[eId].Y) (delVertexData.[eId].Z)
-                                                    delFaceData.[f] <- V4i(fId, (delVertexData.[eId].X), (delVertexData.[eId].Y), (delVertexData.[eId].Z))
-
-                                                if face.X = ef1Id then
-                                                    let fId = IDHash (delVertexData.[eId].Z) (delVertexData.[eId].W) (delVertexData.[eId].X)
-                                                    delFaceData.[f] <- V4i(fId, (delVertexData.[eId].Z), (delVertexData.[eId].W), (delVertexData.[eId].X))
-
-                                            
-                                            // adapt neighbour edges
-                                            for ne in 0 .. 3 do
-                                                let (neId, otherEdgesOfE, otherOppositeV) = 
-                                                    match ne with
-                                                    | 0 -> (eNEdges.X, eNEdges.ZW, eVertices.W)
-                                                    | 1 -> (eNEdges.Y, eNEdges.ZW, eVertices.W)
-                                                    | 2 -> (eNEdges.Z, eNEdges.XY, eVertices.Y)
-                                                    | _ -> (eNEdges.W, eNEdges.XY, eVertices.Y)
-
-                                                    
-                                                if eId = delNEdgeData.[neId].X then
-                                                    delNEdgeData.[neId] <- V4i(otherEdgesOfE.X, eId, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
-                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, otherOppositeV, delVertexData.[neId].Z, delVertexData.[neId].W)
-                                                elif eId = delNEdgeData.[neId].Y then
-                                                    delNEdgeData.[neId] <- V4i(eId, otherEdgesOfE.Y, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
-                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, otherOppositeV, delVertexData.[neId].Z, delVertexData.[neId].W)
-                                                elif eId = delNEdgeData.[neId].Z then
-                                                    delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, otherEdgesOfE.X, eId)
-                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, otherOppositeV)
-                                                else (* eId = neNEdges.W *)
-                                                    delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, eId, otherEdgesOfE.Y)
-                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, otherOppositeV)
-
-                                                // if inside and not marked add to stack
-                                                if delMetaData.[neId].X = 1 && delMetaData.[neId].Y = 0 then
-                                                    delMetaData.[neId] <- V2i(1, 1)
-                                                    delSP <- delSP + 1
-                                                    delStack.[delSP] <- neId
-
+                                            let (vertices, edges, meta, faceVertices, faceEdges, updatedStack, sp) = eId |> DataMutation.flipEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData stack SP
+                                            delVertexData       <- vertices
+                                            delNEdgeData        <- edges
+                                            delMetaData         <- meta
+                                            delFaceVertexData   <- faceVertices
+                                            delFaceEdgeData     <- faceEdges
+                                            stack               <- updatedStack
+                                            SP                  <- sp
                                     
                                     ////////////////////////////////////////
                                     // integrate
@@ -872,13 +848,13 @@ module EffectApDelaunayIrradianceIntegration =
                                     let mutable weightSum = 0.0
 
                                     for f in 0 .. MAX_FACES - 1 do
-                                        let face = delFaceData.[f]
+                                        let face = delFaceVertexData.[f]
 
-                                        if face.X <> -1 then
-                                            let area = computeSphericalExcess (verticesNormalized.[face.Y]) (verticesNormalized.[face.Z]) (verticesNormalized.[face.W])
+                                        if face.W <> -1 then
+                                            let area = computeSphericalExcess (verticesNormalized.[face.X]) (verticesNormalized.[face.Y]) (verticesNormalized.[face.Z])
 
-                                            patchIllumination <- patchIllumination + area * (funVal.[face.Y].X + funVal.[face.Z].X + funVal.[face.W].X) / 3.0
-                                            weightSum <- weightSum + area * (funVal.[face.Y].Y + funVal.[face.Z].Y + funVal.[face.W].Y) / 3.0
+                                            patchIllumination <- patchIllumination + area * (funVal.[face.X].X + funVal.[face.Y].X + funVal.[face.Z].X) / 3.0
+                                            weightSum <- weightSum + area * (funVal.[face.X].Y + funVal.[face.Y].Y + funVal.[face.Z].Y) / 3.0
 
 
                                     let L =
@@ -1125,94 +1101,60 @@ module EffectApDelaunayIrradianceIntegration =
                                                 
                                 j <- j + 1
 
-                        let delVertexData     = QUAD_DATA.getInitVertexData caseOffset
-                        let delNEdgeData      = QUAD_DATA.getInitNeighbourEdgeData caseOffset
-                        let delMetaData       = QUAD_DATA.getInitMetaData caseOffset
-                        let delFaceData       = QUAD_DATA.getInitFaceData caseOffset
-                        let (delStack, delSPInit) = QUAD_DATA.getInitStackData caseOffset
-                        let mutable delSP = delSPInit
+                        let mutable delVertexData       = caseOffset |> QUAD_DATA.getInitVertexData
+                        let mutable delNEdgeData        = caseOffset |> QUAD_DATA.getInitNeighbourEdgeData 
+                        let mutable delMetaData         = caseOffset |> QUAD_DATA.getInitMetaData 
+                        let mutable delFaceVertexData   = caseOffset |> QUAD_DATA.getInitFaceVertexData 
+                        let mutable delFaceEdgeData     = caseOffset |> QUAD_DATA.getInitFaceEdgeData 
+
+
+
+                        let mutable stack = Arr<N<MAX_EDGES>, int>()
+                        let mutable SP = -1
+
+                        for i in 0 .. MAX_EDGES - 1 do
+                            if delMetaData.[i].X = 1 then
+                                SP <- SP + 1
+                                stack.[SP] <- i
+                                delMetaData.[i] <- V2i(1, 1)
+
 
                         ////////////////////////////////////////
                         // transform to a Delaunay triangulation
-
-                        let mutable oneNotLd = false
-                                    
-                        while delSP >= 0 do
+                                                                        
+                        while SP >= 0 do
 
                             // get edge Id
-                            let eId = delStack.[delSP]
+                            let eId = stack.[SP]
 
                             // unmark edge
                             delMetaData.[eId] <- V2i(delMetaData.[eId].X, 0)
-                            delSP <- delSP - 1
+                            SP <- SP - 1
                                         
                             let eVertices = delVertexData.[eId]
-                            let eNEdges = delNEdgeData.[eId]
 
                             // test if edge is locally delaunay
                                 // true if flip, false otherwise
     
                             let notLD = 
-                                let a = verticesNormalized.[eVertices.X].XYZ
-                                let b = verticesNormalized.[eVertices.Y].XYZ
-                                let c = verticesNormalized.[eVertices.Z].XYZ
-                                let d = verticesNormalized.[eVertices.W].XYZ
+                                let a = verticesNormalized.[delVertexData.[eId].X].XYZ
+                                let b = verticesNormalized.[delVertexData.[eId].Y].XYZ
+                                let c = verticesNormalized.[delVertexData.[eId].Z].XYZ
+                                let d = verticesNormalized.[delVertexData.[eId].W].XYZ
                                             
                                 (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
-
-                            oneNotLd <- oneNotLd || notLD
-                                        
+                                                                                    
                             if notLD then
                                 // flip edge
 
-                                // left shift vertices and edges of edge to flip
-                                delVertexData.[eId] <- V4i(eVertices.Y, eVertices.Z, eVertices.W, eVertices.X)
-                                delNEdgeData.[eId] <- V4i(eNEdges.Y, eNEdges.Z, eNEdges.W, eNEdges.X)
-
-                                // adopt faces
-                                let ef0Id = IDHash (eVertices.X) (eVertices.Y) (eVertices.Z)
-                                let ef1Id = IDHash (eVertices.Z) (eVertices.W) (eVertices.X)
-
-                                for f in 0 .. MAX_FACES - 1 do
-                                    let face = delFaceData.[f]
-
-                                    if face.X = ef0Id then
-                                        let fId = IDHash (delVertexData.[eId].X) (delVertexData.[eId].Y) (delVertexData.[eId].Z)
-                                        delFaceData.[f] <- V4i(fId, (delVertexData.[eId].X), (delVertexData.[eId].Y), (delVertexData.[eId].Z))
-
-                                    if face.X = ef1Id then
-                                        let fId = IDHash (delVertexData.[eId].Z) (delVertexData.[eId].W) (delVertexData.[eId].X)
-                                        delFaceData.[f] <- V4i(fId, (delVertexData.[eId].Z), (delVertexData.[eId].W), (delVertexData.[eId].X))
-
-                                            
-                                // adapt neighbour edges
-                                for ne in 0 .. 3 do
-                                    let (neId, otherEdgesOfE, otherOppositeV) = 
-                                        match ne with
-                                        | 0 -> (eNEdges.X, eNEdges.ZW, eVertices.W)
-                                        | 1 -> (eNEdges.Y, eNEdges.ZW, eVertices.W)
-                                        | 2 -> (eNEdges.Z, eNEdges.XY, eVertices.Y)
-                                        | _ -> (eNEdges.W, eNEdges.XY, eVertices.Y)
-
-                                                    
-                                    if eId = delNEdgeData.[neId].X then
-                                        delNEdgeData.[neId] <- V4i(otherEdgesOfE.X, eId, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
-                                        delVertexData.[neId] <- V4i(delVertexData.[neId].X, otherOppositeV, delVertexData.[neId].Z, delVertexData.[neId].W)
-                                    elif eId = delNEdgeData.[neId].Y then
-                                        delNEdgeData.[neId] <- V4i(eId, otherEdgesOfE.Y, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
-                                        delVertexData.[neId] <- V4i(delVertexData.[neId].X, otherOppositeV, delVertexData.[neId].Z, delVertexData.[neId].W)
-                                    elif eId = delNEdgeData.[neId].Z then
-                                        delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, otherEdgesOfE.X, eId)
-                                        delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, otherOppositeV)
-                                    else (* eId = neNEdges.W *)
-                                        delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, eId, otherEdgesOfE.Y)
-                                        delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, otherOppositeV)
-
-                                    // if inside and not marked add to stack
-                                    if delMetaData.[neId].X = 1 && delMetaData.[neId].Y = 0 then
-                                        delMetaData.[neId] <- V2i(1, 1)
-                                        delSP <- delSP + 1
-                                        delStack.[delSP] <- neId
+                                let (vertices, edges, meta, faceVertices, faceEdges, updatedStack, sp) = eId |> DataMutation.flipEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData stack SP
+                                delVertexData       <- vertices
+                                delNEdgeData        <- edges
+                                delMetaData         <- meta
+                                delFaceVertexData   <- faceVertices
+                                delFaceEdgeData     <- faceEdges
+                                stack               <- updatedStack
+                                SP                  <- sp
 
                         ////////////////////////////////////////////////////////
 
@@ -1221,12 +1163,12 @@ module EffectApDelaunayIrradianceIntegration =
                         printfn "Faces: "  
 
                         for f in 0 .. MAX_FACES - 1 do
-                            let face = delFaceData.[f]
+                            let face = delFaceVertexData.[f]
 
-                            if face.X <> -1 then
+                            if face.W <> -1 then
                                 
                                             
-                                let area = computeSphericalExcess (verticesNormalized.[face.Y]) (verticesNormalized.[face.Z]) (verticesNormalized.[face.W])
+                                let area = computeSphericalExcess (verticesNormalized.[face.X]) (verticesNormalized.[face.Y]) (verticesNormalized.[face.Z])
 
                                 printfn " - %A - Area: %A" face area
 
@@ -1278,225 +1220,240 @@ module EffectApDelaunayIrradianceIntegration =
 
             module Before = 
 
-                let V = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i( 0, 1, 2, 3)
-                                | 1 -> yield V4i( 0,-1, 1, 2)
-                                | 2 -> yield V4i( 1,-1, 2, 0)
-                                | 3 -> yield V4i( 2,-1, 3, 0)
-                                | 4 -> yield V4i( 3,-1, 0, 2)
-                                | _ -> yield V4i(-1)
-                        |]
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i( 0, 1, 2, 3)
+                                                        | 1 -> yield V4i( 0,-1, 1, 2)
+                                                        | 2 -> yield V4i( 1,-1, 2, 0)
+                                                        | 3 -> yield V4i( 2,-1, 3, 0)
+                                                        | 4 -> yield V4i( 3,-1, 0, 2)
+                                                        | _ -> yield V4i(-1)
+                                                |])
 
-                let E = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i( 1, 2, 3, 4)
-                                | 1 -> yield V4i(-1,-1, 2, 0)
-                                | 2 -> yield V4i(-1,-1, 0, 1)
-                                | 3 -> yield V4i(-1,-1, 4, 0)
-                                | 4 -> yield V4i(-1,-1, 0, 3)
-                                | _ -> yield V4i(-1)
-                        |]
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i( 1, 2, 3, 4)
+                                                        | 1 -> yield V4i(-1,-1, 2, 0)
+                                                        | 2 -> yield V4i(-1,-1, 0, 1)
+                                                        | 3 -> yield V4i(-1,-1, 4, 0)
+                                                        | 4 -> yield V4i(-1,-1, 0, 3)
+                                                        | _ -> yield V4i(-1)
+                                                |])
 
-                let M = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V2i(1, 1)
-                                | 1 -> yield V2i(0, 0)
-                                | 2 -> yield V2i(0, 0)
-                                | 3 -> yield V2i(0, 0)
-                                | 4 -> yield V2i(0, 0)
-                                | _ -> yield V2i(-1)
-                        |]
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V2i(1, 1)
+                                                        | 1 -> yield V2i(0, 0)
+                                                        | 2 -> yield V2i(1, 0)
+                                                        | 3 -> yield V2i(1, 0)
+                                                        | 4 -> yield V2i(0, 0)
+                                                        | _ -> yield V2i(-1)
+                                                |])
 
-                let FV = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2))
-                                | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3))
-                                | _ -> yield V4i(-1)
-                        |]
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                    for i in 0 .. MAX_FACES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2))
+                                                        | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3))
+                                                        | _ -> yield V4i(-1)
+                                                |])
 
-                let FE = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V3i( 1, 2, 0)
-                                | 1 -> yield V3i( 0, 3, 4)
-                                | _ -> yield V3i(-1)
-                        |]
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                    for i in 0 .. MAX_FACES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V3i( 1, 2, 0)
+                                                        | 1 -> yield V3i( 0, 3, 4)
+                                                        | _ -> yield V3i(-1)
+                                                |])
+
+
+                                            
+                let STACK = Arr<N<MAX_EDGES>, int>()
+
+                let SP = -1
             
             module After = 
 
-                let V = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i( 1, 2, 3, 0)
-                                | 1 -> yield V4i( 0,-1, 1, 3)
-                                | 2 -> yield V4i( 1,-1, 2, 3)
-                                | 3 -> yield V4i( 2,-1, 3, 1)
-                                | 4 -> yield V4i( 3,-1, 0, 1)
-                                | _ -> yield V4i(-1)
-                        |]
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i( 1, 2, 3, 0)
+                                                        | 1 -> yield V4i( 0,-1, 1, 3)
+                                                        | 2 -> yield V4i( 1,-1, 2, 3)
+                                                        | 3 -> yield V4i( 2,-1, 3, 1)
+                                                        | 4 -> yield V4i( 3,-1, 0, 1)
+                                                        | _ -> yield V4i(-1)
+                                                |])
 
-                let E = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i( 2, 3, 4, 1)
-                                | 1 -> yield V4i(-1,-1, 0, 4)
-                                | 2 -> yield V4i(-1,-1, 3, 0)
-                                | 3 -> yield V4i(-1,-1, 0, 2)
-                                | 4 -> yield V4i(-1,-1, 1, 0)
-                                | _ -> yield V4i(-1)
-                        |]
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i( 2, 3, 4, 1)
+                                                        | 1 -> yield V4i(-1,-1, 0, 4)
+                                                        | 2 -> yield V4i(-1,-1, 3, 0)
+                                                        | 3 -> yield V4i(-1,-1, 0, 2)
+                                                        | 4 -> yield V4i(-1,-1, 1, 0)
+                                                        | _ -> yield V4i(-1)
+                                                |])
 
-                let M = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V2i(1, 0)
-                                | 1 -> yield V2i(0, 0)
-                                | 2 -> yield V2i(0, 0)
-                                | 3 -> yield V2i(0, 0)
-                                | 4 -> yield V2i(0, 0)
-                                | _ -> yield V2i(-1)
-                        |]
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V2i(1, 0)
+                                                        | 1 -> yield V2i(0, 0)
+                                                        | 2 -> yield V2i(1, 1)
+                                                        | 3 -> yield V2i(1, 1)
+                                                        | 4 -> yield V2i(0, 0)
+                                                        | _ -> yield V2i(-1)
+                                                |])
 
-                let FV = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V4i(1, 2, 3, (IDHash 1 2 3))
-                                | 1 -> yield V4i(3, 0, 1, (IDHash 3 0 1))
-                                | _ -> yield V4i(-1)
-                        |]
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                    for i in 0 .. MAX_FACES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i(1, 2, 3, (IDHash 1 2 3))
+                                                        | 1 -> yield V4i(3, 0, 1, (IDHash 3 0 1))
+                                                        | _ -> yield V4i(-1)
+                                                |])
 
-                let FE = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V3i( 2, 3, 0)
-                                | 1 -> yield V3i( 4, 1, 0)
-                                | _ -> yield V3i(-1)
-                        |]
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                    for i in 0 .. MAX_FACES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V3i( 2, 3, 0)
+                                                        | 1 -> yield V3i( 4, 1, 0)
+                                                        | _ -> yield V3i(-1)
+                                                |])
+
+                let STACK = Arr<N<MAX_EDGES>, int>([|
+                                                    2
+                                                    3
+                                                |])
+
+                let SP = 1
         
         [<Test>]
         let ``Flip Edge``() = 
 
-            let (vertices, edges, meta, faceVertices, faceEdges) = 0 |> DataMutation.flipEdge (FlipTestMockup.Before.V) (FlipTestMockup.Before.E) (FlipTestMockup.Before.M) (FlipTestMockup.Before.FV) (FlipTestMockup.Before.FE)
+            let (vertices, edges, meta, faceVertices, faceEdges, stack, sp) = 0 |> DataMutation.flipEdge (FlipTestMockup.Before.V) (FlipTestMockup.Before.E) (FlipTestMockup.Before.M) (FlipTestMockup.Before.FV) (FlipTestMockup.Before.FE) (FlipTestMockup.Before.STACK) (FlipTestMockup.Before.SP)
 
 
             Assert.Multiple( fun _ ->
-                vertices     |> should equal (FlipTestMockup.After.V)
-                edges        |> should equal (FlipTestMockup.After.E)
-                meta         |> should equal (FlipTestMockup.After.M)
-                faceVertices |> should equal (FlipTestMockup.After.FV)
-                faceEdges    |> should equal (FlipTestMockup.After.FE)
+                vertices       |> should equal (FlipTestMockup.After.V)
+                edges          |> should equal (FlipTestMockup.After.E)
+                meta           |> should equal (FlipTestMockup.After.M)
+                faceVertices   |> should equal (FlipTestMockup.After.FV)
+                faceEdges      |> should equal (FlipTestMockup.After.FE)
+                stack          |> should equal (FlipTestMockup.After.STACK)
+                sp             |> should equal (FlipTestMockup.After.SP)
             )
 
         module InsertVertexMockup =
 
             module Before = 
 
-                let V = [| 
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
                             for i in 0 .. MAX_EDGES - 1 do
                                 match i with
                                 | 0 -> yield V4i( 0,-1, 1, 2)
                                 | 1 -> yield V4i( 1,-1, 2, 0)
                                 | 2 -> yield V4i( 2,-1, 0, 1)
                                 | _ -> yield V4i(-1)
-                        |]
+                        |])
 
-                let E = [| 
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
                             for i in 0 .. MAX_EDGES - 1 do
                                 match i with
                                 | 0 -> yield V4i(-1,-1, 1, 2)
                                 | 1 -> yield V4i(-1,-1, 2, 0)
                                 | 2 -> yield V4i(-1,-1, 0, 1)
                                 | _ -> yield V4i(-1)
-                        |]
+                        |])
 
-                let M = [| 
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
                             for i in 0 .. MAX_EDGES - 1 do
                                 match i with
                                 | 0 -> yield V2i(1, 0)
                                 | 1 -> yield V2i(1, 0)
                                 | 2 -> yield V2i(0, 0)
                                 | _ -> yield V2i(-1)
-                        |]
+                        |])
 
-                let FV = [| 
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
                             for i in 0 .. MAX_FACES - 1 do
                                 match i with
                                 | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2))
                                 | _ -> yield V4i(-1)
-                        |]
+                        |])
 
-                let FE = [| 
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
                             for i in 0 .. MAX_FACES - 1 do
                                 match i with
                                 | 0 -> yield V3i( 0, 1, 2)
                                 | _ -> yield V3i(-1)
-                        |]
+                        |])
                     
                 let nextFreeFaceAddr = 1
                 let nextFreeEdgeAddr = 3
             
             module After = 
 
-                let V = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i( 0,-1, 1, 3)
-                                | 1 -> yield V4i( 1,-1, 2, 3)
-                                | 2 -> yield V4i( 2,-1, 0, 3)
-                                | 3 -> yield V4i( 0, 1, 3, 2)
-                                | 4 -> yield V4i( 1, 2, 3, 0)
-                                | 5 -> yield V4i( 2, 0, 3, 1)
-                                | _ -> yield V4i(-1)
-                        |]
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i( 0,-1, 1, 3)
+                                                    | 1 -> yield V4i( 1,-1, 2, 3)
+                                                    | 2 -> yield V4i( 2,-1, 0, 3)
+                                                    | 3 -> yield V4i( 0, 1, 3, 2)
+                                                    | 4 -> yield V4i( 1, 2, 3, 0)
+                                                    | 5 -> yield V4i( 2, 0, 3, 1)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let E = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i(-1,-1, 4, 3)
-                                | 1 -> yield V4i(-1,-1, 5, 4)
-                                | 2 -> yield V4i(-1,-1, 3, 5)
-                                | 3 -> yield V4i( 0, 4, 5, 2)
-                                | 4 -> yield V4i( 1, 5, 3, 0)
-                                | 5 -> yield V4i( 2, 3, 4, 1)
-                                | _ -> yield V4i(-1)
-                        |]
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(-1,-1, 4, 3)
+                                                    | 1 -> yield V4i(-1,-1, 5, 4)
+                                                    | 2 -> yield V4i(-1,-1, 3, 5)
+                                                    | 3 -> yield V4i( 0, 4, 5, 2)
+                                                    | 4 -> yield V4i( 1, 5, 3, 0)
+                                                    | 5 -> yield V4i( 2, 3, 4, 1)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let M = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V2i(1, 1)
-                                | 1 -> yield V2i(1, 1)
-                                | 2 -> yield V2i(0, 0)
-                                | 3 -> yield V2i(1, 0)
-                                | 4 -> yield V2i(1, 0)
-                                | 5 -> yield V2i(1, 0)
-                                | _ -> yield V2i(-1)
-                        |]
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V2i(1, 1)
+                                                    | 1 -> yield V2i(1, 1)
+                                                    | 2 -> yield V2i(0, 0)
+                                                    | 3 -> yield V2i(1, 0)
+                                                    | 4 -> yield V2i(1, 0)
+                                                    | 5 -> yield V2i(1, 0)
+                                                    | _ -> yield V2i(-1)
+                                            |])
 
-                let FV = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V4i(-1)
-                                | 1 -> yield V4i(0, 1, 3, (IDHash 0 1 3))
-                                | 2 -> yield V4i(1, 2, 3, (IDHash 1 2 3))
-                                | 3 -> yield V4i(2, 0, 3, (IDHash 2 0 3))
-                                | _ -> yield V4i(-1)
-                        |]
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(-1)
+                                                    | 1 -> yield V4i(0, 1, 3, (IDHash 0 1 3))
+                                                    | 2 -> yield V4i(1, 2, 3, (IDHash 1 2 3))
+                                                    | 3 -> yield V4i(2, 0, 3, (IDHash 2 0 3))
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let FE = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V3i( 0, 1, 2)
-                                | 1 -> yield V3i( 0, 4, 3)
-                                | 2 -> yield V3i( 1, 5, 4)
-                                | 3 -> yield V3i( 2, 3, 5)
-                                | _ -> yield V3i(-1)
-                        |]
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i( 0, 1, 2)
+                                                    | 1 -> yield V3i( 0, 4, 3)
+                                                    | 2 -> yield V3i( 1, 5, 4)
+                                                    | 3 -> yield V3i( 2, 3, 5)
+                                                    | _ -> yield V3i(-1)
+                                            |])
 
                 let nextFreeFaceAddr = 4
                 let nextFreeEdgeAddr = 6
@@ -1521,125 +1478,125 @@ module EffectApDelaunayIrradianceIntegration =
 
             module Before = 
 
-                let V = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i( 0, 1, 2, 3)
-                                | 1 -> yield V4i( 0,-1, 1, 2)
-                                | 2 -> yield V4i( 1,-1, 2, 0)
-                                | 3 -> yield V4i( 2,-1, 3, 0)
-                                | 4 -> yield V4i( 3,-1, 0, 2)
-                                | _ -> yield V4i(-1)
-                        |]
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i( 0, 1, 2, 3)
+                                                    | 1 -> yield V4i( 0,-1, 1, 2)
+                                                    | 2 -> yield V4i( 1,-1, 2, 0)
+                                                    | 3 -> yield V4i( 2,-1, 3, 0)
+                                                    | 4 -> yield V4i( 3,-1, 0, 2)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let E = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i( 1, 2, 3, 4)
-                                | 1 -> yield V4i(-1,-1, 2, 0)
-                                | 2 -> yield V4i(-1,-1, 0, 1)
-                                | 3 -> yield V4i(-1,-1, 4, 0)
-                                | 4 -> yield V4i(-1,-1, 0, 3)
-                                | _ -> yield V4i(-1)
-                        |]
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i( 1, 2, 3, 4)
+                                                    | 1 -> yield V4i(-1,-1, 2, 0)
+                                                    | 2 -> yield V4i(-1,-1, 0, 1)
+                                                    | 3 -> yield V4i(-1,-1, 4, 0)
+                                                    | 4 -> yield V4i(-1,-1, 0, 3)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let M = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V2i(1, 1)
-                                | 1 -> yield V2i(0, 0)
-                                | 2 -> yield V2i(0, 0)
-                                | 3 -> yield V2i(0, 0)
-                                | 4 -> yield V2i(0, 0)
-                                | _ -> yield V2i(-1)
-                        |]
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V2i(1, 1)
+                                                    | 1 -> yield V2i(0, 0)
+                                                    | 2 -> yield V2i(0, 0)
+                                                    | 3 -> yield V2i(0, 0)
+                                                    | 4 -> yield V2i(0, 0)
+                                                    | _ -> yield V2i(-1)
+                                            |])
 
-                let FV = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2))
-                                | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3))
-                                | _ -> yield V4i(-1)
-                        |]
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2))
+                                                    | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3))
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let FE = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V3i( 1, 2, 0)
-                                | 1 -> yield V3i( 0, 3, 4)
-                                | _ -> yield V3i(-1)
-                        |]
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i( 1, 2, 0)
+                                                    | 1 -> yield V3i( 0, 3, 4)
+                                                    | _ -> yield V3i(-1)
+                                            |])
                     
                 let nextFreeFaceAddr = 2
                 let nextFreeEdgeAddr = 5
 
             module After = 
 
-                let V = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i( 0, 1, 4, 3)
-                                | 1 -> yield V4i( 0,-1, 1, 4)
-                                | 2 -> yield V4i( 1,-1, 2, 4)
-                                | 3 -> yield V4i( 2,-1, 3, 4)
-                                | 4 -> yield V4i( 3,-1, 0, 4)
-                                | 5 -> yield V4i( 1, 2, 4, 0)
-                                | 6 -> yield V4i( 2, 3, 4, 1)
-                                | 7 -> yield V4i( 3, 0, 4, 2)
-                                | _ -> yield V4i(-1)
-                        |]
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i( 0, 1, 4, 3)
+                                                    | 1 -> yield V4i( 0,-1, 1, 4)
+                                                    | 2 -> yield V4i( 1,-1, 2, 4)
+                                                    | 3 -> yield V4i( 2,-1, 3, 4)
+                                                    | 4 -> yield V4i( 3,-1, 0, 4)
+                                                    | 5 -> yield V4i( 1, 2, 4, 0)
+                                                    | 6 -> yield V4i( 2, 3, 4, 1)
+                                                    | 7 -> yield V4i( 3, 0, 4, 2)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let E = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V4i( 1, 5, 7, 4)
-                                | 1 -> yield V4i(-1,-1, 5, 0)
-                                | 2 -> yield V4i(-1,-1, 6, 5)
-                                | 3 -> yield V4i(-1,-1, 7, 6)
-                                | 4 -> yield V4i(-1,-1, 0, 7)
-                                | 5 -> yield V4i( 2, 6, 0, 1)
-                                | 6 -> yield V4i( 3, 7, 5, 2)
-                                | 7 -> yield V4i( 4, 0, 6, 3)
-                                | _ -> yield V4i(-1)
-                        |]
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i( 1, 5, 7, 4)
+                                                    | 1 -> yield V4i(-1,-1, 5, 0)
+                                                    | 2 -> yield V4i(-1,-1, 6, 5)
+                                                    | 3 -> yield V4i(-1,-1, 7, 6)
+                                                    | 4 -> yield V4i(-1,-1, 0, 7)
+                                                    | 5 -> yield V4i( 2, 6, 0, 1)
+                                                    | 6 -> yield V4i( 3, 7, 5, 2)
+                                                    | 7 -> yield V4i( 4, 0, 6, 3)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let M = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 0 -> yield V2i(1, 0)
-                                | 1 -> yield V2i(0, 0)
-                                | 2 -> yield V2i(0, 0)
-                                | 3 -> yield V2i(0, 0)
-                                | 4 -> yield V2i(0, 0)
-                                | 5 -> yield V2i(1, 0)
-                                | 6 -> yield V2i(1, 0)
-                                | 7 -> yield V2i(1, 0)
-                                | _ -> yield V2i(-1)
-                        |]
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V2i(1, 0)
+                                                    | 1 -> yield V2i(0, 0)
+                                                    | 2 -> yield V2i(0, 0)
+                                                    | 3 -> yield V2i(0, 0)
+                                                    | 4 -> yield V2i(0, 0)
+                                                    | 5 -> yield V2i(1, 0)
+                                                    | 6 -> yield V2i(1, 0)
+                                                    | 7 -> yield V2i(1, 0)
+                                                    | _ -> yield V2i(-1)
+                                            |])
 
-                let FV = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V4i(-1)
-                                | 1 -> yield V4i(-1)
-                                | 2 -> yield V4i(0, 1, 4, (IDHash 0 1 4))
-                                | 3 -> yield V4i(1, 2, 4, (IDHash 1 2 4))
-                                | 4 -> yield V4i(2, 3, 4, (IDHash 2 3 4))
-                                | 5 -> yield V4i(3, 0, 4, (IDHash 3 0 4))
-                                | _ -> yield V4i(-1)
-                        |]
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(-1)
+                                                    | 1 -> yield V4i(-1)
+                                                    | 2 -> yield V4i(0, 1, 4, (IDHash 0 1 4))
+                                                    | 3 -> yield V4i(1, 2, 4, (IDHash 1 2 4))
+                                                    | 4 -> yield V4i(2, 3, 4, (IDHash 2 3 4))
+                                                    | 5 -> yield V4i(3, 0, 4, (IDHash 3 0 4))
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let FE = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V3i( 1, 2, 0)
-                                | 1 -> yield V3i( 0, 3, 4)
-                                | 2 -> yield V3i( 1, 5, 0)
-                                | 3 -> yield V3i( 2, 6, 5)
-                                | 4 -> yield V3i( 3, 7, 6)
-                                | 5 -> yield V3i( 4, 0, 7)
-                                | _ -> yield V3i(-1)
-                        |]
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i( 1, 2, 0)
+                                                    | 1 -> yield V3i( 0, 3, 4)
+                                                    | 2 -> yield V3i( 1, 5, 0)
+                                                    | 3 -> yield V3i( 2, 6, 5)
+                                                    | 4 -> yield V3i( 3, 7, 6)
+                                                    | 5 -> yield V3i( 4, 0, 7)
+                                                    | _ -> yield V3i(-1)
+                                            |])
                     
                 let nextFreeFaceAddr = 6
                 let nextFreeEdgeAddr = 8
@@ -1664,102 +1621,102 @@ module EffectApDelaunayIrradianceIntegration =
 
             module Before = 
 
-                let V = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 4 -> yield V4i( 3,-1, 5, 7)
-                                | 5 -> yield V4i( 5,-1, 7, 3)
-                                | 8 -> yield V4i( 7,-1, 3, 5)
-                                | _ -> yield V4i(-1)
-                        |]
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 4 -> yield V4i( 3,-1, 5, 7)
+                                                    | 5 -> yield V4i( 5,-1, 7, 3)
+                                                    | 8 -> yield V4i( 7,-1, 3, 5)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let E = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 4 -> yield V4i(-1,-1, 5, 8)
-                                | 5 -> yield V4i(-1,-1, 8, 4)
-                                | 8 -> yield V4i(-1,-1, 4, 5)
-                                | _ -> yield V4i(-1)
-                        |]
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 4 -> yield V4i(-1,-1, 5, 8)
+                                                    | 5 -> yield V4i(-1,-1, 8, 4)
+                                                    | 8 -> yield V4i(-1,-1, 4, 5)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let M = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 4 -> yield V2i(0, 0)
-                                | 5 -> yield V2i(1, 0)
-                                | 8 -> yield V2i(1, 0)
-                                | _ -> yield V2i(-1)
-                        |]
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 4 -> yield V2i(0, 0)
+                                                    | 5 -> yield V2i(1, 0)
+                                                    | 8 -> yield V2i(1, 0)
+                                                    | _ -> yield V2i(-1)
+                                            |])
 
-                let FV = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V4i(3, 5, 7, (IDHash 3 5 7))
-                                | _ -> yield V4i(-1)
-                        |]
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(3, 5, 7, (IDHash 3 5 7))
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let FE = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V3i( 4, 5, 8)
-                                | _ -> yield V3i(-1)
-                        |]
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i( 4, 5, 8)
+                                                    | _ -> yield V3i(-1)
+                                            |])
                     
                 let nextFreeFaceAddr = 1
                 let nextFreeEdgeAddr = 9
 
             module After = 
 
-                let V = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 4 -> yield V4i( 5, 7, 9,-1)
-                                | 5 -> yield V4i( 5,-1, 7, 9)
-                                | 8 -> yield V4i( 7,-1, 3, 9)
-                                | 9 -> yield V4i( 7, 3, 9, 5)
-                                |10 -> yield V4i( 3,-1, 9, 7)
-                                | _ -> yield V4i(-1)
-                        |]
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 4 -> yield V4i( 5, 7, 9,-1)
+                                                    | 5 -> yield V4i( 5,-1, 7, 9)
+                                                    | 8 -> yield V4i( 7,-1, 3, 9)
+                                                    | 9 -> yield V4i( 7, 3, 9, 5)
+                                                    |10 -> yield V4i( 3,-1, 9, 7)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let E = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 4 -> yield V4i( 5, 9,-1,-1)
-                                | 5 -> yield V4i(-1,-1, 9, 4)
-                                | 8 -> yield V4i(-1,-1,10, 9)                                
-                                | 9 -> yield V4i( 8,10, 4, 5)
-                                |10 -> yield V4i(-1,-1, 9, 8)
-                                | _ -> yield V4i(-1)
-                        |]
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 4 -> yield V4i( 5, 9,-1,-1)
+                                                    | 5 -> yield V4i(-1,-1, 9, 4)
+                                                    | 8 -> yield V4i(-1,-1,10, 9)                                
+                                                    | 9 -> yield V4i( 8,10, 4, 5)
+                                                    |10 -> yield V4i(-1,-1, 9, 8)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let M = [| 
-                            for i in 0 .. MAX_EDGES - 1 do
-                                match i with
-                                | 4 -> yield V2i(0, 0)
-                                | 5 -> yield V2i(1, 1)
-                                | 8 -> yield V2i(1, 1)
-                                | 9 -> yield V2i(1, 0)
-                                |10 -> yield V2i(0, 0)
-                                | _ -> yield V2i(-1)
-                        |]
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 4 -> yield V2i(0, 0)
+                                                    | 5 -> yield V2i(1, 1)
+                                                    | 8 -> yield V2i(1, 1)
+                                                    | 9 -> yield V2i(1, 0)
+                                                    |10 -> yield V2i(0, 0)
+                                                    | _ -> yield V2i(-1)
+                                            |])
 
-                let FV = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V4i(-1)
-                                | 1 -> yield V4i( 5, 7, 9, IDHash 5 7 9)
-                                | 2 -> yield V4i( 7, 3, 9, IDHash 7 3 9)
-                                | _ -> yield V4i(-1)
-                        |]
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(-1)
+                                                    | 1 -> yield V4i( 5, 7, 9, IDHash 5 7 9)
+                                                    | 2 -> yield V4i( 7, 3, 9, IDHash 7 3 9)
+                                                    | _ -> yield V4i(-1)
+                                            |])
 
-                let FE = [| 
-                            for i in 0 .. MAX_FACES - 1 do
-                                match i with
-                                | 0 -> yield V3i( 4, 5, 8)
-                                | 1 -> yield V3i( 5, 9, 4)
-                                | 2 -> yield V3i( 8,10, 9)
-                                | _ -> yield V3i(-1)
-                        |]
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i( 4, 5, 8)
+                                                    | 1 -> yield V3i( 5, 9, 4)
+                                                    | 2 -> yield V3i( 8,10, 9)
+                                                    | _ -> yield V3i(-1)
+                                            |])
                     
                 let nextFreeFaceAddr = 3
                 let nextFreeEdgeAddr = 11
