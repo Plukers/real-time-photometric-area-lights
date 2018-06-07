@@ -11,6 +11,8 @@ module EffectUtils =
 
     //open Light.Effect
     open PhotometricLight
+    open NUnit.Framework
+    open FsUnit
     
 
     type UniformScope with
@@ -472,6 +474,170 @@ module EffectUtils =
 
                 (closestPoint, clampState, cp0, cp1)
 
+
+    (*
+        Clamps a point to a polyogn in 3D
+
+        Returns the clamped point + info regarding the clamping process
+
+        (clamped point, clamp state, p0_id, p1_id)
+
+        clamp state:
+        CLAMP_POLYGON_RESULT_NONE  => (clamped point, CLAMP_POLYGON_RESULT_NONE, -1, -1)
+
+        CLAMP_POLYGON_RESULT_POINT => (clamped point, CLAMP_POLYGON_RESULT_POINT, clamped to point id, -1)
+
+        CLAMP_POLYGON_RESULT_LINE  => (clamped point, CLAMP_POLYGON_RESULT_LINE, line point 0 id, line point 1 id) 
+            line is given counterclockwise
+    *)
+    [<ReflectedDefinition>] 
+    let clampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCount : int) (p : V3d) = 
+
+        if polygonVertexCount = 0 then
+            (p, CLAMP_POLYGON_RESULT_NONE, -1, -1)
+        else
+
+            let mutable clampedPoint = V3d.Zero
+            let mutable clampResult = CLAMP_POLYGON_RESULT_NONE
+            let mutable clampResultParam0 = -1
+            let mutable clampResultParam1 = -1
+
+            let mutable smallestDist = 1000000.0
+
+            let mutable inside = true
+
+            for i in 0 .. polygonVertexCount - 1 do
+                
+                let v0 = polygonVertices.[i]
+                let v1 = polygonVertices.[(i + 1) % polygonVertexCount]
+
+                let dotPlane = Vec.cross (v0 |> Vec.normalize) (v1 |> Vec.normalize) |> Vec.normalize |> Vec.dot p
+                if dotPlane >= -1e-9 then
+                    
+                    inside <- false
+
+                    let projectedPoint, PROJECT_TO_LINE_RESULT = projetToLineSegment v0 v1 p
+
+                    let dist = Vec.length (projectedPoint  - p)
+                    if dist < smallestDist then
+                        smallestDist <- dist
+
+                        clampedPoint <- projectedPoint
+
+                        match PROJECT_TO_LINE_RESULT with
+                        | PROJECT_TO_LINE_RESULT_A ->
+                            clampResult <- CLAMP_POLYGON_RESULT_POINT
+                            clampResultParam0 <- i
+                            clampResultParam1 <- -1
+                        | PROJECT_TO_LINE_RESULT_B ->
+                            clampResult <- CLAMP_POLYGON_RESULT_POINT
+                            clampResultParam0 <- (i + 1) % polygonVertexCount
+                            clampResultParam1 <- -1
+                        | _ (* PROJECT_TO_LINE_RESULT_LINE *) ->
+                            clampResult <- CLAMP_POLYGON_RESULT_LINE
+                            clampResultParam0 <- i
+                            clampResultParam1 <- (i + 1) % polygonVertexCount
+
+
+            if inside then
+                (p, CLAMP_POLYGON_RESULT_NONE, -1, -1)
+            else
+                (clampedPoint, clampResult, clampResultParam0, clampResultParam1)
+
+    (*
+        Clamps a point to a polyogn in 3D
+
+        Returns the clamped point + info regarding the clamping process
+
+        (clamped point, clamp state, p0_id, p1_id)
+
+        clamp state:
+        CLAMP_POLYGON_RESULT_NONE  => (clamped point, CLAMP_POLYGON_RESULT_NONE, -1, -1)
+
+        CLAMP_POLYGON_RESULT_POINT => (clamped point, CLAMP_POLYGON_RESULT_POINT, clamped to point id, -1)
+
+        CLAMP_POLYGON_RESULT_LINE  => (clamped point, CLAMP_POLYGON_RESULT_LINE, line point 0 id, line point 1 id) 
+            line is given counterclockwise
+    *)
+    [<ReflectedDefinition>] 
+    let clampPointToPolygonP3 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V3d>) (polygonVertexCount : int) (p : V3d) = 
+
+        if polygonVertexCount = 0 then
+            (p, CLAMP_POLYGON_RESULT_NONE, -1, -1)
+        else
+
+            let mutable clampedPoint = V3d.Zero
+            let mutable clampResult = CLAMP_POLYGON_RESULT_NONE
+            let mutable clampResultParam0 = -1
+            let mutable clampResultParam1 = -1
+
+            let mutable smallestDist = 1000000.0
+
+            let mutable inside = true
+
+            for i in 0 .. polygonVertexCount - 1 do
+                
+                let v0 = polygonVertices.[i]
+                let v1 = polygonVertices.[(i + 1) % polygonVertexCount]
+
+                let dotPlane = Vec.cross (v0 |> Vec.normalize) (v1 |> Vec.normalize) |> Vec.normalize |> Vec.dot p
+                if dotPlane >= -1e-9 then
+                    
+                    inside <- false
+
+                    let projectedPoint, PROJECT_TO_LINE_RESULT = projetToLineSegment v0 v1 p
+
+                    let dist = Vec.length (projectedPoint  - p)
+                    if dist < smallestDist then
+                        smallestDist <- dist
+
+                        clampedPoint <- projectedPoint
+
+                        match PROJECT_TO_LINE_RESULT with
+                        | PROJECT_TO_LINE_RESULT_A ->
+                            clampResult <- CLAMP_POLYGON_RESULT_POINT
+                            clampResultParam0 <- i
+                            clampResultParam1 <- -1
+                        | PROJECT_TO_LINE_RESULT_B ->
+                            clampResult <- CLAMP_POLYGON_RESULT_POINT
+                            clampResultParam0 <- (i + 1) % polygonVertexCount
+                            clampResultParam1 <- -1
+                        | _ (* PROJECT_TO_LINE_RESULT_LINE *) ->
+                            clampResult <- CLAMP_POLYGON_RESULT_LINE
+                            clampResultParam0 <- i
+                            clampResultParam1 <- (i + 1) % polygonVertexCount
+
+
+            if inside then
+                (p, CLAMP_POLYGON_RESULT_NONE, -1, -1)
+            else
+                (clampedPoint, clampResult, clampResultParam0, clampResultParam1)
+
+    [<Test>]
+    let ``Clamp Points To Polygon``() = 
+
+        let polygonVertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V3d>([
+                                                                                    for i in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_THREE do
+                                                                                        match i with
+                                                                                        | 0 -> yield V3d( 1, 5, 1)
+                                                                                        | 1 -> yield V3d(-1, 5, 1)
+                                                                                        | 2 -> yield V3d(-2, 5, 0)
+                                                                                        | 3 -> yield V3d(-1, 5,-1)
+                                                                                        | 4 -> yield V3d( 1, 5,-1)
+                                                                                        | 5 -> yield V3d( 2, 5, 0)
+                                                                                        | _ -> yield V3d(-1)
+                                                                                ])
+        
+        let polygonVertexCount = 6
+
+
+        let clampPointToPolygon = clampPointToPolygonP3 polygonVertices polygonVertexCount
+
+        Assert.Multiple( fun _ ->
+            clampPointToPolygon (V3d( 0, 5, 19)) |> should equal (V3d( 0, 5, 1), CLAMP_POLYGON_RESULT_LINE, 0, 1)
+            clampPointToPolygon (V3d(-3, 5, -3)) |> should equal (V3d(-1, 5,-1), CLAMP_POLYGON_RESULT_POINT, 3,-1)
+            clampPointToPolygon (V3d( 0, 5,  0)) |> should equal (V3d( 0, 5, 0), CLAMP_POLYGON_RESULT_NONE,-1, -1)
+        )
 
     [<ReflectedDefinition>] 
     let Lerp (a : V3d) (b : V3d) (s : float) : V3d = (1.0 - s) * a + s * b
