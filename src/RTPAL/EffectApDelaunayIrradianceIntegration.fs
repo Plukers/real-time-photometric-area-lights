@@ -601,7 +601,7 @@ module EffectApDelaunayIrradianceIntegration =
                         ///////////////////////////////////////////////////
                         // Update Existing Edge
 
-                        if vertices.[splitEdgeE.[eIdx]].Y = splitEdgeV.[(eIdx + 2) % 4] then
+                        if vertices.[splitEdgeE.[eIdx]].Y <> -1 && vertices.[splitEdgeE.[eIdx]].Y = splitEdgeV.[(eIdx + 2) % 4] then
                             vertices.[splitEdgeE.[eIdx]] <- V4i(vertices.[splitEdgeE.[eIdx]].X, vId, vertices.[splitEdgeE.[eIdx]].Z, vertices.[splitEdgeE.[eIdx]].W)
                             edges.[splitEdgeE.[eIdx]] <- V4i(((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, thisGlobalId, edges.[splitEdgeE.[eIdx]].Z, edges.[splitEdgeE.[eIdx]].W)
                         else
@@ -718,7 +718,7 @@ module EffectApDelaunayIrradianceIntegration =
                                 if not insideLightPlane then
 
                                     
-                                    let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa clippedVc closestPoint
+                                    let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc closestPoint
 
                                     ////////////////////////////////////////
                                     // create triangulation
@@ -802,7 +802,12 @@ module EffectApDelaunayIrradianceIntegration =
                                     let mrpDir = (closestPointDir + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
                                     let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
-                                    let (mrpClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1Id) =   clampPointToPolygonP3 vertices vc mrp 
+                                    let (mrpClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1Id) =   
+                                        if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
+                                            clampPointToPolygonP3 vertices 0 vc mrp 
+                                        else
+                                            clampPointToPolygonP3 vertices 1 vc mrp 
+
                                     let mrpClampedDir = mrpClamped |> Vec.normalize
 
                                     match CLAMP_POLYGON_RESULT with
@@ -1160,10 +1165,8 @@ module EffectApDelaunayIrradianceIntegration =
                     let insideLightPlane = (Vec.length closestPoint) < eps
                                 
                     if not insideLightPlane then
-
-                        let closestPointDir = closestPoint |> Vec.normalize
-                                                            
-                        let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                                                                
+                        let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc closestPoint
 
                                                                         
                         // let (closestPoint, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
@@ -1186,7 +1189,7 @@ module EffectApDelaunayIrradianceIntegration =
                         let mutable vc = clippedVc
                         let mutable offset = 0
                         if caseOffset <> CASE_CORNER_OFFSET then 
-                            vertices.[0] <- closestPointClamped |> Vec.normalize
+                            vertices.[0] <- closestPointClamped
                             verticesNormalized.[0] <- closestPointClamped |> Vec.normalize
                             vc <- vc + 1 
                             offset <- 1
@@ -1241,7 +1244,12 @@ module EffectApDelaunayIrradianceIntegration =
                         let mrpDir = (closestPointDir + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
                         let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
-                        let (mrpClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1Id) =   clampPointToPolygonP3 vertices vc mrp 
+                        let (mrpClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1Id) =   
+                            if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
+                                clampPointToPolygonP3 vertices 0 vc mrp 
+                            else
+                                clampPointToPolygonP3 vertices 1 vc mrp 
+
                         let mrpClampedDir = mrpClamped |> Vec.normalize
 
                         match CLAMP_POLYGON_RESULT with
@@ -1855,7 +1863,7 @@ module EffectApDelaunayIrradianceIntegration =
                 nextFreeFaceAddr |> should equal (SplitInsideEdgeMockup.After.nextFreeFaceAddr)
             )     
 
-        module SplitBorderEdgeMockup =
+        module SplitBorderEdgeMockup1 =
 
             module Before = 
 
@@ -2002,21 +2010,172 @@ module EffectApDelaunayIrradianceIntegration =
                 let nextFreeEdgeAddr = 11
              
         [<Test>]
-        let ``Split Border Edge``() = 
+        let ``Split Border Edge 1``() = 
 
-            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = 5 |> DataMutation.spliteEdge (SplitBorderEdgeMockup.Before.V) (SplitBorderEdgeMockup.Before.E) (SplitBorderEdgeMockup.Before.M) (SplitBorderEdgeMockup.Before.FV) (SplitBorderEdgeMockup.Before.FE) (SplitBorderEdgeMockup.Before.nextFreeEdgeAddr) (SplitBorderEdgeMockup.Before.nextFreeFaceAddr) 2
+            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = 5 |> DataMutation.spliteEdge (SplitBorderEdgeMockup1.Before.V) (SplitBorderEdgeMockup1.Before.E) (SplitBorderEdgeMockup1.Before.M) (SplitBorderEdgeMockup1.Before.FV) (SplitBorderEdgeMockup1.Before.FE) (SplitBorderEdgeMockup1.Before.nextFreeEdgeAddr) (SplitBorderEdgeMockup1.Before.nextFreeFaceAddr) 2
 
 
             Assert.Multiple( fun _ ->
-                vertices         |> should equal (SplitBorderEdgeMockup.After.V)
-                edges            |> should equal (SplitBorderEdgeMockup.After.E)
-                meta             |> should equal (SplitBorderEdgeMockup.After.M)
-                faceVertices     |> should equal (SplitBorderEdgeMockup.After.FV)
-                faceEdges        |> should equal (SplitBorderEdgeMockup.After.FE)
-                nextFreeEdgeAddr |> should equal (SplitBorderEdgeMockup.After.nextFreeEdgeAddr)
-                nextFreeFaceAddr |> should equal (SplitBorderEdgeMockup.After.nextFreeFaceAddr)
+                vertices         |> should equal (SplitBorderEdgeMockup1.After.V)
+                edges            |> should equal (SplitBorderEdgeMockup1.After.E)
+                meta             |> should equal (SplitBorderEdgeMockup1.After.M)
+                faceVertices     |> should equal (SplitBorderEdgeMockup1.After.FV)
+                faceEdges        |> should equal (SplitBorderEdgeMockup1.After.FE)
+                nextFreeEdgeAddr |> should equal (SplitBorderEdgeMockup1.After.nextFreeEdgeAddr)
+                nextFreeFaceAddr |> should equal (SplitBorderEdgeMockup1.After.nextFreeFaceAddr)
             )     
 
+        module SplitBorderEdgeMockup2 =
+
+            module Before = 
+
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(0, -1, 1, 2) 
+                                                    | 1 -> yield V4i(1, -1, 2, 0) 
+                                                    | 2 -> yield V4i(2, -1, 3, 0) 
+                                                    | 3 -> yield V4i(3, -1, 4, 0) 
+                                                    | 4 -> yield V4i(4, -1, 0, 3) 
+                                                    | 5 -> yield V4i(0, 1, 2, 3) 
+                                                    | 6 -> yield V4i(0, 2, 3, 4) 
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(-1, -1, 1, 5)
+                                                    | 1 -> yield V4i(-1, -1, 5, 0)
+                                                    | 2 -> yield V4i(-1, -1, 6, 5)
+                                                    | 3 -> yield V4i(-1, -1, 4, 6)
+                                                    | 4 -> yield V4i(-1, -1, 6, 3)
+                                                    | 5 -> yield V4i(0, 1, 2, 6)
+                                                    | 6 -> yield V4i(5, 2, 3, 4)
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V2i(0, 0) 
+                                                    | 1 -> yield V2i(0, 0) 
+                                                    | 2 -> yield V2i(0, 0) 
+                                                    | 3 -> yield V2i(0, 0) 
+                                                    | 4 -> yield V2i(0, 0) 
+                                                    | 5 -> yield V2i(1, 0)
+                                                    | 6 -> yield V2i(1, 0)
+                                                    | _ -> yield V2i(-1) 
+                                            |])
+
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2)) 
+                                                    | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
+                                                    | 2 -> yield V4i(0, 3, 4, (IDHash 0 3 4)) 
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i(0, 1, 5) 
+                                                    | 1 -> yield V3i(5, 2, 6) 
+                                                    | 2 -> yield V3i(6, 3, 4) 
+                                                    | _ -> yield V3i(-1)
+                                            |])
+                    
+                let nextFreeFaceAddr = 3
+                let nextFreeEdgeAddr = 7
+
+            module After = 
+
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(0, -1, 1, 2) 
+                                                    | 1 -> yield V4i(1, -1, 2, 0) 
+                                                    | 2 -> yield V4i(2, -1, 3, 0) 
+                                                    | 3 -> yield V4i(3, -1, 4, 5) 
+                                                    | 4 -> yield V4i(4, -1, 5, 3) 
+                                                    | 5 -> yield V4i(0, 1, 2, 3) 
+                                                    | 6 -> yield V4i(0, 2, 3, 5) 
+                                                    | 8 -> yield V4i(0, 3, 5, -1)
+                                                    | 9 -> yield V4i(3, 4, 5, 0)
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(-1, -1, 1, 5)
+                                                    | 1 -> yield V4i(-1, -1, 5, 0)
+                                                    | 2 -> yield V4i(-1, -1, 6, 5)
+                                                    | 3 -> yield V4i(-1, -1, 4, 9)
+                                                    | 4 -> yield V4i(-1, -1, 9, 3)
+                                                    | 5 -> yield V4i(0, 1, 2, 6)
+                                                    | 6 -> yield V4i(5, 2, 9, 8)
+                                                    | 8 -> yield V4i(6, 9, -1, -1)
+                                                    | 9 -> yield V4i(3, 4, 8, 6)
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V2i(0, 0) 
+                                                    | 1 -> yield V2i(0, 0) 
+                                                    | 2 -> yield V2i(0, 0) 
+                                                    | 3 -> yield V2i(0, 0) 
+                                                    | 4 -> yield V2i(0, 0) 
+                                                    | 5 -> yield V2i(1, 0)
+                                                    | 6 -> yield V2i(1, 0)
+                                                    | 8 -> yield V2i(0, 0)
+                                                    | 9 -> yield V2i(1, 0)
+                                                    | _ -> yield V2i(-1) 
+                                            |])
+
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2)) 
+                                                    | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
+                                                    | 2 -> yield V4i(-1) 
+                                                    | 3 -> yield V4i(0, 3, 5, (IDHash 0 3 5))
+                                                    | 4 -> yield V4i(3, 4, 5, (IDHash 3 4 5))
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i(0, 1, 5) 
+                                                    | 1 -> yield V3i(5, 2, 6) 
+                                                    | 2 -> yield V3i(6, 3, 4) 
+                                                    | 3 -> yield V3i(6, 9, 8)
+                                                    | 4 -> yield V3i(3, 4, 9)
+                                                    | _ -> yield V3i(-1)
+                                            |])
+                    
+                let nextFreeFaceAddr = 5
+                let nextFreeEdgeAddr = 10
+             
+        [<Test>]
+        let ``Split Border Edge 2``() = 
+
+            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = 5 |> DataMutation.spliteEdge (SplitBorderEdgeMockup2.Before.V) (SplitBorderEdgeMockup2.Before.E) (SplitBorderEdgeMockup2.Before.M) (SplitBorderEdgeMockup2.Before.FV) (SplitBorderEdgeMockup2.Before.FE) (SplitBorderEdgeMockup2.Before.nextFreeEdgeAddr) (SplitBorderEdgeMockup2.Before.nextFreeFaceAddr) 4
+
+
+            Assert.Multiple( fun _ ->
+                vertices         |> should equal (SplitBorderEdgeMockup2.After.V)
+                edges            |> should equal (SplitBorderEdgeMockup2.After.E)
+                meta             |> should equal (SplitBorderEdgeMockup2.After.M)
+                faceVertices     |> should equal (SplitBorderEdgeMockup2.After.FV)
+                faceEdges        |> should equal (SplitBorderEdgeMockup2.After.FE)
+                nextFreeEdgeAddr |> should equal (SplitBorderEdgeMockup2.After.nextFreeEdgeAddr)
+                nextFreeFaceAddr |> should equal (SplitBorderEdgeMockup2.After.nextFreeFaceAddr)
+            )   
         
     module Rendering =
 

@@ -491,7 +491,7 @@ module EffectUtils =
             line is given counterclockwise
     *)
     [<ReflectedDefinition>] 
-    let clampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCount : int) (p : V3d) = 
+    let clampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCountStartIdx : int) (polygonVertexCount : int) (p : V3d) = 
 
         if polygonVertexCount = 0 then
             (p, CLAMP_POLYGON_RESULT_NONE, -1, -1)
@@ -506,7 +506,7 @@ module EffectUtils =
 
             let mutable inside = true
 
-            for i in 0 .. polygonVertexCount - 1 do
+            for i in polygonVertexCountStartIdx .. polygonVertexCount - 1 do
                 
                 let v0 = polygonVertices.[i]
                 let v1 = polygonVertices.[(i + 1) % polygonVertexCount]
@@ -560,7 +560,7 @@ module EffectUtils =
             line is given counterclockwise
     *)
     [<ReflectedDefinition>] 
-    let clampPointToPolygonP3 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V3d>) (polygonVertexCount : int) (p : V3d) = 
+    let clampPointToPolygonP3 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V3d>)  (polygonVertexCountStartIdx : int) (polygonVertexCount : int) (p : V3d) = 
 
         if polygonVertexCount = 0 then
             (p, CLAMP_POLYGON_RESULT_NONE, -1, -1)
@@ -575,7 +575,7 @@ module EffectUtils =
 
             let mutable inside = true
 
-            for i in 0 .. polygonVertexCount - 1 do
+            for i in polygonVertexCountStartIdx .. polygonVertexCount - 1 do
                 
                 let v0 = polygonVertices.[i]
                 let v1 = polygonVertices.[(i + 1) % polygonVertexCount]
@@ -631,7 +631,7 @@ module EffectUtils =
         let polygonVertexCount = 6
 
 
-        let clampPointToPolygon = clampPointToPolygonP3 polygonVertices polygonVertexCount
+        let clampPointToPolygon = clampPointToPolygonP3 polygonVertices 0 polygonVertexCount
 
         Assert.Multiple( fun _ ->
             clampPointToPolygon (V3d( 0, 5, 19)) |> should equal (V3d( 0, 5, 1), CLAMP_POLYGON_RESULT_LINE, 0, 1)
