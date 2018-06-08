@@ -422,9 +422,10 @@ module EffectApDelaunayIrradianceIntegration =
         [<Color>]           c       : V4d
     }  
 
+
     module DataMutation =
 
-        [<ReflectedDefinition>]
+        [<ReflectedDefinition>][<Inline>]
         let flipEdge (vertices : Arr<N<MAX_EDGES>, V4i>) (edges : Arr<N<MAX_EDGES>, V4i>) (meta : Arr<N<MAX_EDGES>, V2i>) (faceVertices : Arr<N<MAX_FACES>, V4i>) (faceEdges : Arr<N<MAX_FACES>, V3i>) (stack : Arr<N<MAX_EDGES>, int>) (sp : int) eId =
 
             let originalVertices = vertices.[eId]
@@ -484,6 +485,66 @@ module EffectApDelaunayIrradianceIntegration =
 
 
             (vertices, edges, meta, faceVertices, faceEdges, stack, sp)
+
+        [<ReflectedDefinition>][<Inline>]
+        let flipEdge2 (vertices : Arr<N<MAX_EDGES>, V4i>) (edges : Arr<N<MAX_EDGES>, V4i>) (meta : Arr<N<MAX_EDGES>, V2i>) (faceVertices : Arr<N<MAX_FACES>, V4i>) (faceEdges : Arr<N<MAX_FACES>, V3i>) (stack : Arr<N<MAX_EDGES>, int>) (sp : int) (eId) =
+
+            let originalVertices = vertices.[eId]
+            let originalEdges = edges.[eId]
+
+            // unmrak edge
+            meta.[eId] <- V2i(meta.[eId].X, 0)
+
+            // flip edge
+            vertices.[eId] <- V4i(originalVertices.Y, originalVertices.Z, originalVertices.W, originalVertices.X)
+            edges.[eId] <- V4i(originalEdges.Y, originalEdges.Z, originalEdges.W, originalEdges.X)
+
+            // adopt faces
+            let f0Id = IDHash (originalVertices.X) (originalVertices.Y) (originalVertices.Z)
+            let f1Id = IDHash (originalVertices.Z) (originalVertices.W) (originalVertices.X)
+            (*
+            for f in 0 .. MAX_FACES - 1 do
+                if faceVertices.[f].W = f0Id then
+                    faceVertices.[f] <- V4i((vertices.[eId].X), (vertices.[eId].Y), (vertices.[eId].Z), (IDHash (vertices.[eId].X) (vertices.[eId].Y) (vertices.[eId].Z)))
+                    faceEdges.[f] <- V3i((edges.[eId].X), (edges.[eId].Y), eId)
+
+                if faceVertices.[f].W = f1Id then
+                    faceVertices.[f] <- V4i((vertices.[eId].Z), (vertices.[eId].W), (vertices.[eId].X), (IDHash (vertices.[eId].Z) (vertices.[eId].W) (vertices.[eId].X)))
+                    faceEdges.[f] <- V3i((edges.[eId].Z), (edges.[eId].W), eId)
+              
+            let mutable sp = sp
+
+            // adapt neighbour edges
+            for ne in 0 .. 3 do
+                let (neId, oppositeEdges, oppositeVertex) = 
+                    match ne with
+                    | 0 -> (originalEdges.X, originalEdges.ZW, originalVertices.W)
+                    | 1 -> (originalEdges.Y, originalEdges.ZW, originalVertices.W)
+                    | 2 -> (originalEdges.Z, originalEdges.XY, originalVertices.Y)
+                    | _ -> (originalEdges.W, originalEdges.XY, originalVertices.Y)
+
+                                                    
+                if eId = edges.[neId].X then
+                    edges.[neId] <- V4i(oppositeEdges.X, eId, edges.[neId].Z, edges.[neId].W)
+                    vertices.[neId] <- V4i(vertices.[neId].X, oppositeVertex, vertices.[neId].Z, vertices.[neId].W)
+                elif eId = edges.[neId].Y then
+                    edges.[neId] <- V4i(eId, oppositeEdges.Y, edges.[neId].Z, edges.[neId].W)
+                    vertices.[neId] <- V4i(vertices.[neId].X, oppositeVertex, vertices.[neId].Z, vertices.[neId].W)
+                elif eId = edges.[neId].Z then
+                    edges.[neId] <- V4i(edges.[neId].X, edges.[neId].Y, oppositeEdges.X, eId)
+                    vertices.[neId] <- V4i(vertices.[neId].X, vertices.[neId].Y, vertices.[neId].Z, oppositeVertex)
+                else (* eId = edges.[neId].W *)
+                    edges.[neId] <- V4i(edges.[neId].X, edges.[neId].Y, eId, oppositeEdges.Y)
+                    vertices.[neId] <- V4i(vertices.[neId].X, vertices.[neId].Y, vertices.[neId].Z, oppositeVertex)
+                    
+                // if inside and not marked -> mark it
+                if meta.[neId].X = 1 && meta.[neId].Y = 0 then
+                    sp <- sp + 1
+                    stack.[sp] <- neId
+                    meta.[neId] <- V2i(1, 1)
+            *)
+            sp + 1
+            
 
 
         // Inserts vertex with Id = vId into face with faceId. FaceId is position in Array, not faceHash
@@ -601,7 +662,9 @@ module EffectApDelaunayIrradianceIntegration =
                         ///////////////////////////////////////////////////
                         // Update Existing Edge
 
-                        if vertices.[splitEdgeE.[eIdx]].Y <> -1 && vertices.[splitEdgeE.[eIdx]].Y = splitEdgeV.[(eIdx + 2) % 4] then
+                        let currentOppositeOffset = if eIdx = 1 || eIdx = 3 then 3 else 2
+
+                        if vertices.[splitEdgeE.[eIdx]].Y <> -1 && vertices.[splitEdgeE.[eIdx]].Y = splitEdgeV.[(eIdx + currentOppositeOffset) % 4] then
                             vertices.[splitEdgeE.[eIdx]] <- V4i(vertices.[splitEdgeE.[eIdx]].X, vId, vertices.[splitEdgeE.[eIdx]].Z, vertices.[splitEdgeE.[eIdx]].W)
                             edges.[splitEdgeE.[eIdx]] <- V4i(((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, thisGlobalId, edges.[splitEdgeE.[eIdx]].Z, edges.[splitEdgeE.[eIdx]].W)
                         else
@@ -649,7 +712,7 @@ module EffectApDelaunayIrradianceIntegration =
 
         V2d(irr * weight, weight)
 
-    let delaunyIrrIntegration (v : Vertex) = 
+    let delaunyIrrIntegration useSecondSpecialPoint (v : Vertex) = 
         fragment {
 
             ////////////////////////////////////////////////////////
@@ -723,20 +786,22 @@ module EffectApDelaunayIrradianceIntegration =
                                     ////////////////////////////////////////
                                     // create triangulation
 
-                                    let (caseOffset, v1Idx) =
-                                        if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
-                                            (CASE_CORNER_OFFSET, clampP0Id)
-                                        elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
-                                            (CASE_EDGE_OFFSET, clampP1ID)
-                                        else (*CLAMP_POLYGON_RESULT =  CLAMP_POLYGON_RESULT_NONE *) 
-                                            (CASE_INSIDE_OFFSET, 0)
+                                    let mutable caseOffset = CASE_INSIDE_OFFSET
+                                    let mutable v1Idx = 0
+
+                                    if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
+                                        caseOffset <- CASE_CORNER_OFFSET
+                                        v1Idx <- clampP0Id
+                                    elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
+                                        caseOffset <- CASE_EDGE_OFFSET
+                                        v1Idx <- clampP1ID
+                                    else
+                                        ()
+
                                      
                                     // XYZ -> Spherical coords; 
                                     let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V3d>() 
                                      
-                                    // XYZ -> Spherical coords; 
-                                    let verticesNormalized = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V3d>() 
-
                                     // X -> luminance, Y -> Weight
                                     let funVal = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V2d>() 
 
@@ -745,7 +810,6 @@ module EffectApDelaunayIrradianceIntegration =
                                     let mutable offset = 0
                                     if caseOffset <> CASE_CORNER_OFFSET then 
                                         vertices.[0] <- closestPointClamped |> Vec.normalize
-                                        verticesNormalized.[0] <- closestPointClamped |> Vec.normalize
                                         funVal.[0]   <- sampleIrr t2w addr closestPointClamped
                                         vc <- vc + 1 
                                         offset <- 1
@@ -756,14 +820,12 @@ module EffectApDelaunayIrradianceIntegration =
                                     
                                         for i in 0 .. clippedVc - 1 do 
                                             vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
-                                            verticesNormalized.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
                                             funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
                                             
                                     else
                                         let mutable j = 0
                                         for i in clippedVc - 1 .. -1 .. 0 do 
                                             vertices.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
-                                            verticesNormalized.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
                                             funVal.[j + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
                                                 
                                             j <- j + 1
@@ -782,131 +844,132 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     ////////////////////////////////////////
                                     // insert additional verticex = MRP
-                                    
-                                    let closestPointDir = closestPoint |> Vec.normalize
 
-                                    // intersect normal with plane
-                                    let mutable up = V3d.OOI
+                                    if useSecondSpecialPoint then
+                                    
+                                        let closestPointDir = closestPoint |> Vec.normalize
+
+                                        // intersect normal with plane
+                                        let mutable up = V3d.OOI
                                                                     
-                                    if abs(Vec.dot up lightPlaneN) < eps then
-                                        up <- up + (epb * closestPointDir) |> Vec.normalize     
-                                    else
-                                        let abovePlane = if (Vec.dot V3d.OOI closestPoint) < 0.0 && (Vec.dot closestPoint lightPlaneN) < 0.0 then false else true
-                                        if abovePlane then
-                                            if (Vec.dot up lightPlaneN) > 0.0 then
-                                                up <- up + (abs(Vec.dot up lightPlaneN) + epb) * (-lightPlaneN) |> Vec.normalize
-                                    
-                                    
-                                    let normPlanePoint = linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN // tangent space
-
-                                    let mrpDir = (closestPointDir + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
-                                    let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
-
-                                    let (mrpClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1Id) =   
-                                        if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
-                                            clampPointToPolygonP3 vertices 0 vc mrp 
+                                        if abs(Vec.dot up lightPlaneN) < eps then
+                                            up <- up + (epb * closestPointDir) |> Vec.normalize     
                                         else
-                                            clampPointToPolygonP3 vertices 1 vc mrp 
+                                            let abovePlane = if (Vec.dot V3d.OOI closestPoint) < 0.0 && (Vec.dot closestPoint lightPlaneN) < 0.0 then false else true
+                                            if abovePlane then
+                                                if (Vec.dot up lightPlaneN) > 0.0 then
+                                                    up <- up + (abs(Vec.dot up lightPlaneN) + epb) * (-lightPlaneN) |> Vec.normalize
+                                    
+                                    
+                                        let normPlanePoint = linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN // tangent space
 
-                                    let mrpClampedDir = mrpClamped |> Vec.normalize
+                                        let mrpDir = (closestPointDir + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
+                                        let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
-                                    match CLAMP_POLYGON_RESULT with
-                                    | CLAMP_POLYGON_RESULT_NONE -> 
+                                        let (mrpClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1Id) =   
+                                            if CLAMP_POLYGON_RESULT <> CLAMP_POLYGON_RESULT_NONE then
+                                                clampPointToPolygonP3 vertices 0 vc mrp 
+                                            else
+                                                clampPointToPolygonP3 vertices 1 vc mrp 
 
-                                        if Vec.dot mrpClampedDir (closestPointClamped |> Vec.normalize) < (1.0 - 1e-8) then
+                                        let mrpClampedDir = mrpClamped |> Vec.normalize
 
-                                            let mutable splitEdge = false
-                                            let mutable param = 0
+                                        match CLAMP_POLYGON_RESULT with
+                                        | CLAMP_POLYGON_RESULT_NONE -> 
 
-                                            let mutable foundFace = false
+                                            if Vec.dot mrpClampedDir (closestPointClamped |> Vec.normalize) < (1.0 - 1e-9) then
+
+                                                let mutable splitEdge = false
+                                                let mutable param = 0
+
+                                                let mutable foundFace = false
                         
-                                            for f in 0 .. MAX_FACES - 1 do
-                                                if not foundFace && delFaceVertexData.[f].W <> -1 then 
+                                                for f in 0 .. MAX_FACES - 1 do
+                                                    if not foundFace && delFaceVertexData.[f].W <> -1 then 
                             
-                                                    let face = delFaceVertexData.[f]
+                                                        let face = delFaceVertexData.[f]
                                                                                         
-                                                    let dotZN = Vec.cross (verticesNormalized.[face.X]) (verticesNormalized.[face.Z]) |> Vec.normalize |> Vec.dot mrpClampedDir 
-                                                    let dotYN = Vec.cross (verticesNormalized.[face.Z]) (verticesNormalized.[face.Y]) |> Vec.normalize |> Vec.dot mrpClampedDir 
-                                                    let dotXN = Vec.cross (verticesNormalized.[face.Y]) (verticesNormalized.[face.X]) |> Vec.normalize |> Vec.dot mrpClampedDir 
+                                                        let dotZN = Vec.cross (vertices.[face.X]) (vertices.[face.Z]) |> Vec.normalize |> Vec.dot mrpClampedDir 
+                                                        let dotYN = Vec.cross (vertices.[face.Z]) (vertices.[face.Y]) |> Vec.normalize |> Vec.dot mrpClampedDir 
+                                                        let dotXN = Vec.cross (vertices.[face.Y]) (vertices.[face.X]) |> Vec.normalize |> Vec.dot mrpClampedDir 
 
-                                                    if dotXN >= 0.0 && dotYN >= 0.0 && dotZN >= 0.0 then 
+                                                        if dotXN >= 0.0 && dotYN >= 0.0 && dotZN >= 0.0 then 
                                                         
-                                                        foundFace <- true
+                                                            foundFace <- true
 
-                                                        let x = dotXN < eps
-                                                        let y = dotYN < eps
-                                                        let z = dotZN < eps
+                                                            let x = dotXN < eps
+                                                            let y = dotYN < eps
+                                                            let z = dotZN < eps
 
-                                                        if (x && y) || (x && z) || (y && z) then
-                                                            ()
-                                                        elif x || y || z then
+                                                            if (x && y) || (x && z) || (y && z) then
+                                                                ()
+                                                            elif x || y || z then
 
-                                                            splitEdge <- true
+                                                                splitEdge <- true
 
-                                                            param  <- 
-                                                                if x then delFaceEdgeData.[f].X
-                                                                elif y then delFaceEdgeData.[f].Y
-                                                                else delFaceEdgeData.[f].Z
+                                                                param  <- 
+                                                                    if x then delFaceEdgeData.[f].X
+                                                                    elif y then delFaceEdgeData.[f].Y
+                                                                    else delFaceEdgeData.[f].Z
                                         
-                                                        else
-                                                            param <- f
+                                                            else
+                                                                param <- f
 
-                                                 
+                                                vertices.[vc] <- mrpClamped
+                                                funVal.[vc]   <- sampleIrr t2w addr mrpClamped
+                                                
+                                                vc <- vc + 1 
 
-                                            verticesNormalized.[vc] <- mrpClampedDir
+                                                if splitEdge then
+                                                    let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr param
+                                                    delVertexData       <- vertices
+                                                    delNEdgeData        <- edges
+                                                    delMetaData         <- meta
+                                                    delFaceVertexData   <- faceVertices
+                                                    delFaceEdgeData     <- faceEdges
+                                                    delNextFreeEdgeAddr <- nextFreeEdgeAddr
+                                                    delNextFreeFaceAddr <- nextFreeFaceAddr
+
+                                                else
+                                                    let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.insertVertexIntoFace delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr param
+                                                    delVertexData       <- vertices
+                                                    delNEdgeData        <- edges
+                                                    delMetaData         <- meta
+                                                    delFaceVertexData   <- faceVertices
+                                                    delFaceEdgeData     <- faceEdges
+                                                    delNextFreeEdgeAddr <- nextFreeEdgeAddr
+                                                    delNextFreeFaceAddr <- nextFreeFaceAddr
+                                                
+                                        | CLAMP_POLYGON_RESULT_LINE -> 
+
+                                            let mutable edgeToSplit = 0
+
+                                            let mutable foundEdge = false
+                        
+                                            for e in 0 .. MAX_EDGES - 1 do
+                                                if not foundEdge then 
+
+                                                    if (delVertexData.[e].X = clampP0Id && delVertexData.[e].Z = clampP1Id) || (delVertexData.[e].X = clampP1Id && delVertexData.[e].Z = clampP0Id) then
+                                                        foundEdge <- true
+                                                        edgeToSplit <- e
+                            
+
+                                            vertices.[vc] <- mrpClamped
                                             funVal.[vc]   <- sampleIrr t2w addr mrpClamped
+                                            
                                             vc <- vc + 1 
 
-                                            if splitEdge then
-                                                let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr param
-                                                delVertexData       <- vertices
-                                                delNEdgeData        <- edges
-                                                delMetaData         <- meta
-                                                delFaceVertexData   <- faceVertices
-                                                delFaceEdgeData     <- faceEdges
-                                                delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                                                delNextFreeFaceAddr <- nextFreeFaceAddr
-
-                                            else
-                                                let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.insertVertexIntoFace delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr param
-                                                delVertexData       <- vertices
-                                                delNEdgeData        <- edges
-                                                delMetaData         <- meta
-                                                delFaceVertexData   <- faceVertices
-                                                delFaceEdgeData     <- faceEdges
-                                                delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                                                delNextFreeFaceAddr <- nextFreeFaceAddr
+                                            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr edgeToSplit
+                                            delVertexData       <- vertices
+                                            delNEdgeData        <- edges
+                                            delMetaData         <- meta
+                                            delFaceVertexData   <- faceVertices
+                                            delFaceEdgeData     <- faceEdges
+                                            delNextFreeEdgeAddr <- nextFreeEdgeAddr
+                                            delNextFreeFaceAddr <- nextFreeFaceAddr
+                                            
+                                        | _ (* CLAMP_POLYGON_RESULT_POINT *) -> ()                      
                                     
-                                    | CLAMP_POLYGON_RESULT_LINE -> 
-
-                                        let mutable edgeToSplit = 0
-
-                                        let mutable foundEdge = false
-                        
-                                        for e in 0 .. MAX_EDGES - 1 do
-                                            if not foundEdge then 
-
-                                                if (delVertexData.[e].X = clampP0Id && delVertexData.[e].Z = clampP1Id) || (delVertexData.[e].X = clampP1Id && delVertexData.[e].Z = clampP0Id) then
-                                                    foundEdge <- true
-                                                    edgeToSplit <- e
-                            
-
-                                        verticesNormalized.[vc] <- mrpClampedDir
-                                        funVal.[vc]   <- sampleIrr t2w addr mrpClamped
-                                        vc <- vc + 1 
-
-                                        let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> DataMutation.spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr edgeToSplit
-                                        delVertexData       <- vertices
-                                        delNEdgeData        <- edges
-                                        delMetaData         <- meta
-                                        delFaceVertexData   <- faceVertices
-                                        delFaceEdgeData     <- faceEdges
-                                        delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                                        delNextFreeFaceAddr <- nextFreeFaceAddr
-                                    
-                                                                         
-                                    | _ (* CLAMP_POLYGON_RESULT_POINT *) -> ()
-                                      
 
                                     ////////////////////////////////////////
                                     // execute edge flip algorithm
@@ -919,7 +982,7 @@ module EffectApDelaunayIrradianceIntegration =
                                             SP <- SP + 1
                                             stack.[SP] <- i
                                             delMetaData.[i] <- V2i(1, 1)
-
+                                    
 
                                     ////////////////////////////////////////
                                     // transform to a Delaunay triangulation
@@ -933,23 +996,20 @@ module EffectApDelaunayIrradianceIntegration =
                                         delMetaData.[eId] <- V2i(delMetaData.[eId].X, 0)
                                         SP <- SP - 1
                                         
-                                        let eVertices = delVertexData.[eId]
-
                                         // test if edge is locally delaunay
                                             // true if flip, false otherwise
-    
-                                        let notLD = 
-                                            let a = verticesNormalized.[delVertexData.[eId].X].XYZ
-                                            let b = verticesNormalized.[delVertexData.[eId].Y].XYZ
-                                            let c = verticesNormalized.[delVertexData.[eId].Z].XYZ
-                                            let d = verticesNormalized.[delVertexData.[eId].W].XYZ
-                                            
-                                            (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
-                                                                                    
+                                
+                                        let a = vertices.[delVertexData.[eId].X].XYZ |> Vec.normalize
+                                        let b = vertices.[delVertexData.[eId].Y].XYZ |> Vec.normalize
+                                        let c = vertices.[delVertexData.[eId].Z].XYZ |> Vec.normalize
+                                        let d = vertices.[delVertexData.[eId].W].XYZ |> Vec.normalize
+                                        let notLD = (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0   
+                                        
                                         if notLD then
                                             // flip edge
-
-                                            let (vertices, edges, meta, faceVertices, faceEdges, updatedStack, sp) = eId |> DataMutation.flipEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData stack SP
+                                            (*
+                                            let (vertices, edges, meta, faceVertices, faceEdges, updatedStack, sp) = 
+                                                 DataMutation.flipEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData stack SP eId
                                             delVertexData       <- vertices
                                             delNEdgeData        <- edges
                                             delMetaData         <- meta
@@ -957,7 +1017,75 @@ module EffectApDelaunayIrradianceIntegration =
                                             delFaceEdgeData     <- faceEdges
                                             stack               <- updatedStack
                                             SP                  <- sp
-                                    
+                                            *) 
+
+                                            SP <- DataMutation.flipEdge2 delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData stack SP eId
+
+                                            //let originalVertices = vertices.[eId]
+                                            //let originalEdges = edges.[eId]
+
+                                            //// unmrak edge
+                                            //meta.[eId] <- V2i(meta.[eId].X, 0)
+
+                                            //// flip edge
+                                            //vertices.[eId] <- V4i(originalVertices.Y, originalVertices.Z, originalVertices.W, originalVertices.X)
+                                            //edges.[eId] <- V4i(originalEdges.Y, originalEdges.Z, originalEdges.W, originalEdges.X)
+
+                                            (*
+                                            let originalVertices = delVertexData.[eId]
+                                            let originalEdges = delNEdgeData.[eId]
+
+                                            // unmrak edge
+                                            delMetaData.[eId] <- V2i(delMetaData.[eId].X, 0)
+
+                                            // flip edge
+                                            delVertexData.[eId] <- V4i(originalVertices.Y, originalVertices.Z, originalVertices.W, originalVertices.X)
+                                            delNEdgeData.[eId] <- V4i(originalEdges.Y, originalEdges.Z, originalEdges.W, originalEdges.X)
+
+                                            // adopt faces
+                                            let f0Id = IDHash (originalVertices.X) (originalVertices.Y) (originalVertices.Z)
+                                            let f1Id = IDHash (originalVertices.Z) (originalVertices.W) (originalVertices.X)
+
+                                            for f in 0 .. MAX_FACES - 1 do
+                                                if delFaceVertexData.[f].W = f0Id then
+                                                    delFaceVertexData.[f] <- V4i((delVertexData.[eId].X), (delVertexData.[eId].Y), (delVertexData.[eId].Z), (IDHash (delVertexData.[eId].X) (delVertexData.[eId].Y) (delVertexData.[eId].Z)))
+                                                    delFaceEdgeData.[f] <- V3i((delNEdgeData.[eId].X), (delNEdgeData.[eId].Y), eId)
+
+                                                if delFaceVertexData.[f].W = f1Id then
+                                                    delFaceVertexData.[f] <- V4i((delVertexData.[eId].Z), (delVertexData.[eId].W), (delVertexData.[eId].X), (IDHash (delVertexData.[eId].Z) (delVertexData.[eId].W) (delVertexData.[eId].X)))
+                                                    delFaceEdgeData.[f] <- V3i((delNEdgeData.[eId].Z), (delNEdgeData.[eId].W), eId)
+              
+             
+
+                                            // adapt neighbour edges
+                                            for ne in 0 .. 3 do
+                                                let (neId, oppositeEdges, oppositeVertex) = 
+                                                    match ne with
+                                                    | 0 -> (originalEdges.X, originalEdges.ZW, originalVertices.W)
+                                                    | 1 -> (originalEdges.Y, originalEdges.ZW, originalVertices.W)
+                                                    | 2 -> (originalEdges.Z, originalEdges.XY, originalVertices.Y)
+                                                    | _ -> (originalEdges.W, originalEdges.XY, originalVertices.Y)
+
+                                                    
+                                                if eId = delNEdgeData.[neId].X then
+                                                    delNEdgeData.[neId] <- V4i(oppositeEdges.X, eId, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
+                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, oppositeVertex, delVertexData.[neId].Z, delVertexData.[neId].W)
+                                                elif eId = delNEdgeData.[neId].Y then
+                                                    delNEdgeData.[neId] <- V4i(eId, oppositeEdges.Y, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
+                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, oppositeVertex, delVertexData.[neId].Z, delVertexData.[neId].W)
+                                                elif eId = delNEdgeData.[neId].Z then
+                                                    delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, oppositeEdges.X, eId)
+                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, oppositeVertex)
+                                                else (* eId = delNEdgeData.[neId].W *)
+                                                    delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, eId, oppositeEdges.Y)
+                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, oppositeVertex)
+
+                                                // if inside and not marked -> mark it
+                                                if delMetaData.[neId].X = 1 && delMetaData.[neId].Y = 0 then
+                                                    SP <- SP + 1
+                                                    stack.[SP] <- neId
+                                                    delMetaData.[neId] <- V2i(1, 1)
+                                                *)
                                     ////////////////////////////////////////
                                     // integrate
 
@@ -969,7 +1097,7 @@ module EffectApDelaunayIrradianceIntegration =
                                         let face = delFaceVertexData.[f]
 
                                         if face.W <> -1 then
-                                            let area = computeSphericalExcess (verticesNormalized.[face.X]) (verticesNormalized.[face.Y]) (verticesNormalized.[face.Z])
+                                            let area = computeSphericalExcess (vertices.[face.X] |> Vec.normalize) (vertices.[face.Y] |> Vec.normalize) (vertices.[face.Z] |> Vec.normalize)
 
                                             patchIllumination <- patchIllumination + area * (funVal.[face.X].X + funVal.[face.Y].X + funVal.[face.Z].X) / 3.0
                                             weightSum <- weightSum + area * (funVal.[face.X].Y + funVal.[face.Y].Y + funVal.[face.Z].Y) / 3.0
@@ -995,7 +1123,7 @@ module EffectApDelaunayIrradianceIntegration =
                             ////////////////////////////////////////////////////////
                         
 
-            return V4d(0)// V4d(illumination.XYZ, v.c.W)
+            return V4d(illumination.XYZ, v.c.W)
         }
 
     module Debug =
@@ -1245,7 +1373,7 @@ module EffectApDelaunayIrradianceIntegration =
                         let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
                         let (mrpClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1Id) =   
-                            if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
+                            if CLAMP_POLYGON_RESULT <> CLAMP_POLYGON_RESULT_NONE then
                                 clampPointToPolygonP3 vertices 0 vc mrp 
                             else
                                 clampPointToPolygonP3 vertices 1 vc mrp 
@@ -1423,13 +1551,13 @@ module EffectApDelaunayIrradianceIntegration =
                         
                         let mutable sg = Sg.empty
 
-                        sg <- Sg.group' [sg; pointSg 0.98 (C4b(255, 255, 255, 100)) (Trafo3d.Identity |> Mod.init)]
+                        sg <- Sg.group' [sg; pointSg 0.12 (C4b(255, 255, 255, 100)) (Trafo3d.Identity |> Mod.init)]
 
                         for i in 0 .. vc - 1 do 
                             match i with
-                            | 0 ->  sg <- Sg.group' [sg; pointSg 0.005 C4b.Blue (getTrafo (verticesNormalized.[i]))]
-                            | v when v = (vc - 1) -> sg <- Sg.group' [sg; pointSg 0.005 C4b.Green (getTrafo (verticesNormalized.[i]))]
-                            | _ -> sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (verticesNormalized.[i]))]
+                            | 0 ->  sg <- Sg.group' [sg; pointSg 0.002 C4b.Blue (getTrafo (verticesNormalized.[i] * 0.14))]
+                            | v when v = (vc - 1) -> sg <- Sg.group' [sg; pointSg 0.002 C4b.Green (getTrafo (verticesNormalized.[i] * 0.14))]
+                            | _ -> sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (verticesNormalized.[i] * 0.14))]
                             
             
                         
@@ -1439,11 +1567,12 @@ module EffectApDelaunayIrradianceIntegration =
                         for i in 0 .. MAX_EDGES - 1 do         
                             if delVertexData.[i].X <> -1 && delVertexData.[i].Z <> -1 then 
                                 let edgeStart = verticesNormalized.[delVertexData.[i].X]
-                                let edgeEnd   = verticesNormalized.[delVertexData.[i].Z]
+                                let edgeEnd   = verticesNormalized.[delVertexData.[i].Z] 
 
                                 printfn " - %A -> %A" edgeStart edgeEnd
 
-                                sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red (Trafo3d.Identity |> Mod.init)]
+
+                                sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red (Trafo3d.Scale 0.14 |> Mod.init)]
 
                         sg
 
@@ -1455,7 +1584,6 @@ module EffectApDelaunayIrradianceIntegration =
                     Sg.empty
 
             )
-
 
     module Test = 
         open NUnit.Framework
@@ -2176,6 +2304,158 @@ module EffectApDelaunayIrradianceIntegration =
                 nextFreeEdgeAddr |> should equal (SplitBorderEdgeMockup2.After.nextFreeEdgeAddr)
                 nextFreeFaceAddr |> should equal (SplitBorderEdgeMockup2.After.nextFreeFaceAddr)
             )   
+
+        module SplitBorderEdgeMockup3 =
+
+            module Before = 
+
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(0, -1, 1, 2) 
+                                                    | 1 -> yield V4i(1, -1, 2, 0) 
+                                                    | 2 -> yield V4i(2, -1, 3, 0) 
+                                                    | 3 -> yield V4i(3, -1, 4, 0) 
+                                                    | 4 -> yield V4i(4, -1, 0, 3) 
+                                                    | 5 -> yield V4i(0, 1, 2, 3) 
+                                                    | 6 -> yield V4i(0, 2, 3, 4) 
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(-1, -1, 1, 5)
+                                                    | 1 -> yield V4i(-1, -1, 5, 0)
+                                                    | 2 -> yield V4i(-1, -1, 6, 5)
+                                                    | 3 -> yield V4i(-1, -1, 4, 6)
+                                                    | 4 -> yield V4i(-1, -1, 6, 3)
+                                                    | 5 -> yield V4i(0, 1, 2, 6)
+                                                    | 6 -> yield V4i(5, 2, 3, 4)
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V2i(0, 0) 
+                                                    | 1 -> yield V2i(0, 0) 
+                                                    | 2 -> yield V2i(0, 0) 
+                                                    | 3 -> yield V2i(0, 0) 
+                                                    | 4 -> yield V2i(0, 0) 
+                                                    | 5 -> yield V2i(1, 0)
+                                                    | 6 -> yield V2i(1, 0)
+                                                    | _ -> yield V2i(-1) 
+                                            |])
+
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2)) 
+                                                    | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
+                                                    | 2 -> yield V4i(0, 3, 4, (IDHash 0 3 4)) 
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i(0, 1, 5) 
+                                                    | 1 -> yield V3i(5, 2, 6) 
+                                                    | 2 -> yield V3i(6, 3, 4) 
+                                                    | _ -> yield V3i(-1)
+                                            |])
+                    
+                let nextFreeFaceAddr = 3
+                let nextFreeEdgeAddr = 7
+
+            module After = 
+
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(0, -1, 5, 2) 
+                                                    | 1 -> yield V4i(1, -1, 2, 5) 
+                                                    | 2 -> yield V4i(2, -1, 3, 0) 
+                                                    | 3 -> yield V4i(3, -1, 4, 0) 
+                                                    | 4 -> yield V4i(4, -1, 0, 3) 
+                                                    | 5 -> yield V4i(0, 5, 2, 3) 
+                                                    | 6 -> yield V4i(0, 2, 3, 4) 
+                                                    | 8 -> yield V4i(1, 2, 5, -1)
+                                                    | 9 -> yield V4i(2, 0, 5, 1)
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(-1, -1, 9, 5)
+                                                    | 1 -> yield V4i(-1, -1, 9, 8)
+                                                    | 2 -> yield V4i(-1, -1, 6, 5)
+                                                    | 3 -> yield V4i(-1, -1, 4, 6)
+                                                    | 4 -> yield V4i(-1, -1, 6, 3)
+                                                    | 5 -> yield V4i(0, 9, 2, 6)
+                                                    | 6 -> yield V4i(5, 2, 3, 4)
+                                                    | 8 -> yield V4i(1, 9, -1, -1)
+                                                    | 9 -> yield V4i(5, 0, 8, 1)
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V2i(0, 0) 
+                                                    | 1 -> yield V2i(0, 0) 
+                                                    | 2 -> yield V2i(0, 0) 
+                                                    | 3 -> yield V2i(0, 0) 
+                                                    | 4 -> yield V2i(0, 0) 
+                                                    | 5 -> yield V2i(1, 0)
+                                                    | 6 -> yield V2i(1, 0)
+                                                    | 8 -> yield V2i(0, 0)
+                                                    | 9 -> yield V2i(1, 0)
+                                                    | _ -> yield V2i(-1) 
+                                            |])
+
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(-1) 
+                                                    | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
+                                                    | 2 -> yield V4i(0, 3, 4, (IDHash 0 3 4)) 
+                                                    | 3 -> yield V4i(1, 2, 5, (IDHash 1 2 5))
+                                                    | 4 -> yield V4i(2, 0, 5, (IDHash 2 0 5))
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i(0, 1, 5) 
+                                                    | 1 -> yield V3i(5, 2, 6) 
+                                                    | 2 -> yield V3i(6, 3, 4) 
+                                                    | 3 -> yield V3i(1, 9, 8)
+                                                    | 4 -> yield V3i(5, 0, 9)
+                                                    | _ -> yield V3i(-1)
+                                            |])
+                    
+                let nextFreeFaceAddr = 5
+                let nextFreeEdgeAddr = 10
+             
+        [<Test>]
+        let ``Split Border Edge 3``() = 
+
+            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = 5 |> DataMutation.spliteEdge (SplitBorderEdgeMockup3.Before.V) (SplitBorderEdgeMockup3.Before.E) (SplitBorderEdgeMockup3.Before.M) (SplitBorderEdgeMockup3.Before.FV) (SplitBorderEdgeMockup3.Before.FE) (SplitBorderEdgeMockup3.Before.nextFreeEdgeAddr) (SplitBorderEdgeMockup3.Before.nextFreeFaceAddr) 0
+
+
+            Assert.Multiple( fun _ ->
+                vertices         |> should equal (SplitBorderEdgeMockup3.After.V)
+                edges            |> should equal (SplitBorderEdgeMockup3.After.E)
+                meta             |> should equal (SplitBorderEdgeMockup3.After.M)
+                faceVertices     |> should equal (SplitBorderEdgeMockup3.After.FV)
+                faceEdges        |> should equal (SplitBorderEdgeMockup3.After.FE)
+                nextFreeEdgeAddr |> should equal (SplitBorderEdgeMockup3.After.nextFreeEdgeAddr)
+                nextFreeFaceAddr |> should equal (SplitBorderEdgeMockup3.After.nextFreeFaceAddr)
+            )   
         
     module Rendering =
 
@@ -2190,17 +2470,17 @@ module EffectApDelaunayIrradianceIntegration =
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
 
             
-            let sceneSg = 
-                [
-                    sceneSg
-                    Debug.delaunyScene data.lights |> Sg.dynamic
-                ]
-                |> Sg.group'
+            //let sceneSg = 
+            //    [
+            //        sceneSg
+            //        Debug.delaunyScene data.lights |> Sg.dynamic
+            //    ]
+            //    |> Sg.group'
             
             
             sceneSg
                 |> setupFbEffects [ 
-                        delaunyIrrIntegration |> toEffect
+                        delaunyIrrIntegration false |> toEffect
                     ]
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData

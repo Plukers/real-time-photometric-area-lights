@@ -247,7 +247,7 @@ module EffectUtils =
         let lenPA = pa |> Vec.length
         let lenPB = pb |> Vec.length
         
-        if lenPA > 1e-6 && lenPB > 1e-6 && (Vec.dot pa pb) < 0.0 then
+        if lenPA > 1e-9 && lenPB > 1e-9 && (Vec.dot pa pb) < 0.0 then
             (projection, PROJECT_TO_LINE_RESULT_LINE)
         elif lenPA < lenPB then
             (a, PROJECT_TO_LINE_RESULT_A)
