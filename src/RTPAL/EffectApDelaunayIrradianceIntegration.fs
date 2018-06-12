@@ -11,7 +11,7 @@ module EffectApDelaunayIrradianceIntegration =
 
 
     [<Literal>]
-    let MAX_EDGES = 13
+    let MAX_EDGES = 14
 
     [<Literal>]
     let MAX_EDGES_HALF = 7
@@ -52,6 +52,8 @@ module EffectApDelaunayIrradianceIntegration =
     [<Literal>]
     let MAX_FACES_ALL = 30 // MAX_FACES * NUM_CASE
 
+
+   
 
     [<ReflectedDefinition>]
     let private IDHash a b c = 
@@ -430,7 +432,10 @@ module EffectApDelaunayIrradianceIntegration =
 
 
     module DataHandling = 
-
+        open NUnit.Framework
+        open FsUnit
+        
+        let NONE = 0x000000FF
 
         let private ID_BIT_MASK = 0x000000FF 
         
@@ -440,41 +445,99 @@ module EffectApDelaunayIrradianceIntegration =
         let private getIdFromInt pos value =
             (value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID)
 
+        [<Test>]
+        let ``Get Id from Int``() = 
+            Assert.Multiple( fun _ ->
+                0x000000AA |> getIdFromInt 0 |> should equal 0xAA
+                0x000000AA |> getIdFromInt 1 |> should equal 0x00
+                0x00AABB00 |> getIdFromInt 2 |> should equal 0xAA
+                0xFFAABB00 |> getIdFromInt 3 |> should equal 0xFF
+            )
+
         [<ReflectedDefinition>][<Inline>]
         let private setIdInInt pos value id =
             (value &&& (~~~(ID_BIT_MASK <<< pos * BIT_PER_ID))) ||| (id <<< pos * BIT_PER_ID)
 
+        [<Test>]
+        let ``Set Id in Int``() = 
+            Assert.Multiple( fun _ ->
+                0xBB |> setIdInInt 0 0x000000AA |> should equal 0x000000BB
+                0xFF |> setIdInInt 1 0x000000AA |> should equal 0x0000FFAA
+                0xCC |> setIdInInt 2 0x00AABB00 |> should equal 0x00CCBB00
+                0xDD |> setIdInInt 3 0xFFAABB00 |> should equal 0xDDAABB00
+            )
+
         [<ReflectedDefinition>][<Inline>]
         let private setTwoIdsInInt pos value id0 id1 =
-            (value &&& (~~~((ID_BIT_MASK <<< (pos + 1) * BIT_PER_ID) ||| (ID_BIT_MASK <<< pos * BIT_PER_ID)))) ||| ((id0 <<< (pos + 1) * BIT_PER_ID) ||| (id0 <<< pos * BIT_PER_ID))
+            (value &&& (~~~((ID_BIT_MASK <<< (pos + 1) * BIT_PER_ID) ||| (ID_BIT_MASK <<< pos * BIT_PER_ID)))) ||| ((id1 <<< (pos + 1) * BIT_PER_ID) ||| (id0 <<< pos * BIT_PER_ID))
+
+        [<Test>]
+        let ``Set Two Ids in Int``() = 
+            Assert.Multiple( fun _ ->
+                setTwoIdsInInt 0 0x000000AA 0xBB 0xBB |> should equal 0x0000BBBB
+                setTwoIdsInInt 1 0x000000AA 0xFF 0xAA |> should equal 0x00AAFFAA
+                setTwoIdsInInt 2 0x00AABB00 0xCC 0xBB |> should equal 0xBBCCBB00
+            )
 
         [<ReflectedDefinition>][<Inline>]
         let private offsetId offset id = 
             id <<< (BIT_PER_ID * offset)
 
+        [<Test>]
+        let ``Offset Id``() = 
+            Assert.Multiple( fun _ ->
+                0x000000AA |> offsetId 0 |> should equal 0x000000AA
+                0x000000AA |> offsetId 1 |> should equal 0x0000AA00
+                0x00AABB00 |> offsetId 2 |> should equal 0xBB000000
+            )
+
         [<ReflectedDefinition>][<Inline>]
         let genIntFromV3i (v : V3i) =
             (v.X |> offsetId 0) &&& (v.Y |> offsetId 1) &&& (v.Z |> offsetId 2)
+
+        [<Test>]
+        let ``Gen Int From V3i``() = 
+            Assert.Multiple( fun _ ->
+                V3i(0xAA, 0x02, 0x23) |> genIntFromV3i |> should equal 0x00AA0223
+            )
 
         [<ReflectedDefinition>][<Inline>]
         let genIntFromV4i (v : V4i) =
             (v.X |> offsetId 0) &&& (v.Y |> offsetId 1) &&& (v.Z |> offsetId 2) &&& (v.W |> offsetId 3)
 
+        [<Test>]
+        let ``Gen Int From V4i``() = 
+            Assert.Multiple( fun _ ->
+                V4i(0xAA, 0x02, 0x23, 0x67) |> genIntFromV4i |> should equal 0xAA022367
+            )
+
         [<ReflectedDefinition>][<Inline>]
         let private leftShiftWithRotation24Bit shift v =
-            ((v <<< BIT_PER_ID * shift) + (v >>> BIT_PER_ID * (3 - shift))) &&& 0x00FFFFFF
+            int (((uint32 v <<< BIT_PER_ID * shift) ||| (uint32 v >>> BIT_PER_ID * (3 - shift))) &&& uint32 0x00FFFFFF)
+
+        [<Test>]
+        let ``Left Shift  with Rotation 24Bit``() = 
+            Assert.Multiple( fun _ ->
+                0x000000AA |> leftShiftWithRotation24Bit 0 |> should equal 0x000000AA
+                0x000000AA |> leftShiftWithRotation24Bit 2 |> should equal 0x00AA0000
+                0x000000AA |> leftShiftWithRotation24Bit 3 |> should equal 0x000000AA
+                0x00AA00AA |> leftShiftWithRotation24Bit 3 |> should equal 0x00AA00AA
+            )
 
         [<ReflectedDefinition>][<Inline>]
         let private leftShiftWithRotation32Bit shift v =
-            ((v <<< BIT_PER_ID * shift) + (v >>> BIT_PER_ID * (4 - shift))) &&& 0x00FFFFFF
-        
-
-        let generateCompactEdgeV4i (v0 : V4i) (e0 : V4i) (v1 : V4i) (e1 : V4i) =
-            V4i(v0 |> genIntFromV4i, e0 |> genIntFromV4i, v1 |> genIntFromV4i, e1 |> genIntFromV4i) 
+            int ((uint32 v <<< BIT_PER_ID * shift) ||| (uint32 v >>> BIT_PER_ID * (4 - shift)))
 
 
-        let generateCompactFaceV4i (fv0 : V3i) (fe0 : V3i) (fv1 : V3i) (fe1 : V3i) =
-            V4i(fv0 |> genIntFromV3i, fe0 |> genIntFromV3i, fv1 |> genIntFromV3i, fe1 |> genIntFromV3i) 
+        [<Test>]
+        let ``Left Shift  with Rotation 32Bit``() = 
+            Assert.Multiple( fun _ ->
+                0x000000AA |> leftShiftWithRotation32Bit 0 |> should equal 0x000000AA
+                0x000000AA |> leftShiftWithRotation32Bit 1 |> should equal 0x0000AA00
+                0x000000AA |> leftShiftWithRotation32Bit 2 |> should equal 0x00AA0000
+                0x000000AA |> leftShiftWithRotation32Bit 3 |> should equal 0xAA000000
+                0xAA0000AA |> leftShiftWithRotation32Bit 3 |> should equal 0xAAAA0000
+            )
 
         //////////////////////////////////////////////////////////////////////////////////////////
         // Edge 
@@ -616,7 +679,55 @@ module EffectApDelaunayIrradianceIntegration =
                 (((if eId % 2 = 0 then edges.[eId / 2].X else edges.[eId / 2].Z) &&& 0xFFFF0000) >>> (BIT_PER_ID * 2)) + (((if eId % 2 = 0 then edges.[eId / 2].X else edges.[eId / 2].Z) &&& 0x000000FF) <<< (BIT_PER_ID * 2))
             
 
+        //////////////////////////////////////////////////////////////////////////////////////////
+        // Data Import
 
+        let generateCompactEdgeV4i (v0 : V4i) (e0 : V4i) (v1 : V4i) (e1 : V4i) =
+            V4i(v0 |> genIntFromV4i, e0 |> genIntFromV4i, v1 |> genIntFromV4i, e1 |> genIntFromV4i) 
+
+
+        let generateCompactFaceV4i (fv0 : V3i) (fe0 : V3i) (fv1 : V3i) (fe1 : V3i) =
+            V4i(fv0 |> genIntFromV3i, fe0 |> genIntFromV3i, fv1 |> genIntFromV3i, fe1 |> genIntFromV3i) 
+
+        let private  replaceMinusOneWithNone v = 
+            if v = -1 then NONE else v
+
+        let private replaceMinusOneWithNoneInV4i (v : V4i) =
+            V4i(v.X |> replaceMinusOneWithNone, v.Y |> replaceMinusOneWithNone, v.Z |> replaceMinusOneWithNone, v.W |> replaceMinusOneWithNone)
+
+        let private replaceMinusOneWithNoneInV3i (v : V3i) =
+            V3i(v.X |> replaceMinusOneWithNone, v.Y |> replaceMinusOneWithNone, v.Z |> replaceMinusOneWithNone)
+
+        let transformEdgesToCompactRepresentation (V :  Arr<N<MAX_EDGES>, V4i>) (E :  Arr<N<MAX_EDGES>, V4i>) (M :  Arr<N<MAX_EDGES>, V2i>) = 
+            
+            let edges = Arr<N<MAX_EDGES_HALF>, V4i>([|
+                                                        for i in 0 .. 2 .. MAX_EDGES - 1 do
+                                                            yield generateCompactEdgeV4i (V.[i] |> replaceMinusOneWithNoneInV4i) (E.[i] |> replaceMinusOneWithNoneInV4i) (V.[i + 1] |> replaceMinusOneWithNoneInV4i) (E.[i + 1] |> replaceMinusOneWithNoneInV4i)
+            
+                                                    |])
+            
+            let mutable meta = 0x00000000
+
+            for i in 0 .. MAX_EDGES - 1 do
+
+                if M.[i].X = 1 then
+                    meta <- i |> makeEdgeInside meta
+
+                if M.[i].Y = 1 then
+                    meta <- i |> markEdge meta
+
+            (edges, meta)
+
+        let transformFacesToCompactRepresentation (FV : Arr<N<MAX_FACES>, V4i>) (FE : Arr<N<MAX_FACES>, V3i>) =
+
+            Arr<N<MAX_FACES_HALF>, V4i>([|
+                                        for i in 0 .. 2 .. MAX_FACES - 1 do
+                                            yield generateCompactFaceV4i (FV.[i].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i] |> replaceMinusOneWithNoneInV3i) (FV.[i + 1].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i + 1] |> replaceMinusOneWithNoneInV3i)
+            
+                                    |])
+
+
+            
 
     module DataMutation =
 
@@ -1922,17 +2033,28 @@ module EffectApDelaunayIrradianceIntegration =
         [<Test>]
         let ``Flip Edge``() = 
 
-            let (vertices, edges, meta, faceVertices, faceEdges, stack, sp) = 0 |> DataMutation.flipEdge (FlipTestMockup.Before.V) (FlipTestMockup.Before.E) (FlipTestMockup.Before.M) (FlipTestMockup.Before.FV) (FlipTestMockup.Before.FE) (FlipTestMockup.Before.STACK) (FlipTestMockup.Before.SP)
+            let (edges, meta) = DataHandling.transformEdgesToCompactRepresentation (FlipTestMockup.Before.V) (FlipTestMockup.Before.E) (FlipTestMockup.Before.M)
+            let mutable meta = meta
+            let faces = DataHandling.transformFacesToCompactRepresentation (FlipTestMockup.Before.FV) (FlipTestMockup.Before.FE)
+            let stack = FlipTestMockup.Before.STACK
+            let mutable sp = FlipTestMockup.Before.SP
 
+            let (newMeta, newSp) = 0 |> DataMutation.flipEdge edges meta faces stack sp
+            meta <- newMeta
+            sp <- newSp
+
+
+            let (afterEdges, afterMeta) = DataHandling.transformEdgesToCompactRepresentation (FlipTestMockup.After.V) (FlipTestMockup.After.E) (FlipTestMockup.After.M)
+            let afterFaces = DataHandling.transformFacesToCompactRepresentation (FlipTestMockup.After.FV) (FlipTestMockup.After.FE)
+            let afterStack = FlipTestMockup.After.STACK
+            let afterSp = FlipTestMockup.After.SP
 
             Assert.Multiple( fun _ ->
-                vertices       |> should equal (FlipTestMockup.After.V)
-                edges          |> should equal (FlipTestMockup.After.E)
-                meta           |> should equal (FlipTestMockup.After.M)
-                faceVertices   |> should equal (FlipTestMockup.After.FV)
-                faceEdges      |> should equal (FlipTestMockup.After.FE)
-                stack          |> should equal (FlipTestMockup.After.STACK)
-                sp             |> should equal (FlipTestMockup.After.SP)
+                edges |> should equal afterEdges
+                meta  |> should equal afterMeta
+                faces |> should equal afterFaces
+                stack |> should equal afterStack
+                sp    |> should equal afterSp
             )
 
         module InsertVertexMockup =
