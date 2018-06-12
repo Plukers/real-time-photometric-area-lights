@@ -437,13 +437,13 @@ module EffectApDelaunayIrradianceIntegration =
         
         let NONE = 0x000000FF
 
-        let private ID_BIT_MASK = 0x000000FF 
+        let private ID_BIT_MASK = uint32 0x000000FF 
         
         let private BIT_PER_ID = 8
 
         [<ReflectedDefinition>][<Inline>]
         let private getIdFromInt pos value =
-            (value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID)
+            (uint32 value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID) |> int
 
         [<Test>]
         let ``Get Id from Int``() = 
