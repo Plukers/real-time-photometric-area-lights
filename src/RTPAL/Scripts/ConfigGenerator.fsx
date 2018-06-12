@@ -58,6 +58,49 @@ let lightConfig =
     
     c
 
+let delaunayConfig =
+    
+    let newEntry key value config = (value, config |> Map.add key value)
+        
+    let c = Map.empty
+
+    // DEFINE CONFIG HERE    
+    let (MAX_EDGES, c) = c |> newEntry "MAX_EDGES" 14
+    
+    let (MAX_EDGES_HALF, c) = c |> newEntry "MAX_EDGES_HALF" (MAX_EDGES / 2)
+
+    let (MAX_FACES, c) = c |> newEntry "MAX_FACES" 10
+    
+    let (MAX_FACES_HALF, c) = c |> newEntry "MAX_FACES_HALF" (MAX_EDGES / 2)
+
+
+    let (CASE_CORNER, c) = c |> newEntry "CASE_CORNER" 1
+
+    let (CASE_CORNER_OFFSET, c) = c |> newEntry "CASE_CORNER_OFFSET" 0
+
+
+    let (CASE_EDGE, c) = c |> newEntry "CASE_EDGE" 2
+
+    let (CASE_EDGE_OFFSET, c) = c |> newEntry "CASE_EDGE_OFFSET" 1
+
+
+    let (CASE_INSIDE, c) = c |> newEntry "CASE_INSIDE" 4
+
+    let (CASE_INSIDE_OFFSET, c) = c |> newEntry "CASE_INSIDE_OFFSET" 2
+    
+    
+    let (NUM_CASE, c) = c |> newEntry "NUM_CASE" 3
+
+    let (MAX_EDGES_ALL, c) = c |> newEntry "MAX_EDGES_ALL" (MAX_EDGES * NUM_CASE)
+
+    let (MAX_FACES_ALL, c) = c |> newEntry "MAX_FACES_ALL" (MAX_FACES * NUM_CASE)
+
+    let (MAX_EDGES_ALL_HALF, c) = c |> newEntry "MAX_EDGES_ALL_HALF" (MAX_EDGES_HALF * NUM_CASE)
+
+    let (MAX_FACES_ALL_HALF, c) = c |> newEntry "MAX_FACES_ALL_HALF" (MAX_FACES_HALF * NUM_CASE)
+
+    c
+
 let mutable configStr = 
     """namespace Render
 (* 
@@ -82,6 +125,23 @@ lightConfig |> Map.iter (fun entry value ->
         [<Literal>]
         let %s = %A
                       " entry value
+
+    configStr <- String.concat "" [ configStr; entrystring ] 
+    ()) 
+
+
+let delaunayHeader = """
+    module Delaunay = 
+"""
+configStr <- String.concat "" [ configStr; delaunayHeader ] 
+
+delaunayConfig |> Map.iter (fun entry value -> 
+
+    let entrystring = 
+        sprintf "
+        [<Literal>]
+        let %s = %A
+                        " entry value
 
     configStr <- String.concat "" [ configStr; entrystring ] 
     ()) 

@@ -60,3 +60,50 @@ module Config =
         [<Literal>]
         let VERT_PER_LIGHT_PLUS_ONE = 5
                       
+    module Delaunay = 
+
+        [<Literal>]
+        let CASE_CORNER = 1
+                        
+        [<Literal>]
+        let CASE_CORNER_OFFSET = 0
+                        
+        [<Literal>]
+        let CASE_EDGE = 2
+                        
+        [<Literal>]
+        let CASE_EDGE_OFFSET = 1
+                        
+        [<Literal>]
+        let CASE_INSIDE = 4
+                        
+        [<Literal>]
+        let CASE_INSIDE_OFFSET = 2
+                        
+        [<Literal>]
+        let MAX_EDGES = 14
+                        
+        [<Literal>]
+        let MAX_EDGES_ALL = 42
+                        
+        [<Literal>]
+        let MAX_EDGES_ALL_HALF = 21
+                        
+        [<Literal>]
+        let MAX_EDGES_HALF = 7
+                        
+        [<Literal>]
+        let MAX_FACES = 10
+                        
+        [<Literal>]
+        let MAX_FACES_ALL = 30
+                        
+        [<Literal>]
+        let MAX_FACES_ALL_HALF = 21
+                        
+        [<Literal>]
+        let MAX_FACES_HALF = 7
+                        
+        [<Literal>]
+        let NUM_CASE = 3
+                        
