@@ -14,7 +14,13 @@ module EffectApDelaunayIrradianceIntegration =
     let MAX_EDGES = 13
 
     [<Literal>]
+    let MAX_EDGES_HALF = 7
+
+    [<Literal>]
     let MAX_FACES = 10
+
+    [<Literal>]
+    let MAX_FACES_HALF = 5
 
 
     [<Literal>]
@@ -423,6 +429,160 @@ module EffectApDelaunayIrradianceIntegration =
     }  
 
 
+    module DataManagement = 
+
+
+        let private ID_BIT_MASK = 0x000000FF 
+        
+        let private BIT_PER_ID = 8
+
+        [<ReflectedDefinition>][<Inline>]
+        let private getIdFromInt pos value =
+            (value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID)
+
+        [<ReflectedDefinition>][<Inline>]
+        let private setIdInInt pos value id =
+            (value &&& (~~~(ID_BIT_MASK <<< pos * BIT_PER_ID))) ||| (id <<< pos * BIT_PER_ID)
+
+        [<ReflectedDefinition>][<Inline>]
+        let private offsetId offset id = 
+            id <<< (BIT_PER_ID * offset)
+
+        [<ReflectedDefinition>][<Inline>]
+        let genIntFromV3i (v : V3i) =
+            (v.X |> offsetId 0) &&& (v.Y |> offsetId 1) &&& (v.Z |> offsetId 2)
+
+        [<ReflectedDefinition>][<Inline>]
+        let genIntFromV4i (v : V4i) =
+            (v.X |> offsetId 0) &&& (v.Y |> offsetId 1) &&& (v.Z |> offsetId 2) &&& (v.W |> offsetId 3)
+        
+
+        let generateCompactEdgeV4i (v0 : V4i) (e0 : V4i) (v1 : V4i) (e1 : V4i) =
+            V4i(v0 |> genIntFromV4i, e0 |> genIntFromV4i, v1 |> genIntFromV4i, e1 |> genIntFromV4i) 
+
+
+        let generateCompactFaceV4i (fv0 : V3i) (fe0 : V3i) (fv1 : V3i) (fe1 : V3i) =
+            V4i(fv0 |> genIntFromV3i, fe0 |> genIntFromV3i, fv1 |> genIntFromV3i, fe1 |> genIntFromV3i) 
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        // Edge 
+
+        // Vertex Handling
+
+        [<ReflectedDefinition>][<Inline>]
+        let readVertexId (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId vPos =
+            getIdFromInt vPos (if eId % 2 = 0 then edges.[eId / 2].X else edges.[eId / 2].Z)
+
+        [<ReflectedDefinition>][<Inline>]
+        let writeVertexId (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId vPos vertexId =
+            edges.[eId / 2] <- 
+                if eId % 2 = 0 then 
+                    V4i(setIdInInt vPos (edges.[eId / 2].X) vertexId, edges.[eId / 2].Y, edges.[eId / 2].Z, edges.[eId / 2].W)
+                else 
+                    V4i(edges.[eId / 2].X, edges.[eId / 2].Y, setIdInInt vPos (edges.[eId / 2].Z) vertexId, edges.[eId / 2].W)
+
+        let OPPOSITE_0 = 0
+        let OPPOSITE_1 = 1
+
+        // Use OPPOSITE_0 and OPPOSITE_1 as opposite parameter
+        [<ReflectedDefinition>][<Inline>]
+        let getFaceVerticesOfEdge (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId opposite = 
+            if opposite = OPPOSITE_0 then 
+                (if eId % 2 = 0 then edges.[eId / 2].X else edges.[eId / 2].Z) &&& 0x00FFFFFF
+            else
+                (((if eId % 2 = 0 then edges.[eId / 2].X else edges.[eId / 2].Z) &&& 0xFFFF0000) >>> (BIT_PER_ID * 2)) + (((if eId % 2 = 0 then edges.[eId / 2].X else edges.[eId / 2].Z) &&& 0x000000FF) <<< (BIT_PER_ID * 2))
+            
+        // Neighbor Edge Handling
+
+        [<ReflectedDefinition>][<Inline>]
+        let readEdgeId (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId ePos =
+            getIdFromInt ePos (if eId % 2 = 0 then edges.[eId / 2].Y else edges.[eId / 2].W)
+
+        [<ReflectedDefinition>][<Inline>]
+        let writeEdgeId (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId ePos edgeId =
+            edges.[eId / 2] <-
+                if eId % 2 = 0 then 
+                    V4i(edges.[eId / 2].X, setIdInInt ePos (edges.[eId / 2].Y) edgeId, edges.[eId / 2].Z, edges.[eId / 2].W)
+                else 
+                    V4i(edges.[eId / 2].X, edges.[eId / 2].Y, edges.[eId / 2].Z, setIdInInt ePos (edges.[eId / 2].W) edgeId)
+
+
+        // Meta Handling
+
+        let private META_BIT_MASK = 0x00000001
+
+        let private MARKED_OFFSET = 0
+        let private INSIDE_OFFSET = 1
+
+        [<ReflectedDefinition>][<Inline>]
+        let edgeIsInside meta eId = 
+            meta &&& (META_BIT_MASK <<< ((eId / 2) + INSIDE_OFFSET)) <> 0 
+
+        // TODO maybe replace meta with a meta ref, check shader code
+        [<ReflectedDefinition>][<Inline>]
+        let makeEdgeInside meta eId =
+            meta ||| (META_BIT_MASK <<< ((eId / 2) + INSIDE_OFFSET))
+
+        [<ReflectedDefinition>][<Inline>]
+        let edgeIsMarked meta eId = 
+            meta &&& (META_BIT_MASK <<< ((eId / 2) + MARKED_OFFSET)) <> 0 
+
+        // TODO maybe replace meta with a meta ref, check shader code
+        [<ReflectedDefinition>][<Inline>]
+        let markEdge meta eId =
+            meta ||| (META_BIT_MASK <<< ((eId / 2) + MARKED_OFFSET))
+
+        // TODO maybe replace meta with a meta ref, check shader code
+        [<ReflectedDefinition>][<Inline>]
+        let unmarkEdge meta eId =
+            meta &&& (~~~(META_BIT_MASK <<< ((eId / 2) + MARKED_OFFSET)))
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        // Face 
+
+        // Vertex Handling
+
+        [<ReflectedDefinition>][<Inline>]
+        let readFaceVertexId (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId vPos =
+            getIdFromInt vPos (if fId % 2 = 0 then faces.[fId / 2].X else faces.[fId / 2].Z)
+
+        [<ReflectedDefinition>][<Inline>]
+        let writeFaceVertexIds (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId v0 v1 v2 =
+            faces.[fId / 2] <-
+                if fId % 2 = 0 then 
+                    V4i((v0 |> offsetId 0) &&& (v1 |> offsetId 1) &&& (v2 |> offsetId 2), faces.[fId / 2].Y, faces.[fId / 2].Z, faces.[fId / 2].W)
+                else 
+                    V4i(faces.[fId / 2].X, faces.[fId / 2].Y, (v0 |> offsetId 0) &&& (v1 |> offsetId 1) &&& (v2 |> offsetId 2), faces.[fId / 2].W)
+
+
+        // Neighbor Edge Handling
+
+        [<ReflectedDefinition>][<Inline>]
+        let readFaceEdgeId (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId ePos =
+            getIdFromInt ePos (if fId % 2 = 0 then faces.[fId / 2].Y else faces.[fId / 2].W)
+
+        [<ReflectedDefinition>][<Inline>]
+        let writeFaceEdgeIds (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId e0 e1 e2 =
+            faces.[fId / 2] <- 
+                if fId % 2 = 0 then
+                    V4i(faces.[fId / 2].X, (e0 |> offsetId 0) &&& (e1 |> offsetId 1) &&& (e2 |> offsetId 2), faces.[fId / 2].Z, faces.[fId / 2].W)
+                else
+                    V4i(faces.[fId / 2].X, faces.[fId / 2].Y, faces.[fId / 2].Z, (e0 |> offsetId 0) &&& (e1 |> offsetId 1) &&& (e2 |> offsetId 2))
+
+        // Misc Handling
+
+        [<ReflectedDefinition>][<Inline>]
+        let private leftShiftWithRotation24Bit shift v =
+            ((v <<< BIT_PER_ID * shift) + (v >>> BIT_PER_ID * (3 - shift))) &&& 0x00FFFFFF
+
+        [<ReflectedDefinition>][<Inline>]
+        let private compareVerticesPermutations24Bit v0 v1 =
+            v0 = v1 || (v0 |> leftShiftWithRotation24Bit 1) = v1 || (v0 |> leftShiftWithRotation24Bit 2) = v1
+
+        [<ReflectedDefinition>][<Inline>]
+        let areVerticesFromFace (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId vertices =
+            compareVerticesPermutations24Bit (if fId % 2 = 0 then  faces.[fId / 2].X else faces.[fId / 2].Z) vertices
+
     module DataMutation =
 
         [<ReflectedDefinition>][<Inline>]
@@ -502,7 +662,7 @@ module EffectApDelaunayIrradianceIntegration =
             // adopt faces
             let f0Id = IDHash (originalVertices.X) (originalVertices.Y) (originalVertices.Z)
             let f1Id = IDHash (originalVertices.Z) (originalVertices.W) (originalVertices.X)
-            (*
+            
             for f in 0 .. MAX_FACES - 1 do
                 if faceVertices.[f].W = f0Id then
                     faceVertices.[f] <- V4i((vertices.[eId].X), (vertices.[eId].Y), (vertices.[eId].Z), (IDHash (vertices.[eId].X) (vertices.[eId].Y) (vertices.[eId].Z)))
@@ -542,7 +702,7 @@ module EffectApDelaunayIrradianceIntegration =
                     sp <- sp + 1
                     stack.[sp] <- neId
                     meta.[neId] <- V2i(1, 1)
-            *)
+            
             sp + 1
             
 
