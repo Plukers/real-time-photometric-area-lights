@@ -2313,6 +2313,7 @@
     <Compile Include="EffectApPoissonSampling.fs" />
     <Compile Include="EffectApVoronoiIrradianceIntegration.fs" />
     <Compile Include="EffectApDelaunayDataHandling.fs" />
+    <Compile Include="EffectApDelaunayDataMutation.fs" />
     <Compile Include="EffectApDelaunayIrradianceIntegration.fs" />
     <Compile Include="EffectCompare.fs" />
     <Compile Include="EffectOutline.fs" />
