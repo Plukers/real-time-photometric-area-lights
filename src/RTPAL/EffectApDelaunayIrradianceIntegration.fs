@@ -571,88 +571,13 @@ module EffectApDelaunayIrradianceIntegration =
                                         
                                         if notLD then
                                             // flip edge
-                                            (*
-                                            let (vertices, edges, meta, faceVertices, faceEdges, updatedStack, sp) = 
-                                                 flipEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData stack SP eId
-                                            delVertexData       <- vertices
-                                            delNEdgeData        <- edges
-                                            delMetaData         <- meta
-                                            delFaceVertexData   <- faceVertices
-                                            delFaceEdgeData     <- faceEdges
-                                            stack               <- updatedStack
-                                            SP                  <- sp
-                                            *) 
 
                                             let (sp, meta) = eId |>  flipEdge delEdgeData delMetaData delFaceData stack SP 
 
                                             SP <- sp
                                             delMetaData <- meta
 
-                                            //let originalVertices = vertices.[eId]
-                                            //let originalEdges = edges.[eId]
 
-                                            //// unmrak edge
-                                            //meta.[eId] <- V2i(meta.[eId].X, 0)
-
-                                            //// flip edge
-                                            //vertices.[eId] <- V4i(originalVertices.Y, originalVertices.Z, originalVertices.W, originalVertices.X)
-                                            //edges.[eId] <- V4i(originalEdges.Y, originalEdges.Z, originalEdges.W, originalEdges.X)
-
-                                            (*
-                                            let originalVertices = delVertexData.[eId]
-                                            let originalEdges = delNEdgeData.[eId]
-
-                                            // unmrak edge
-                                            delMetaData.[eId] <- V2i(delMetaData.[eId].X, 0)
-
-                                            // flip edge
-                                            delVertexData.[eId] <- V4i(originalVertices.Y, originalVertices.Z, originalVertices.W, originalVertices.X)
-                                            delNEdgeData.[eId] <- V4i(originalEdges.Y, originalEdges.Z, originalEdges.W, originalEdges.X)
-
-                                            // adopt faces
-                                            let f0Id = IDHash (originalVertices.X) (originalVertices.Y) (originalVertices.Z)
-                                            let f1Id = IDHash (originalVertices.Z) (originalVertices.W) (originalVertices.X)
-
-                                            for f in 0 .. MAX_FACES - 1 do
-                                                if delFaceVertexData.[f].W = f0Id then
-                                                    delFaceVertexData.[f] <- V4i((delVertexData.[eId].X), (delVertexData.[eId].Y), (delVertexData.[eId].Z), (IDHash (delVertexData.[eId].X) (delVertexData.[eId].Y) (delVertexData.[eId].Z)))
-                                                    delFaceEdgeData.[f] <- V3i((delNEdgeData.[eId].X), (delNEdgeData.[eId].Y), eId)
-
-                                                if delFaceVertexData.[f].W = f1Id then
-                                                    delFaceVertexData.[f] <- V4i((delVertexData.[eId].Z), (delVertexData.[eId].W), (delVertexData.[eId].X), (IDHash (delVertexData.[eId].Z) (delVertexData.[eId].W) (delVertexData.[eId].X)))
-                                                    delFaceEdgeData.[f] <- V3i((delNEdgeData.[eId].Z), (delNEdgeData.[eId].W), eId)
-              
-             
-
-                                            // adapt neighbour edges
-                                            for ne in 0 .. 3 do
-                                                let (neId, oppositeEdges, oppositeVertex) = 
-                                                    match ne with
-                                                    | 0 -> (originalEdges.X, originalEdges.ZW, originalVertices.W)
-                                                    | 1 -> (originalEdges.Y, originalEdges.ZW, originalVertices.W)
-                                                    | 2 -> (originalEdges.Z, originalEdges.XY, originalVertices.Y)
-                                                    | _ -> (originalEdges.W, originalEdges.XY, originalVertices.Y)
-
-                                                    
-                                                if eId = delNEdgeData.[neId].X then
-                                                    delNEdgeData.[neId] <- V4i(oppositeEdges.X, eId, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
-                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, oppositeVertex, delVertexData.[neId].Z, delVertexData.[neId].W)
-                                                elif eId = delNEdgeData.[neId].Y then
-                                                    delNEdgeData.[neId] <- V4i(eId, oppositeEdges.Y, delNEdgeData.[neId].Z, delNEdgeData.[neId].W)
-                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, oppositeVertex, delVertexData.[neId].Z, delVertexData.[neId].W)
-                                                elif eId = delNEdgeData.[neId].Z then
-                                                    delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, oppositeEdges.X, eId)
-                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, oppositeVertex)
-                                                else (* eId = delNEdgeData.[neId].W *)
-                                                    delNEdgeData.[neId] <- V4i(delNEdgeData.[neId].X, delNEdgeData.[neId].Y, eId, oppositeEdges.Y)
-                                                    delVertexData.[neId] <- V4i(delVertexData.[neId].X, delVertexData.[neId].Y, delVertexData.[neId].Z, oppositeVertex)
-
-                                                // if inside and not marked -> mark it
-                                                if delMetaData.[neId].X = 1 && delMetaData.[neId].Y = 0 then
-                                                    SP <- SP + 1
-                                                    stack.[SP] <- neId
-                                                    delMetaData.[neId] <- V2i(1, 1)
-                                                *)
                                     ////////////////////////////////////////
                                     // integrate
 
