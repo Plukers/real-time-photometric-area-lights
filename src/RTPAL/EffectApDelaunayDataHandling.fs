@@ -45,6 +45,10 @@ module DataHandling =
     let private leftShiftWithRotation32Bit shift v =
         int ((uint32 v <<< BIT_PER_ID * shift) ||| (uint32 v >>> BIT_PER_ID * (4 - shift)))
 
+    [<ReflectedDefinition>][<Inline>]
+    let private rightShiftWithRotation32Bit shift v =
+        int ((uint32 v >>> BIT_PER_ID * shift) ||| (uint32 v <<< BIT_PER_ID * (4 - shift)))
+
     //////////////////////////////////////////////////////////////////////////////////////////
     // Edge 
 
@@ -160,9 +164,9 @@ module DataHandling =
     let leftShiftVerticesAndEdgesByOne (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId =
         edges.[eId / 2] <-
             if eId % 2 = 0 then 
-                V4i(edges.[eId / 2].X |> leftShiftWithRotation32Bit 1, edges.[eId / 2].Y |> leftShiftWithRotation32Bit 1, edges.[eId / 2].Z, edges.[eId / 2].W)
+                V4i(edges.[eId / 2].X |> rightShiftWithRotation32Bit 1, edges.[eId / 2].Y |> rightShiftWithRotation32Bit 1, edges.[eId / 2].Z, edges.[eId / 2].W)
             else 
-                V4i(edges.[eId / 2].X, edges.[eId / 2].Y, edges.[eId / 2].Z |> leftShiftWithRotation32Bit 1, edges.[eId / 2].W |> leftShiftWithRotation32Bit 1)
+                V4i(edges.[eId / 2].X, edges.[eId / 2].Y, edges.[eId / 2].Z |> rightShiftWithRotation32Bit 1, edges.[eId / 2].W |> rightShiftWithRotation32Bit 1)
 
 
     [<ReflectedDefinition>][<Inline>]
@@ -302,6 +306,16 @@ module DataHandling =
                 0x000000AA |> leftShiftWithRotation32Bit 2 |> should equal 0x00AA0000
                 0x000000AA |> leftShiftWithRotation32Bit 3 |> should equal 0xAA000000
                 0xAA0000AA |> leftShiftWithRotation32Bit 3 |> should equal 0xAAAA0000
+            )
+
+        [<Test>]
+        let ``Right Shift With Rotation 32Bit``() =
+            Assert.Multiple( fun _ ->
+                0x000000AA |> rightShiftWithRotation32Bit 0 |> should equal 0x000000AA
+                0x000000AA |> rightShiftWithRotation32Bit 1 |> should equal 0xAA000000
+                0x000000AA |> rightShiftWithRotation32Bit 2 |> should equal 0x00AA0000
+                0x000000AA |> rightShiftWithRotation32Bit 3 |> should equal 0x0000AA00
+                0xAA0000AA |> rightShiftWithRotation32Bit 3 |> should equal 0x0000AAAA
             )
 
         let private getMockupEdgeArray () =
@@ -538,10 +552,13 @@ module DataHandling =
             let edges = getMockupEdgeArray ()
 
 
-            leftShiftVerticesAndEdgesByOne edges 2            
+            leftShiftVerticesAndEdgesByOne edges 2   
+            let shiftResult2 = V2i(V4i(9, 10, 11, 8) |> genIntFromV4i, V4i(99, 100, 111, 88) |> genIntFromV4i)
+
             leftShiftVerticesAndEdgesByOne edges 3
+            let shiftResult3 = V2i(V4i(13, 14, 15, 12) |> genIntFromV4i, V4i(133, 144, 155, 122) |> genIntFromV4i)
 
             Assert.Multiple( fun _ ->
-                edges.[2].XY |> should equal (V2i(V4i(9, 10, 11, 8) |> genIntFromV4i, V4i(99, 100, 111, 88) |> genIntFromV4i))
-                edges.[2].ZW |> should equal (V2i(V4i(13, 14, 15, 12) |> genIntFromV4i, V4i(133, 144, 155, 122) |> genIntFromV4i))
+                edges.[1].XY |> should equal shiftResult2
+                edges.[1].ZW |> should equal shiftResult3
             )
