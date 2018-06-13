@@ -354,12 +354,26 @@ module EffectApDelaunayIrradianceIntegration =
                 edgeArray.[i] <- ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
 
         [<ReflectedDefinition>][<Inline>]
+        let getInitEdgeData' caseOffset =
+            let edgeArray = Arr<N<MAX_EDGES_HALF>, V4i>()
+            for i in 0 .. MAX_EDGES_HALF - 1 do
+                edgeArray.[i] <- ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
+            edgeArray
+
+        [<ReflectedDefinition>][<Inline>]
         let getInitMetaData caseOffset = ALL.META.[caseOffset]
 
         [<ReflectedDefinition>][<Inline>]
-        let getInitFaceData (faceArray : Arr<N<MAX_FACES_HALF>, V4i>) caseOffset= 
+        let getInitFaceData (faceArray : Arr<N<MAX_FACES_HALF>, V4i>) caseOffset = 
             for i in 0 .. MAX_FACES_HALF - 1 do
-                faceArray.[i] <- ALL.EDGES.[MAX_FACES_HALF * caseOffset + i]
+                faceArray.[i] <- ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
+
+        [<ReflectedDefinition>][<Inline>]
+        let getInitFaceData' caseOffset = 
+            let faceArray = Arr<N<MAX_FACES_HALF>, V4i>()
+            for i in 0 .. MAX_FACES_HALF - 1 do
+                faceArray.[i] <- ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
+            faceArray
         
         [<ReflectedDefinition>]
         let getInitFreeEdgeAddr caseOffset = ALL.NEXT_FREE_EDGE_ADDR.[caseOffset]
@@ -374,7 +388,7 @@ module EffectApDelaunayIrradianceIntegration =
     }  
 
    
-    [<ReflectedDefinition>]
+    [<ReflectedDefinition>][<Inline>]
     let private sampleIrr (t2w : M33d) (addr : int) (p : V3d) = 
 
         //let i = p |> Vec.normalize  
@@ -521,13 +535,21 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     ////////////////////////////////////////
                                     // load inital data
+                                    (*
+                                    Does not work for some reason
+                                    Turns into
+                                    ivec4 delFaceData[5]
 
                                     let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
                                     let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
 
                                     caseOffset |> QUAD_DATA.getInitEdgeData delEdgeData
                                     caseOffset |> QUAD_DATA.getInitFaceData delFaceData
-                                    
+                                    *)
+
+                                    let delEdgeData = caseOffset |> QUAD_DATA.getInitEdgeData' 
+                                    let delFaceData = caseOffset |> QUAD_DATA.getInitFaceData'       
+
                                     let mutable delMetaData = caseOffset |> QUAD_DATA.getInitMetaData 
 
                                     let mutable delNextFreeEdgeAddr = caseOffset |> QUAD_DATA.getInitFreeEdgeAddr
@@ -540,7 +562,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     let mutable stack = Arr<N<MAX_EDGES>, int>()
                                     let mutable SP = -1
-
+                                    
                                     for i in 0 .. MAX_EDGES - 1 do
                                         if i |> edgeIsInside delMetaData then
                                             SP <- SP + 1
@@ -550,7 +572,6 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     ////////////////////////////////////////
                                     // transform to a Delaunay triangulation
-                                                                        
                                     while SP >= 0 do
 
                                         // get edge Id
@@ -563,22 +584,21 @@ module EffectApDelaunayIrradianceIntegration =
                                         // test if edge is locally delaunay
                                             // true if flip, false otherwise
                                 
-                                        let a = vertices.[ 0 |> readEdgeId delEdgeData eId].XYZ |> Vec.normalize
-                                        let b = vertices.[ 1 |> readEdgeId delEdgeData eId].XYZ |> Vec.normalize
-                                        let c = vertices.[ 2 |> readEdgeId delEdgeData eId].XYZ |> Vec.normalize
-                                        let d = vertices.[ 3 |> readEdgeId delEdgeData eId].XYZ |> Vec.normalize
+                                        let a = vertices.[ 0 |> readVertexId delEdgeData eId].XYZ |> Vec.normalize
+                                        let b = vertices.[ 1 |> readVertexId delEdgeData eId].XYZ |> Vec.normalize
+                                        let c = vertices.[ 2 |> readVertexId delEdgeData eId].XYZ |> Vec.normalize
+                                        let d = vertices.[ 3 |> readVertexId delEdgeData eId].XYZ |> Vec.normalize
                                         let notLD = (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0   
                                         
                                         if notLD then
                                             // flip edge
 
-                                            let (sp, meta) = eId |>  flipEdge delEdgeData delMetaData delFaceData stack SP 
+                                            let (meta, sp) = eId |>  flipEdge delEdgeData delMetaData delFaceData stack SP 
 
                                             SP <- sp
                                             delMetaData <- meta
 
-
-                                    ////////////////////////////////////////
+                                    ////////////////////////////////////////////////////////
                                     // integrate
 
                                     
@@ -616,7 +636,7 @@ module EffectApDelaunayIrradianceIntegration =
 
             return V4d(illumination.XYZ, v.c.W)
         }
-(*
+
     module Debug =
 
         open System
@@ -829,156 +849,43 @@ module EffectApDelaunayIrradianceIntegration =
                                                 
                                 j <- j + 1
 
+
                         ////////////////////////////////////////
                         // load inital data
+                        (*
+                        let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
+                        let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
 
-                        let mutable delVertexData       = caseOffset |> QUAD_DATA.getInitVertexData
-                        let mutable delNEdgeData        = caseOffset |> QUAD_DATA.getInitNeighbourEdgeData 
-                        let mutable delMetaData         = caseOffset |> QUAD_DATA.getInitMetaData 
-                        let mutable delFaceVertexData   = caseOffset |> QUAD_DATA.getInitFaceVertexData 
-                        let mutable delFaceEdgeData     = caseOffset |> QUAD_DATA.getInitFaceEdgeData 
+                        caseOffset |> QUAD_DATA.getInitEdgeData delEdgeData
+                        caseOffset |> QUAD_DATA.getInitFaceData delFaceData
+                        *)
+
+                        let delEdgeData = caseOffset |> QUAD_DATA.getInitEdgeData' 
+                        let delFaceData = caseOffset |> QUAD_DATA.getInitFaceData'    
+
+                        caseOffset |> QUAD_DATA.getInitEdgeData delEdgeData
+                        caseOffset |> QUAD_DATA.getInitFaceData delFaceData
+                                    
+                        let mutable delMetaData = caseOffset |> QUAD_DATA.getInitMetaData 
 
                         let mutable delNextFreeEdgeAddr = caseOffset |> QUAD_DATA.getInitFreeEdgeAddr
                         let mutable delNextFreeFaceAddr = caseOffset |> QUAD_DATA.getInitFreeFaceAddr
 
-                        ////////////////////////////////////////
-                        // insert additional verticex = MRP
-                                    
-                        let closestPointDir = closestPoint |> Vec.normalize
 
-                        // intersect normal with plane
-                        let mutable up = V3d.OOI
-                                                                    
-                        if abs(Vec.dot up lightPlaneN) < eps then
-                            up <- up + (epb * closestPointDir) |> Vec.normalize     
-                        else
-                            let abovePlane = if (Vec.dot V3d.OOI closestPoint) < 0.0 && (Vec.dot closestPoint lightPlaneN) < 0.0 then false else true
-                            if abovePlane then
-                                if (Vec.dot up lightPlaneN) > 0.0 then
-                                    up <- up + (abs(Vec.dot up lightPlaneN) + epb) * (-lightPlaneN) |> Vec.normalize
-                                    
-                                    
-                        let normPlanePoint = linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN // tangent space
-
-                        let mrpDir = (closestPointDir + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
-                        let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
-
-                        let (mrpClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1Id) =   
-                            if CLAMP_POLYGON_RESULT <> CLAMP_POLYGON_RESULT_NONE then
-                                clampPointToPolygonP3 vertices 0 vc mrp 
-                            else
-                                clampPointToPolygonP3 vertices 1 vc mrp 
-
-                        let mrpClampedDir = mrpClamped |> Vec.normalize
-
-                        match CLAMP_POLYGON_RESULT with
-                        | CLAMP_POLYGON_RESULT_NONE -> 
-
-                            if Vec.dot mrpClampedDir (closestPointClamped |> Vec.normalize) < (1.0 - 1e-8) then
-
-                                let mutable splitEdge = false
-                                let mutable param = 0
-
-                                let mutable foundFace = false
-                        
-                                for f in 0 .. MAX_FACES - 1 do
-                                    if not foundFace && delFaceVertexData.[f].W <> -1 then 
-                            
-                                        let face = delFaceVertexData.[f]
-                                                                                        
-                                        let dotZN = Vec.cross (verticesNormalized.[face.X]) (verticesNormalized.[face.Z]) |> Vec.normalize |> Vec.dot mrpClampedDir 
-                                        let dotYN = Vec.cross (verticesNormalized.[face.Z]) (verticesNormalized.[face.Y]) |> Vec.normalize |> Vec.dot mrpClampedDir 
-                                        let dotXN = Vec.cross (verticesNormalized.[face.Y]) (verticesNormalized.[face.X]) |> Vec.normalize |> Vec.dot mrpClampedDir 
-
-                                        if dotXN >= 0.0 && dotYN >= 0.0 && dotZN >= 0.0 then 
-                                                        
-                                            foundFace <- true
-
-                                            let x = dotXN < eps
-                                            let y = dotYN < eps
-                                            let z = dotZN < eps
-
-                                            if (x && y) || (x && z) || (y && z) then
-                                                ()
-                                            elif x || y || z then
-
-                                                splitEdge <- true
-
-                                                param  <- 
-                                                    if x then delFaceEdgeData.[f].X
-                                                    elif y then delFaceEdgeData.[f].Y
-                                                    else delFaceEdgeData.[f].Z
-                                        
-                                            else
-                                                param <- f
-
-                                                 
-
-                                verticesNormalized.[vc] <- mrpClampedDir
-                                vc <- vc + 1 
-
-                                if splitEdge then
-                                    let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr param
-                                    delVertexData       <- vertices
-                                    delNEdgeData        <- edges
-                                    delMetaData         <- meta
-                                    delFaceVertexData   <- faceVertices
-                                    delFaceEdgeData     <- faceEdges
-                                    delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                                    delNextFreeFaceAddr <- nextFreeFaceAddr
-
-                                else
-                                    let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> insertVertexIntoFace delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr param
-                                    delVertexData       <- vertices
-                                    delNEdgeData        <- edges
-                                    delMetaData         <- meta
-                                    delFaceVertexData   <- faceVertices
-                                    delFaceEdgeData     <- faceEdges
-                                    delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                                    delNextFreeFaceAddr <- nextFreeFaceAddr
-                                    
-                        | CLAMP_POLYGON_RESULT_LINE -> 
-
-                            let mutable edgeToSplit = 0
-
-                            let mutable foundEdge = false
-                        
-                            for e in 0 .. MAX_EDGES - 1 do
-                                if not foundEdge then 
-
-                                    if (delVertexData.[e].X = clampP0Id && delVertexData.[e].Z = clampP1Id) || (delVertexData.[e].X = clampP1Id && delVertexData.[e].Z = clampP0Id) then
-                                        foundEdge <- true
-                                        edgeToSplit <- e
-                            
-
-                            verticesNormalized.[vc] <- mrpClampedDir
-                            vc <- vc + 1 
-
-                            let (vertices, edges, meta, faceVertices, faceEdges, nextFreeEdgeAddr, nextFreeFaceAddr) = (vc - 1) |> spliteEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData delNextFreeEdgeAddr delNextFreeFaceAddr edgeToSplit
-                            delVertexData       <- vertices
-                            delNEdgeData        <- edges
-                            delMetaData         <- meta
-                            delFaceVertexData   <- faceVertices
-                            delFaceEdgeData     <- faceEdges
-                            delNextFreeEdgeAddr <- nextFreeEdgeAddr
-                            delNextFreeFaceAddr <- nextFreeFaceAddr
-                                    
-                                                                         
-                        | _ (* CLAMP_POLYGON_RESULT_POINT *) -> ()
-                                      
 
                         ////////////////////////////////////////
                         // execute edge flip algorithm
 
                         let mutable stack = Arr<N<MAX_EDGES>, int>()
-                        let mutable SP = -1
-
+                        let mutable SP = 0
+                                    
                         for i in 0 .. MAX_EDGES - 1 do
-                            if delMetaData.[i].X = 1 then
+                            if i |> edgeIsInside delMetaData then
                                 SP <- SP + 1
-                                stack.[SP] <- i
-                                delMetaData.[i] <- V2i(1, 1)
-
+                                stack.[SP - 1] <- i
+                                delMetaData <- i |> markEdge delMetaData
+                                    
+                        SP <- SP - 1
 
                         ////////////////////////////////////////
                         // transform to a Delaunay triangulation
@@ -987,35 +894,32 @@ module EffectApDelaunayIrradianceIntegration =
 
                             // get edge Id
                             let eId = stack.[SP]
+                            SP <- SP - 1
 
                             // unmark edge
-                            delMetaData.[eId] <- V2i(delMetaData.[eId].X, 0)
-                            SP <- SP - 1
+                            delMetaData <- eId |> unmarkEdge delMetaData
                                         
-                            let eVertices = delVertexData.[eId]
-
                             // test if edge is locally delaunay
                                 // true if flip, false otherwise
-    
-                            let notLD = 
-                                let a = verticesNormalized.[delVertexData.[eId].X].XYZ
-                                let b = verticesNormalized.[delVertexData.[eId].Y].XYZ
-                                let c = verticesNormalized.[delVertexData.[eId].Z].XYZ
-                                let d = verticesNormalized.[delVertexData.[eId].W].XYZ
-                                            
-                                (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0     
-                                                                                    
+
+                            let a' = 0 |> readVertexId delEdgeData eId
+                            let b' = 1 |> readVertexId delEdgeData eId
+                            let c' = 2 |> readVertexId delEdgeData eId
+                            let d' = 3 |> readVertexId delEdgeData eId
+                                
+                            let a = vertices.[a'].XYZ |> Vec.normalize
+                            let b = vertices.[b'].XYZ |> Vec.normalize
+                            let c = vertices.[c'].XYZ |> Vec.normalize
+                            let d = vertices.[d'].XYZ |> Vec.normalize
+                            let notLD = (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0   
+                                        
                             if notLD then
                                 // flip edge
 
-                                let (vertices, edges, meta, faceVertices, faceEdges, updatedStack, sp) = eId |> flipEdge delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData stack SP
-                                delVertexData       <- vertices
-                                delNEdgeData        <- edges
-                                delMetaData         <- meta
-                                delFaceVertexData   <- faceVertices
-                                delFaceEdgeData     <- faceEdges
-                                stack               <- updatedStack
-                                SP                  <- sp
+                                let (meta, sp) = eId |>  flipEdge delEdgeData delMetaData delFaceData stack SP 
+
+                                SP <- sp
+                                delMetaData <- meta
 
                         ////////////////////////////////////////////////////////
 
@@ -1024,14 +928,12 @@ module EffectApDelaunayIrradianceIntegration =
                         printfn "Faces: "  
 
                         for f in 0 .. MAX_FACES - 1 do
-                            let face = delFaceVertexData.[f]
 
-                            if face.W <> -1 then
-                                
-                                            
-                                let area = computeSphericalExcess (verticesNormalized.[face.X]) (verticesNormalized.[face.Y]) (verticesNormalized.[face.Z])
+                             if not (faceIsEmpty delFaceData f) then
 
-                                printfn " - %A - Area: %A" face area
+                                let area = computeSphericalExcess (vertices.[0 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[1 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[2 |> readFaceVertexId delFaceData f] |> Vec.normalize)
+
+                                printfn " - %A - Area: %A" f area
 
                                 areaSum <- areaSum + area 
 
@@ -1047,7 +949,7 @@ module EffectApDelaunayIrradianceIntegration =
                         for i in 0 .. vc - 1 do 
                             match i with
                             | 0 ->  sg <- Sg.group' [sg; pointSg 0.002 C4b.Blue (getTrafo (verticesNormalized.[i] * 0.14))]
-                            | v when v = (vc - 1) -> sg <- Sg.group' [sg; pointSg 0.002 C4b.Green (getTrafo (verticesNormalized.[i] * 0.14))]
+                            // | v when v = (vc - 1) -> sg <- Sg.group' [sg; pointSg 0.002 C4b.Green (getTrafo (verticesNormalized.[i] * 0.14))]
                             | _ -> sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (verticesNormalized.[i] * 0.14))]
                             
             
@@ -1056,9 +958,9 @@ module EffectApDelaunayIrradianceIntegration =
 
                         printfn "Edges: "
                         for i in 0 .. MAX_EDGES - 1 do         
-                            if delVertexData.[i].X <> -1 && delVertexData.[i].Z <> -1 then 
-                                let edgeStart = verticesNormalized.[delVertexData.[i].X]
-                                let edgeEnd   = verticesNormalized.[delVertexData.[i].Z] 
+                            if (0 |> readVertexId delEdgeData i) <> NONE && (2 |> readVertexId delEdgeData i) <> NONE then 
+                                let edgeStart = verticesNormalized.[0 |> readVertexId delEdgeData i]
+                                let edgeEnd   = verticesNormalized.[2 |> readVertexId delEdgeData i] 
 
                                 printfn " - %A -> %A" edgeStart edgeEnd
 
@@ -1075,7 +977,7 @@ module EffectApDelaunayIrradianceIntegration =
                     Sg.empty
 
             )
-*)
+
   
     module Rendering =
 
@@ -1090,12 +992,12 @@ module EffectApDelaunayIrradianceIntegration =
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
 
             
-            //let sceneSg = 
-            //    [
-            //        sceneSg
-            //        Debug.delaunyScene data.lights |> Sg.dynamic
-            //    ]
-            //    |> Sg.group'
+            let sceneSg = 
+                [
+                    sceneSg
+                    Debug.delaunyScene data.lights |> Sg.dynamic
+                ]
+                |> Sg.group'
             
             
             sceneSg
