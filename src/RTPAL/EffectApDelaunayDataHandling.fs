@@ -150,6 +150,12 @@ module EffectApDelaunayDataHandling =
             else
                 V4i(faces.[fId / 2].X, faces.[fId / 2].Y, faces.[fId / 2].Z, (e0 |> offsetId 0) ||| (e1 |> offsetId 1) ||| (e2 |> offsetId 2))
 
+    [<ReflectedDefinition>][<Inline>]
+    let faceIsEmpty (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId =
+        (if fId % 2 = 0 then faces.[fId / 2].X else faces.[fId / 2].Z) = 0x00FFFFFF
+            
+
+
     //////////////////////////////////////////////////////////////////////////////////////////
     // Misc Handling
 
@@ -209,7 +215,7 @@ module EffectApDelaunayDataHandling =
     let private replaceMinusOneWithNoneInV3i (v : V3i) =
         V3i(v.X |> replaceMinusOneWithNone, v.Y |> replaceMinusOneWithNone, v.Z |> replaceMinusOneWithNone)
 
-    let transformEdgesToCompactRepresentation (V : V4i []) (E : V4i []) (M : V2i []) = 
+    let transformEdgesToCompactRepresentation (V : V4i array) (E : V4i array) (M : V2i array) = 
             
         let edges = [|
                         for i in 0 .. 2 .. MAX_EDGES - 2 do
@@ -228,13 +234,42 @@ module EffectApDelaunayDataHandling =
 
         (edges, meta)
 
-    let transformFacesToCompactRepresentation (FV : V4i []) (FE : V3i []) =
+    let transformEdgeCollectionToCompactCollection (V : V4i array) (E : V4i array) (M : V2i array) numOfCollectionElements =
 
+        let mutable edgeList : V4i array = Array.empty
+        let mutable metaList : int array = Array.empty
+
+        for i in 0 .. numOfCollectionElements - 1 do
+
+            let s = i * MAX_EDGES
+            let e = i * MAX_EDGES + MAX_EDGES - 1
+            let (e, m) = transformEdgesToCompactRepresentation (V.[s .. e]) (E.[s .. e]) (M.[s .. e])
+
+            edgeList <- Array.concat [ edgeList ; e ]
+            metaList <- Array.concat [ metaList ; [| m |] ]
+
+
+        (edgeList, metaList)
+        
+    let transformFacesToCompactRepresentation (FV : V4i array) (FE : V3i array) =
         [|
             for i in 0 .. 2 .. MAX_FACES - 2 do
                 yield generateCompactFaceV4i (FV.[i].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i] |> replaceMinusOneWithNoneInV3i) (FV.[i + 1].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i + 1] |> replaceMinusOneWithNoneInV3i)
         |]
 
+    let transformFaceollectionToCompactCollection (FV : V4i array) (FE : V3i array) numOfCollectionElements =
+
+        let mutable faceList : V4i array = Array.empty
+
+        for i in 0 .. numOfCollectionElements - 1 do
+
+            let s = i * MAX_FACES
+            let e = i * MAX_FACES + MAX_FACES - 1
+            let f = transformFacesToCompactRepresentation (FV.[s .. e]) (FE.[s .. e])
+
+            faceList <- Array.concat [ faceList ; f ]
+
+        faceList
 
     module Test =
         

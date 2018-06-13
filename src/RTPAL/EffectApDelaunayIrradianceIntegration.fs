@@ -345,54 +345,22 @@ module EffectApDelaunayIrradianceIntegration =
             let NEXT_FREE_FACE_ADDR = [| 2; 3; 4 |]
 
 
-            let (EDGES, META) = transformEdgesToCompactRepresentation V E M
-            let FACES = transformFacesToCompactRepresentation FV FE
+            let (EDGES, META) = transformEdgeCollectionToCompactCollection V E M 3
+            let FACES = transformFaceollectionToCompactCollection FV FE 3
 
         [<ReflectedDefinition>][<Inline>]
-        let getInitEdgeData caseOffset (edgeArray : Arr<N<MAX_EDGES_HALF>, V4i>) = 
+        let getInitEdgeData (edgeArray : Arr<N<MAX_EDGES_HALF>, V4i>) caseOffset = 
             for i in 0 .. MAX_EDGES_HALF - 1 do
                 edgeArray.[i] <- ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
 
         [<ReflectedDefinition>][<Inline>]
-        let getInitFaceData caseOffset (faceArray : Arr<N<MAX_FACES_HALF>, V4i>) = 
+        let getInitMetaData caseOffset = ALL.META.[caseOffset]
+
+        [<ReflectedDefinition>][<Inline>]
+        let getInitFaceData (faceArray : Arr<N<MAX_FACES_HALF>, V4i>) caseOffset= 
             for i in 0 .. MAX_FACES_HALF - 1 do
                 faceArray.[i] <- ALL.EDGES.[MAX_FACES_HALF * caseOffset + i]
-
-        [<ReflectedDefinition>]
-        let getInitVertexData caseOffset =             
-            let d = Arr<N<MAX_EDGES>, V4i>()
-            for i in 0 .. MAX_EDGES - 1 do
-                d.[i] <- ALL.V.[MAX_EDGES * caseOffset + i]
-            d
-
-        [<ReflectedDefinition>]
-        let getInitNeighbourEdgeData caseOffset =             
-            let d = Arr<N<MAX_EDGES>, V4i>()
-            for i in 0 .. MAX_EDGES - 1 do
-                d.[i] <- ALL.E.[MAX_EDGES * caseOffset + i]
-            d
-
-        [<ReflectedDefinition>]
-        let getInitMetaData caseOffset =             
-            let d = Arr<N<MAX_EDGES>, V2i>()
-            for i in 0 .. MAX_EDGES - 1 do
-                d.[i] <- ALL.M.[MAX_EDGES * caseOffset + i]
-            d
-
-        [<ReflectedDefinition>]
-        let getInitFaceVertexData caseOffset =             
-            let d = Arr<N<MAX_FACES>, V4i>()
-            for i in 0 .. MAX_FACES - 1 do
-                d.[i] <- ALL.FV.[MAX_FACES * caseOffset + i]
-            d
-
-        [<ReflectedDefinition>]
-        let getInitFaceEdgeData caseOffset =             
-            let d = Arr<N<MAX_FACES>, V3i>()
-            for i in 0 .. MAX_FACES - 1 do
-                d.[i] <- ALL.FE.[MAX_FACES * caseOffset + i]
-            d
-
+        
         [<ReflectedDefinition>]
         let getInitFreeEdgeAddr caseOffset = ALL.NEXT_FREE_EDGE_ADDR.[caseOffset]
 
@@ -554,18 +522,20 @@ module EffectApDelaunayIrradianceIntegration =
                                     ////////////////////////////////////////
                                     // load inital data
 
-                                    let mutable delVertexData       = caseOffset |> QUAD_DATA.getInitVertexData
-                                    let mutable delNEdgeData        = caseOffset |> QUAD_DATA.getInitNeighbourEdgeData 
-                                    let mutable delMetaData         = caseOffset |> QUAD_DATA.getInitMetaData 
-                                    let mutable delFaceVertexData   = caseOffset |> QUAD_DATA.getInitFaceVertexData 
-                                    let mutable delFaceEdgeData     = caseOffset |> QUAD_DATA.getInitFaceEdgeData 
+                                    let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
+                                    let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
+
+                                    caseOffset |> QUAD_DATA.getInitEdgeData delEdgeData
+                                    caseOffset |> QUAD_DATA.getInitFaceData delFaceData
+                                    
+                                    let mutable delMetaData = caseOffset |> QUAD_DATA.getInitMetaData 
 
                                     let mutable delNextFreeEdgeAddr = caseOffset |> QUAD_DATA.getInitFreeEdgeAddr
                                     let mutable delNextFreeFaceAddr = caseOffset |> QUAD_DATA.getInitFreeFaceAddr
 
                                     ////////////////////////////////////////
                                     // insert additional verticex = MRP
-
+                                    (*
                                     if useSecondSpecialPoint then
                                     
                                         let closestPointDir = closestPoint |> Vec.normalize
@@ -690,7 +660,7 @@ module EffectApDelaunayIrradianceIntegration =
                                             delNextFreeFaceAddr <- nextFreeFaceAddr
                                             
                                         | _ (* CLAMP_POLYGON_RESULT_POINT *) -> ()                      
-                                    
+                                    *)
 
                                     ////////////////////////////////////////
                                     // execute edge flip algorithm
@@ -699,10 +669,10 @@ module EffectApDelaunayIrradianceIntegration =
                                     let mutable SP = -1
 
                                     for i in 0 .. MAX_EDGES - 1 do
-                                        if delMetaData.[i].X = 1 then
+                                        if i |> edgeIsInside delMetaData then
                                             SP <- SP + 1
                                             stack.[SP] <- i
-                                            delMetaData.[i] <- V2i(1, 1)
+                                            delMetaData <- i |> markEdge delMetaData
                                     
 
                                     ////////////////////////////////////////
@@ -712,18 +682,18 @@ module EffectApDelaunayIrradianceIntegration =
 
                                         // get edge Id
                                         let eId = stack.[SP]
+                                        SP <- SP - 1
 
                                         // unmark edge
-                                        delMetaData.[eId] <- V2i(delMetaData.[eId].X, 0)
-                                        SP <- SP - 1
+                                        delMetaData <- eId |> unmarkEdge delMetaData
                                         
                                         // test if edge is locally delaunay
                                             // true if flip, false otherwise
                                 
-                                        let a = vertices.[delVertexData.[eId].X].XYZ |> Vec.normalize
-                                        let b = vertices.[delVertexData.[eId].Y].XYZ |> Vec.normalize
-                                        let c = vertices.[delVertexData.[eId].Z].XYZ |> Vec.normalize
-                                        let d = vertices.[delVertexData.[eId].W].XYZ |> Vec.normalize
+                                        let a = vertices.[ 0 |> readEdgeId delEdgeData eId].XYZ |> Vec.normalize
+                                        let b = vertices.[ 1 |> readEdgeId delEdgeData eId].XYZ |> Vec.normalize
+                                        let c = vertices.[ 2 |> readEdgeId delEdgeData eId].XYZ |> Vec.normalize
+                                        let d = vertices.[ 3 |> readEdgeId delEdgeData eId].XYZ |> Vec.normalize
                                         let notLD = (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0   
                                         
                                         if notLD then
@@ -740,7 +710,10 @@ module EffectApDelaunayIrradianceIntegration =
                                             SP                  <- sp
                                             *) 
 
-                                            SP <- flipEdge2 delVertexData delNEdgeData delMetaData delFaceVertexData delFaceEdgeData stack SP eId
+                                            let (sp, meta) = eId |>  flipEdge delEdgeData delMetaData delFaceData stack SP 
+
+                                            SP <- sp
+                                            delMetaData <- meta
 
                                             //let originalVertices = vertices.[eId]
                                             //let originalEdges = edges.[eId]
@@ -815,13 +788,12 @@ module EffectApDelaunayIrradianceIntegration =
                                     let mutable weightSum = 0.0
 
                                     for f in 0 .. MAX_FACES - 1 do
-                                        let face = delFaceVertexData.[f]
+                                        
+                                        if not (faceIsEmpty delFaceData f) then
+                                            let area = computeSphericalExcess (vertices.[0 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[1 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[2 |> readFaceVertexId delFaceData f] |> Vec.normalize)
 
-                                        if face.W <> -1 then
-                                            let area = computeSphericalExcess (vertices.[face.X] |> Vec.normalize) (vertices.[face.Y] |> Vec.normalize) (vertices.[face.Z] |> Vec.normalize)
-
-                                            patchIllumination <- patchIllumination + area * (funVal.[face.X].X + funVal.[face.Y].X + funVal.[face.Z].X) / 3.0
-                                            weightSum <- weightSum + area * (funVal.[face.X].Y + funVal.[face.Y].Y + funVal.[face.Z].Y) / 3.0
+                                            patchIllumination <- patchIllumination + area * (funVal.[0 |> readFaceVertexId delFaceData f].X + funVal.[1 |> readFaceVertexId delFaceData f].X + funVal.[2 |> readFaceVertexId delFaceData f].X) / 3.0
+                                            weightSum <- weightSum + area * (funVal.[0 |> readFaceVertexId delFaceData f].Y + funVal.[1 |> readFaceVertexId delFaceData f].Y + funVal.[2 |> readFaceVertexId delFaceData f].Y) / 3.0
 
 
                                     let L =
