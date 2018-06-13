@@ -11,6 +11,7 @@ module EffectApDelaunayIrradianceIntegration =
 
     open Config.Delaunay
 
+    open EffectApDelaunayDataHandling
     open EffectApDelaunayDataMutation
 
    
@@ -342,6 +343,20 @@ module EffectApDelaunayIrradianceIntegration =
             let NEXT_FREE_EDGE_ADDR = [| 5; 7; 8 |]
 
             let NEXT_FREE_FACE_ADDR = [| 2; 3; 4 |]
+
+
+            let (EDGES, META) = transformEdgesToCompactRepresentation V E M
+            let FACES = transformFacesToCompactRepresentation FV FE
+
+        [<ReflectedDefinition>][<Inline>]
+        let getInitEdgeData caseOffset (edgeArray : Arr<N<MAX_EDGES_HALF>, V4i>) = 
+            for i in 0 .. MAX_EDGES_HALF - 1 do
+                edgeArray.[i] <- ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
+
+        [<ReflectedDefinition>][<Inline>]
+        let getInitFaceData caseOffset (faceArray : Arr<N<MAX_FACES_HALF>, V4i>) = 
+            for i in 0 .. MAX_FACES_HALF - 1 do
+                faceArray.[i] <- ALL.EDGES.[MAX_FACES_HALF * caseOffset + i]
 
         [<ReflectedDefinition>]
         let getInitVertexData caseOffset =             

@@ -209,13 +209,12 @@ module EffectApDelaunayDataHandling =
     let private replaceMinusOneWithNoneInV3i (v : V3i) =
         V3i(v.X |> replaceMinusOneWithNone, v.Y |> replaceMinusOneWithNone, v.Z |> replaceMinusOneWithNone)
 
-    let transformEdgesToCompactRepresentation (V :  Arr<N<MAX_EDGES>, V4i>) (E :  Arr<N<MAX_EDGES>, V4i>) (M :  Arr<N<MAX_EDGES>, V2i>) = 
+    let transformEdgesToCompactRepresentation (V : V4i []) (E : V4i []) (M : V2i []) = 
             
-        let edges = Arr<N<MAX_EDGES_HALF>, V4i>([|
-                                                    for i in 0 .. 2 .. MAX_EDGES - 2 do
-                                                        yield generateCompactEdgeV4i (V.[i] |> replaceMinusOneWithNoneInV4i) (E.[i] |> replaceMinusOneWithNoneInV4i) (V.[i + 1] |> replaceMinusOneWithNoneInV4i) (E.[i + 1] |> replaceMinusOneWithNoneInV4i)
-            
-                                                |])
+        let edges = [|
+                        for i in 0 .. 2 .. MAX_EDGES - 2 do
+                            yield generateCompactEdgeV4i (V.[i] |> replaceMinusOneWithNoneInV4i) (E.[i] |> replaceMinusOneWithNoneInV4i) (V.[i + 1] |> replaceMinusOneWithNoneInV4i) (E.[i + 1] |> replaceMinusOneWithNoneInV4i)
+                    |]
             
         let mutable meta = 0x00000000
 
@@ -229,12 +228,12 @@ module EffectApDelaunayDataHandling =
 
         (edges, meta)
 
-    let transformFacesToCompactRepresentation (FV : Arr<N<MAX_FACES>, V4i>) (FE : Arr<N<MAX_FACES>, V3i>) =
+    let transformFacesToCompactRepresentation (FV : V4i []) (FE : V3i []) =
 
-        Arr<N<MAX_FACES_HALF>, V4i>([|
-                                    for i in 0 .. 2 .. MAX_FACES - 2 do
-                                        yield generateCompactFaceV4i (FV.[i].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i] |> replaceMinusOneWithNoneInV3i) (FV.[i + 1].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i + 1] |> replaceMinusOneWithNoneInV3i)
-                                |])
+        [|
+            for i in 0 .. 2 .. MAX_FACES - 2 do
+                yield generateCompactFaceV4i (FV.[i].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i] |> replaceMinusOneWithNoneInV3i) (FV.[i + 1].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i + 1] |> replaceMinusOneWithNoneInV3i)
+        |]
 
 
     module Test =
@@ -615,49 +614,49 @@ module EffectApDelaunayDataHandling =
         [<Test>]
         let ``Transform Edges To Compact Representation``() =
 
-            let V = Arr<N<MAX_EDGES>, V4i>([| 
-                                                for i in 0 .. MAX_EDGES - 1 do
-                                                    match i with
-                                                    | 0 -> yield V4i( 0, 1, 2, 3)
-                                                    | 1 -> yield V4i( 0,-1, 1, 2)
-                                                    | 2 -> yield V4i( 1,-1, 2, 0)
-                                                    | 3 -> yield V4i( 2,-1, 3, 0)
-                                                    | 4 -> yield V4i( 3,-1, 0, 2)
-                                                    | _ -> yield V4i(-1)
-                                            |])
+            let V = [| 
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            | 0 -> yield V4i( 0, 1, 2, 3)
+                            | 1 -> yield V4i( 0,-1, 1, 2)
+                            | 2 -> yield V4i( 1,-1, 2, 0)
+                            | 3 -> yield V4i( 2,-1, 3, 0)
+                            | 4 -> yield V4i( 3,-1, 0, 2)
+                            | _ -> yield V4i(-1)
+                    |]
 
-            let E = Arr<N<MAX_EDGES>, V4i>([| 
-                                                for i in 0 .. MAX_EDGES - 1 do
-                                                    match i with
-                                                    | 0 -> yield V4i( 1, 2, 3, 4)
-                                                    | 1 -> yield V4i(-1,-1, 2, 0)
-                                                    | 2 -> yield V4i(-1,-1, 0, 1)
-                                                    | 3 -> yield V4i(-1,-1, 4, 0)
-                                                    | 4 -> yield V4i(-1,-1, 0, 3)
-                                                    | _ -> yield V4i(-1)
-                                            |])
+            let E = [| 
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            | 0 -> yield V4i( 1, 2, 3, 4)
+                            | 1 -> yield V4i(-1,-1, 2, 0)
+                            | 2 -> yield V4i(-1,-1, 0, 1)
+                            | 3 -> yield V4i(-1,-1, 4, 0)
+                            | 4 -> yield V4i(-1,-1, 0, 3)
+                            | _ -> yield V4i(-1)
+                    |]
 
-            let M = Arr<N<MAX_EDGES>, V2i>([| 
-                                                for i in 0 .. MAX_EDGES - 1 do
-                                                    match i with
-                                                    | 0 -> yield V2i(1, 1)
-                                                    | 1 -> yield V2i(0, 0)
-                                                    | 2 -> yield V2i(1, 0)
-                                                    | 3 -> yield V2i(1, 0)
-                                                    | 4 -> yield V2i(0, 0)
-                                                    | _ -> yield V2i(-1)
-                                            |])
+            let M = [| 
+                        for i in 0 .. MAX_EDGES - 1 do
+                            match i with
+                            | 0 -> yield V2i(1, 1)
+                            | 1 -> yield V2i(0, 0)
+                            | 2 -> yield V2i(1, 0)
+                            | 3 -> yield V2i(1, 0)
+                            | 4 -> yield V2i(0, 0)
+                            | _ -> yield V2i(-1)
+                    |]
 
-            let (edges, meta) = transformEdgesToCompactRepresentation (V) (E) (M)
+            let (edges, meta) = transformEdgesToCompactRepresentation V E M
             
-            let afterEdges = Arr<N<MAX_EDGES_HALF>, V4i>([|
-                                                            for i in 0 .. MAX_EDGES_HALF - 1 do
-                                                                match i with
-                                                                | 0 -> yield V4i(0x03020100, 0x04030201, 0x0201FF00, 0x0002FFFF)
-                                                                | 1 -> yield V4i(0x0002FF01, 0x0100FFFF, 0x0003FF02, 0x0004FFFF)
-                                                                | 2 -> yield V4i(0x0200FF03, 0x0300FFFF, 0xFFFFFFFF, 0xFFFFFFFF)
-                                                                | _ -> yield V4i(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)
-                                                        |])
+            let afterEdges = [|
+                                for i in 0 .. MAX_EDGES_HALF - 1 do
+                                    match i with
+                                    | 0 -> yield V4i(0x03020100, 0x04030201, 0x0201FF00, 0x0002FFFF)
+                                    | 1 -> yield V4i(0x0002FF01, 0x0100FFFF, 0x0003FF02, 0x0004FFFF)
+                                    | 2 -> yield V4i(0x0200FF03, 0x0300FFFF, 0xFFFFFFFF, 0xFFFFFFFF)
+                                    | _ -> yield V4i(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)
+                            |]
 
             let afterMeta = 0x000000A3
 
@@ -669,30 +668,30 @@ module EffectApDelaunayDataHandling =
         [<Test>]
         let ``Transform Faces To Compact Representation``() =
             
-            let FV = Arr<N<MAX_FACES>, V4i>([| 
-                                                for i in 0 .. MAX_FACES - 1 do
-                                                    match i with
-                                                    | 0 -> yield V4i(0, 1, 2, 12)
-                                                    | 1 -> yield V4i(0, 2, 3, 23)
-                                                    | _ -> yield V4i(-1)
-                                            |])
+            let FV = [| 
+                        for i in 0 .. MAX_FACES - 1 do
+                            match i with
+                            | 0 -> yield V4i(0, 1, 2, 12)
+                            | 1 -> yield V4i(0, 2, 3, 23)
+                            | _ -> yield V4i(-1)
+                    |]
 
-            let FE = Arr<N<MAX_FACES>, V3i>([| 
-                                                for i in 0 .. MAX_FACES - 1 do
-                                                    match i with
-                                                    | 0 -> yield V3i( 1, 2, 0)
-                                                    | 1 -> yield V3i( 0, 3, 4)
-                                                    | _ -> yield V3i(-1)
-                                            |])
+            let FE = [| 
+                        for i in 0 .. MAX_FACES - 1 do
+                            match i with
+                            | 0 -> yield V3i( 1, 2, 0)
+                            | 1 -> yield V3i( 0, 3, 4)
+                            | _ -> yield V3i(-1)
+                    |]
 
 
             let faces = transformFacesToCompactRepresentation FV FE
             
-            let afterFaces = Arr<N<MAX_FACES_HALF>, V4i>([|
-                                                            for i in 0 .. MAX_FACES_HALF - 1 do
-                                                                match i with
-                                                                | 0 -> yield V4i( 0x00020100, 0x00000201, 0x00030200, 0x00040300)
-                                                                | _ -> yield V4i(0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF)
-                                                        |])
+            let afterFaces = [|
+                                for i in 0 .. MAX_FACES_HALF - 1 do
+                                    match i with
+                                    | 0 -> yield V4i( 0x00020100, 0x00000201, 0x00030200, 0x00040300)
+                                    | _ -> yield V4i(0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF)
+                            |]
 
             faces |> should equal afterFaces
