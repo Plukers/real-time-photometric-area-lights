@@ -25,7 +25,7 @@ module EffectApDelaunayDataHandling =
     [<ReflectedDefinition>][<Inline>]
     let private setTwoIdsInInt pos value id0 id1 =
         ((uint32 value &&& (~~~((ID_BIT_MASK <<< (pos + 1) * BIT_PER_ID) ||| (ID_BIT_MASK <<< pos * BIT_PER_ID)))) ||| ((uint32 id1 <<< (pos + 1) * BIT_PER_ID) ||| (uint32 id0 <<< pos * BIT_PER_ID))) |> int
-
+        
     [<ReflectedDefinition>][<Inline>]
     let private offsetId offset id = 
         id <<< (BIT_PER_ID * offset)
@@ -53,8 +53,8 @@ module EffectApDelaunayDataHandling =
     //////////////////////////////////////////////////////////////////////////////////////////
     // Edge 
 
-    let OPPOSITE_0 = 0
-    let OPPOSITE_1 = 2
+    let OPPOSITE_0 = 1
+    let OPPOSITE_1 = 3
 
     // Vertex Handling
 
@@ -174,13 +174,13 @@ module EffectApDelaunayDataHandling =
     let writeOppositeEdgeIds (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId opposite edgeToId edgeFromId =
         edges.[eId / 2] <-
             if eId % 2 = 0 then 
-                V4i(edges.[eId / 2].X, setTwoIdsInInt opposite (edges.[eId / 2].Y) edgeToId edgeFromId, edges.[eId / 2].Z, edges.[eId / 2].W)
+                V4i(edges.[eId / 2].X, setTwoIdsInInt (opposite - 1) (edges.[eId / 2].Y) edgeToId edgeFromId, edges.[eId / 2].Z, edges.[eId / 2].W)
             else 
-                V4i(edges.[eId / 2].X, edges.[eId / 2].Y, edges.[eId / 2].Z, setTwoIdsInInt opposite (edges.[eId / 2].Y) edgeToId edgeFromId)
+                V4i(edges.[eId / 2].X, edges.[eId / 2].Y, edges.[eId / 2].Z, setTwoIdsInInt (opposite - 1) (edges.[eId / 2].W) edgeToId edgeFromId)
 
     [<ReflectedDefinition>][<Inline>]
     let compareIndices (edges : Arr<N<MAX_EDGES_HALF>, V4i>) e0 pos0 e1 pos1 = 
-        getIdFromInt (if e0 % 2 = 0 then edges.[e0 / 2].X else edges.[e0 / 2].Z) pos0 = getIdFromInt (if e1 % 2 = 0 then edges.[e1 / 2].X else edges.[e1 / 2].Z) pos1
+        getIdFromInt pos0 (if e0 % 2 = 0 then edges.[e0 / 2].X else edges.[e0 / 2].Z) = getIdFromInt pos1 (if e1 % 2 = 0 then edges.[e1 / 2].X else edges.[e1 / 2].Z) 
 
     // Use OPPOSITE_0 and OPPOSITE_1 as opposite parameter
     [<ReflectedDefinition>][<Inline>]
@@ -321,6 +321,7 @@ module EffectApDelaunayDataHandling =
             Arr<N<MAX_EDGES_HALF>, V4i>([|
                                         yield V4i(V4i(0, 1, 2, 3) |> genIntFromV4i, V4i(00, 11, 22, 33) |> genIntFromV4i, V4i(4, 5, 6, 7) |> genIntFromV4i, V4i(44, 55, 66, 77) |> genIntFromV4i) 
                                         yield V4i(V4i(8, 9, 10, 11) |> genIntFromV4i, V4i(88, 99, 100, 111) |> genIntFromV4i, V4i(12, 13, 14, 15) |> genIntFromV4i, V4i(122, 133, 144, 155) |> genIntFromV4i) 
+                                        yield V4i(V4i(0, 0, 2, 3) |> genIntFromV4i, V4i(00, 11, 22, 33) |> genIntFromV4i, V4i(4, 4, 4, 7) |> genIntFromV4i, V4i(44, 55, 66, 77) |> genIntFromV4i) 
                                     |])
 
         [<Test>]
@@ -560,6 +561,42 @@ module EffectApDelaunayDataHandling =
             Assert.Multiple( fun _ ->
                 edges.[1].XY |> should equal shiftResult2
                 edges.[1].ZW |> should equal shiftResult3
+            )
+
+        [<Test>]
+        let ``Write Opposite Edge Ids``() =
+            let edges = getMockupEdgeArray ()
+
+            writeOppositeEdgeIds edges 2 OPPOSITE_0 0xAA 0xBB 
+            writeOppositeEdgeIds edges 3 OPPOSITE_1 0xAA 0xBB 
+
+            Assert.Multiple( fun _ ->
+                readEdgeId edges 2 0 |> should equal 0xAA
+                readEdgeId edges 2 1 |> should equal 0xBB
+                readEdgeId edges 3 2 |> should equal 0xAA
+                readEdgeId edges 3 3 |> should equal 0xBB
+            )
+        
+        [<Test>]
+        let ``Compare Indices``() =
+            let edges = getMockupEdgeArray ()
+            
+            Assert.Multiple( fun _ ->
+                compareIndices edges 0 0 4 1 |> should equal true
+                compareIndices edges 1 3 5 3 |> should equal true
+                compareIndices edges 0 0 3 3 |> should equal false
+                compareIndices edges 1 1 3 1 |> should equal false
+            )
+
+        [<Test>]
+        let ``Get Face Vertices Of Edge``() =
+            let edges = getMockupEdgeArray ()
+
+            Assert.Multiple( fun _ ->
+                0 |> getFaceVerticesOfEdge edges OPPOSITE_0 |> should equal 0x020100
+                3 |> getFaceVerticesOfEdge edges OPPOSITE_0 |> should equal 0x0E0D0C
+                4 |> getFaceVerticesOfEdge edges OPPOSITE_1 |> should equal 0x000302
+                5 |> getFaceVerticesOfEdge edges OPPOSITE_1 |> should equal 0x040704
             )
 
         [<Test>]

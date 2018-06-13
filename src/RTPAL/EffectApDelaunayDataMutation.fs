@@ -37,35 +37,35 @@ module EffectApDelaunayDataMutation =
             match ne with
             | 0 -> 
                 if 2 |> compareIndices edges neId OPPOSITE_0 eId then
-                    writeOppositeEdgeIds edges neId OPPOSITE_0 (1 |> readEdgeId edges eId) (eId)
-                    writeVertexId edges neId OPPOSITE_0 (3 |> readEdgeId edges eId)
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (3 |> readEdgeId edges eId) 
+                    writeVertexId edges neId OPPOSITE_0 (3 |> readVertexId edges eId)
                 else
-                    writeOppositeEdgeIds edges neId OPPOSITE_1 (1 |> readEdgeId edges eId) (eId)
-                    writeVertexId edges neId OPPOSITE_1 (3 |> readEdgeId edges eId)
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (3 |> readEdgeId edges eId) 
+                    writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
 
             | 3 ->
                 if 2 |> compareIndices edges neId OPPOSITE_0 eId then
-                    writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (2 |> readEdgeId edges eId) 
-                    writeVertexId edges neId OPPOSITE_0 (1 |> readEdgeId edges eId)
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (0 |> readEdgeId edges eId) (eId)
+                    writeVertexId edges neId OPPOSITE_0 (1 |> readVertexId edges eId)
                 else
-                    writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (2 |> readEdgeId edges eId) 
-                    writeVertexId edges neId OPPOSITE_1 (1 |> readEdgeId edges eId)
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (0 |> readEdgeId edges eId) (eId)
+                    writeVertexId edges neId OPPOSITE_1 (1 |> readVertexId edges eId)
                 
             | 1 ->
                 if 0 |> compareIndices edges neId OPPOSITE_0 eId then
-                    writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (0 |> readEdgeId edges eId) 
-                    writeVertexId edges neId OPPOSITE_0 ( 0 |> readEdgeId edges eId)
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (2 |> readEdgeId edges eId) (eId) 
+                    writeVertexId edges neId OPPOSITE_0 (3 |> readVertexId edges eId)
                 else
-                    writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (0 |> readEdgeId edges eId) 
-                    writeVertexId edges neId OPPOSITE_1 (  0|> readEdgeId edges eId)
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (2 |> readEdgeId edges eId) (eId)  
+                    writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
 
             | 2 ->
                 if 0 |> compareIndices edges neId OPPOSITE_0 eId then
-                    writeOppositeEdgeIds edges neId OPPOSITE_0 (3 |> readEdgeId edges eId) (eId)  
-                    writeVertexId edges neId OPPOSITE_0 ( 0 |> readEdgeId edges eId)
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (1 |> readEdgeId edges eId) 
+                    writeVertexId edges neId OPPOSITE_0 ( 1 |> readVertexId edges eId)
                 else
-                    writeOppositeEdgeIds edges neId OPPOSITE_1 (3 |> readEdgeId edges eId) (eId)   
-                    writeVertexId edges neId OPPOSITE_1 ( 0 |> readEdgeId edges eId)
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (1 |> readEdgeId edges eId)    
+                    writeVertexId edges neId OPPOSITE_1 ( 1 |> readVertexId edges eId)
                     
             | _ -> ()
 
@@ -438,6 +438,155 @@ module EffectApDelaunayDataMutation =
             let afterFaces = EffectApDelaunayDataHandling.transformFacesToCompactRepresentation (FlipTestMockup.After.FV) (FlipTestMockup.After.FE)
             let afterStack = FlipTestMockup.After.STACK
             let afterSp = FlipTestMockup.After.SP
+
+            Assert.Multiple( fun _ ->
+                edges |> should equal afterEdges
+                meta  |> should equal afterMeta
+                faces |> should equal afterFaces
+                stack |> should equal afterStack
+                sp    |> should equal afterSp
+            )
+
+
+        module FlipTestMockup2 =
+
+            module Before = 
+
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i( 3, 2, 5,-1)
+                                                        | 1 -> yield V4i( 2,-1, 0, 5)
+                                                        | 2 -> yield V4i( 5, 3, 2, 0)
+                                                        | 3 -> yield V4i( 5, 2, 0,-1)
+                                                        | 5 -> yield V4i( 3,-1, 2, 5)
+                                                        | _ -> yield V4i(-1)
+                                                |])
+
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i( 5, 2,-1,-1)
+                                                        | 1 -> yield V4i(-1,-1, 3, 2)
+                                                        | 2 -> yield V4i( 0, 5, 1, 3)
+                                                        | 3 -> yield V4i( 2, 1,-1,-1)
+                                                        | 5 -> yield V4i(-1,-1, 2, 0)
+                                                        | _ -> yield V4i(-1)
+                                                |])
+
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V2i(1, 0)
+                                                        | 1 -> yield V2i(1, 0)
+                                                        | 2 -> yield V2i(1, 1)
+                                                        | 3 -> yield V2i(1, 0)
+                                                        | 5 -> yield V2i(0, 0)
+                                                        | _ -> yield V2i(-1)
+                                                |])
+
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                    for i in 0 .. MAX_FACES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i(5, 2, 0, (IDHash 5 2 0))
+                                                        | 1 -> yield V4i(3, 2, 5, (IDHash 3 2 5))
+                                                        | _ -> yield V4i(-1)
+                                                |])
+
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                    for i in 0 .. MAX_FACES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V3i( 2, 1, 3)
+                                                        | 1 -> yield V3i( 5, 2, 0)
+                                                        | _ -> yield V3i(-1)
+                                                |])
+
+
+                                            
+                let STACK = Arr<N<MAX_EDGES>, int>()
+
+                let SP = -1
+            
+            module After = 
+
+
+                let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i( 3, 0, 5,-1)
+                                                        | 1 -> yield V4i( 2,-1, 0, 3)
+                                                        | 2 -> yield V4i( 3, 2, 0, 5)
+                                                        | 3 -> yield V4i( 5, 3, 0,-1)
+                                                        | 5 -> yield V4i( 3,-1, 2, 0)
+                                                        | _ -> yield V4i(-1)
+                                                |])
+
+                let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i( 2, 3,-1,-1)
+                                                        | 1 -> yield V4i(-1,-1, 2, 5)
+                                                        | 2 -> yield V4i( 5, 1, 3, 0)
+                                                        | 3 -> yield V4i( 0, 2,-1,-1)
+                                                        | 5 -> yield V4i(-1,-1, 1, 2)
+                                                        | _ -> yield V4i(-1)
+                                                |])
+
+                let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                    for i in 0 .. MAX_EDGES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V2i(1, 1)
+                                                        | 1 -> yield V2i(1, 1)
+                                                        | 2 -> yield V2i(1, 0)
+                                                        | 3 -> yield V2i(1, 1)
+                                                        | 5 -> yield V2i(0, 0)
+                                                        | _ -> yield V2i(-1)
+                                                |])
+
+                let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                    for i in 0 .. MAX_FACES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V4i(0, 5, 3, (IDHash 0 5 3))
+                                                        | 1 -> yield V4i(3, 2, 0, (IDHash 3 2 0))
+                                                        | _ -> yield V4i(-1)
+                                                |])
+
+                let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                    for i in 0 .. MAX_FACES - 1 do
+                                                        match i with
+                                                        | 0 -> yield V3i( 3, 0, 2)
+                                                        | 1 -> yield V3i( 5, 1, 2)
+                                                        | _ -> yield V3i(-1)
+                                                |])
+
+
+                                            
+                let STACK = Arr<N<MAX_EDGES>, int>([|
+                                                        0
+                                                        1
+                                                        3
+                                                    |])
+
+                let SP = 2
+        
+        [<Test>]
+        let ``Flip Edge 2``() = 
+
+            let (edges, meta) = EffectApDelaunayDataHandling.transformEdgesToCompactRepresentation (FlipTestMockup2.Before.V) (FlipTestMockup2.Before.E) (FlipTestMockup2.Before.M)
+            let mutable meta = meta
+            let faces = EffectApDelaunayDataHandling.transformFacesToCompactRepresentation (FlipTestMockup2.Before.FV) (FlipTestMockup2.Before.FE)
+            let stack = FlipTestMockup2.Before.STACK
+            let mutable sp = FlipTestMockup2.Before.SP
+
+            let (newMeta, newSp) = 2 |> flipEdge edges meta faces stack sp
+            meta <- newMeta
+            sp <- newSp
+
+
+            let (afterEdges, afterMeta) = EffectApDelaunayDataHandling.transformEdgesToCompactRepresentation (FlipTestMockup2.After.V) (FlipTestMockup2.After.E) (FlipTestMockup2.After.M)
+            let afterFaces = EffectApDelaunayDataHandling.transformFacesToCompactRepresentation (FlipTestMockup2.After.FV) (FlipTestMockup2.After.FE)
+            let afterStack = FlipTestMockup2.After.STACK
+            let afterSp = FlipTestMockup2.After.SP
 
             Assert.Multiple( fun _ ->
                 edges |> should equal afterEdges
