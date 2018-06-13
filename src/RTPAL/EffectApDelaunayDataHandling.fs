@@ -196,7 +196,6 @@ module DataHandling =
     let generateCompactEdgeV4i (v0 : V4i) (e0 : V4i) (v1 : V4i) (e1 : V4i) =
         V4i(v0 |> genIntFromV4i, e0 |> genIntFromV4i, v1 |> genIntFromV4i, e1 |> genIntFromV4i) 
 
-
     let generateCompactFaceV4i (fv0 : V3i) (fe0 : V3i) (fv1 : V3i) (fe1 : V3i) =
         V4i(fv0 |> genIntFromV3i, fe0 |> genIntFromV3i, fv1 |> genIntFromV3i, fe1 |> genIntFromV3i) 
 
@@ -212,7 +211,7 @@ module DataHandling =
     let transformEdgesToCompactRepresentation (V :  Arr<N<MAX_EDGES>, V4i>) (E :  Arr<N<MAX_EDGES>, V4i>) (M :  Arr<N<MAX_EDGES>, V2i>) = 
             
         let edges = Arr<N<MAX_EDGES_HALF>, V4i>([|
-                                                    for i in 0 .. 2 .. MAX_EDGES - 1 do
+                                                    for i in 0 .. 2 .. MAX_EDGES - 2 do
                                                         yield generateCompactEdgeV4i (V.[i] |> replaceMinusOneWithNoneInV4i) (E.[i] |> replaceMinusOneWithNoneInV4i) (V.[i + 1] |> replaceMinusOneWithNoneInV4i) (E.[i + 1] |> replaceMinusOneWithNoneInV4i)
             
                                                 |])
@@ -232,9 +231,8 @@ module DataHandling =
     let transformFacesToCompactRepresentation (FV : Arr<N<MAX_FACES>, V4i>) (FE : Arr<N<MAX_FACES>, V3i>) =
 
         Arr<N<MAX_FACES_HALF>, V4i>([|
-                                    for i in 0 .. 2 .. MAX_FACES - 1 do
+                                    for i in 0 .. 2 .. MAX_FACES - 2 do
                                         yield generateCompactFaceV4i (FV.[i].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i] |> replaceMinusOneWithNoneInV3i) (FV.[i + 1].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i + 1] |> replaceMinusOneWithNoneInV3i)
-            
                                 |])
 
 
@@ -448,7 +446,7 @@ module DataHandling =
             )
 
         let private getMockupFaceArray () =
-            Arr<N<MAX_EDGES_HALF>, V4i>([|
+            Arr<N<MAX_FACES_HALF>, V4i>([|
                                         yield V4i(-1)
                                         yield V4i(-1)
                                         yield V4i(-1)
@@ -562,3 +560,101 @@ module DataHandling =
                 edges.[1].XY |> should equal shiftResult2
                 edges.[1].ZW |> should equal shiftResult3
             )
+
+        [<Test>]
+        let ``Generate Compact Edge V4i``() =
+            let edge = generateCompactEdgeV4i (V4i(0x1, 0x2, 0x3, 0x4)) (V4i(0x5, 0x6, 0x7, 0x8)) (V4i(0x9, 0xA, 0xB, 0xC)) (V4i(0xD, 0xE, 0xF, 0x0))
+
+            edge |> should equal (V4i(0x04030201, 0x08070605, 0x0C0B0A09, 0x000F0E0D))
+
+        [<Test>]
+        let ``Generate Compact Face V4i``() =
+            let face = generateCompactFaceV4i (V3i(0x2, 0x3, 0x4)) (V3i(0x6, 0x7, 0x8)) (V3i(0xA, 0xB, 0xC)) (V3i(0xE, 0xF, 0x0))
+
+            face |> should equal (V4i(0x00040302, 0x00080706, 0x000C0B0A, 0x00000F0E))
+
+
+        [<Test>]
+        let ``Transform Edges To Compact Representation``() =
+
+            let V = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i( 0, 1, 2, 3)
+                                                    | 1 -> yield V4i( 0,-1, 1, 2)
+                                                    | 2 -> yield V4i( 1,-1, 2, 0)
+                                                    | 3 -> yield V4i( 2,-1, 3, 0)
+                                                    | 4 -> yield V4i( 3,-1, 0, 2)
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+            let E = Arr<N<MAX_EDGES>, V4i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i( 1, 2, 3, 4)
+                                                    | 1 -> yield V4i(-1,-1, 2, 0)
+                                                    | 2 -> yield V4i(-1,-1, 0, 1)
+                                                    | 3 -> yield V4i(-1,-1, 4, 0)
+                                                    | 4 -> yield V4i(-1,-1, 0, 3)
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+            let M = Arr<N<MAX_EDGES>, V2i>([| 
+                                                for i in 0 .. MAX_EDGES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V2i(1, 1)
+                                                    | 1 -> yield V2i(0, 0)
+                                                    | 2 -> yield V2i(1, 0)
+                                                    | 3 -> yield V2i(1, 0)
+                                                    | 4 -> yield V2i(0, 0)
+                                                    | _ -> yield V2i(-1)
+                                            |])
+
+            let (edges, meta) = transformEdgesToCompactRepresentation (V) (E) (M)
+            
+            let afterEdges = Arr<N<MAX_EDGES_HALF>, V4i>([|
+                                                            for i in 0 .. MAX_EDGES_HALF - 1 do
+                                                                match i with
+                                                                | 0 -> yield V4i(0x03020100, 0x04030201, 0x0201FF00, 0x0002FFFF)
+                                                                | 1 -> yield V4i(0x0002FF01, 0x0100FFFF, 0x0003FF02, 0x0004FFFF)
+                                                                | 2 -> yield V4i(0x0200FF03, 0x0300FFFF, 0xFFFFFFFF, 0xFFFFFFFF)
+                                                                | _ -> yield V4i(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)
+                                                        |])
+
+            let afterMeta = 0x000000A3
+
+            Assert.Multiple( fun _ ->
+                edges |> should equal afterEdges
+                meta |> should equal afterMeta
+            )
+
+        [<Test>]
+        let ``Transform Faces To Compact Representation``() =
+            
+            let FV = Arr<N<MAX_FACES>, V4i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V4i(0, 1, 2, 12)
+                                                    | 1 -> yield V4i(0, 2, 3, 23)
+                                                    | _ -> yield V4i(-1)
+                                            |])
+
+            let FE = Arr<N<MAX_FACES>, V3i>([| 
+                                                for i in 0 .. MAX_FACES - 1 do
+                                                    match i with
+                                                    | 0 -> yield V3i( 1, 2, 0)
+                                                    | 1 -> yield V3i( 0, 3, 4)
+                                                    | _ -> yield V3i(-1)
+                                            |])
+
+
+            let faces = transformFacesToCompactRepresentation FV FE
+            
+            let afterFaces = Arr<N<MAX_FACES_HALF>, V4i>([|
+                                                            for i in 0 .. MAX_FACES_HALF - 1 do
+                                                                match i with
+                                                                | 0 -> yield V4i( 0x00020100, 0x00000201, 0x00030200, 0x00040300)
+                                                                | _ -> yield V4i(0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF)
+                                                        |])
+
+            faces |> should equal afterFaces

@@ -99,10 +99,10 @@ module Config =
         let MAX_FACES_ALL = 30
                         
         [<Literal>]
-        let MAX_FACES_ALL_HALF = 21
+        let MAX_FACES_ALL_HALF = 15
                         
         [<Literal>]
-        let MAX_FACES_HALF = 7
+        let MAX_FACES_HALF = 5
                         
         [<Literal>]
         let NUM_CASE = 3

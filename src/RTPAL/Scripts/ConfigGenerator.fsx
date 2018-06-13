@@ -71,7 +71,7 @@ let delaunayConfig =
 
     let (MAX_FACES, c) = c |> newEntry "MAX_FACES" 10
     
-    let (MAX_FACES_HALF, c) = c |> newEntry "MAX_FACES_HALF" (MAX_EDGES / 2)
+    let (MAX_FACES_HALF, c) = c |> newEntry "MAX_FACES_HALF" (MAX_FACES / 2)
 
 
     let (CASE_CORNER, c) = c |> newEntry "CASE_CORNER" 1
