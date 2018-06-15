@@ -614,10 +614,10 @@ module EffectApDelaunayIrradianceIntegration =
                                     for f in 0 .. MAX_FACES - 1 do
                                         
                                         if not (faceIsEmpty delFaceData f) then
-                                            let area = computeSphericalExcess (vertices.[0 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[1 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[2 |> readFaceVertexId delFaceData f] |> Vec.normalize)
+                                            let area = computeSphericalExcess (vertices.[readFaceVertexId delFaceData f 0] |> Vec.normalize) (vertices.[readFaceVertexId delFaceData f 1] |> Vec.normalize) (vertices.[readFaceVertexId delFaceData f 2] |> Vec.normalize)
 
                                             patchIllumination <- patchIllumination + area * (funVal.[0 |> readFaceVertexId delFaceData f].X + funVal.[1 |> readFaceVertexId delFaceData f].X + funVal.[2 |> readFaceVertexId delFaceData f].X) / 3.0
-                                            weightSum <- weightSum + area * (funVal.[0 |> readFaceVertexId delFaceData f].Y + funVal.[1 |> readFaceVertexId delFaceData f].Y + funVal.[2 |> readFaceVertexId delFaceData f].Y) / 3.0
+                                            weightSum <- weightSum + area * (funVal.[readFaceVertexId delFaceData f 0].Y + funVal.[readFaceVertexId delFaceData f 1].Y + funVal.[readFaceVertexId delFaceData f 2].Y) / 3.0
 
 
                                     let L =

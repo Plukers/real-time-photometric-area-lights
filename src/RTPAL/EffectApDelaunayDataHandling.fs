@@ -16,15 +16,15 @@ module EffectApDelaunayDataHandling =
 
     [<ReflectedDefinition>][<Inline>]
     let private getIdFromInt pos value =
-        ((uint32 value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID)) |> int
+        int (((uint32 value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID)))
 
     [<ReflectedDefinition>][<Inline>]
     let private setIdInInt pos value id =
-        ((uint32 value &&& (~~~(ID_BIT_MASK <<< pos * BIT_PER_ID))) ||| (uint32 id <<< pos * BIT_PER_ID)) |> int
+        int (((uint32 value &&& (~~~(ID_BIT_MASK <<< pos * BIT_PER_ID))) ||| (uint32 id <<< pos * BIT_PER_ID)))
 
     [<ReflectedDefinition>][<Inline>]
     let private setTwoIdsInInt pos value id0 id1 =
-        ((uint32 value &&& (~~~((ID_BIT_MASK <<< (pos + 1) * BIT_PER_ID) ||| (ID_BIT_MASK <<< pos * BIT_PER_ID)))) ||| ((uint32 id1 <<< (pos + 1) * BIT_PER_ID) ||| (uint32 id0 <<< pos * BIT_PER_ID))) |> int
+        int (((uint32 value &&& (~~~((ID_BIT_MASK <<< (pos + 1) * BIT_PER_ID) ||| (ID_BIT_MASK <<< pos * BIT_PER_ID)))) ||| ((uint32 id1 <<< (pos + 1) * BIT_PER_ID) ||| (uint32 id0 <<< pos * BIT_PER_ID))))
         
     [<ReflectedDefinition>][<Inline>]
     let private offsetId offset id = 
@@ -32,11 +32,11 @@ module EffectApDelaunayDataHandling =
 
     [<ReflectedDefinition>][<Inline>]
     let genIntFromV3i (v : V3i) =
-        (uint32 (v.X |> offsetId 0) ||| uint32 (v.Y |> offsetId 1) ||| uint32 (v.Z |> offsetId 2)) |> int
+        int ((uint32 (offsetId 0 v.X) ||| uint32 (offsetId 1 v.Y) ||| uint32 (offsetId 2 v.Z)))
 
     [<ReflectedDefinition>][<Inline>]
     let genIntFromV4i (v : V4i) =
-        (v.X |> offsetId 0) ||| (v.Y |> offsetId 1) ||| (v.Z |> offsetId 2) ||| (v.W |> offsetId 3)
+        (offsetId 0 v.X) ||| (offsetId 1 v.Y) ||| (offsetId 2 v.Z) ||| (offsetId 3 v.W)
 
     [<ReflectedDefinition>][<Inline>]
     let private leftShiftWithRotation24Bit shift v =
@@ -98,7 +98,7 @@ module EffectApDelaunayDataHandling =
     // TODO maybe replace meta with a meta ref, check shader code
     [<ReflectedDefinition>][<Inline>]
     let makeEdgeInside meta eId =
-        (uint32 meta ||| (META_BIT_MASK <<< ((eId * 2) + INSIDE_OFFSET))) |> int
+        int ((uint32 meta ||| (META_BIT_MASK <<< ((eId * 2) + INSIDE_OFFSET))))
             
     [<ReflectedDefinition>][<Inline>]
     let edgeIsMarked meta eId = 
@@ -107,12 +107,12 @@ module EffectApDelaunayDataHandling =
     // TODO maybe replace meta with a meta ref, check shader code
     [<ReflectedDefinition>][<Inline>]
     let markEdge meta eId =
-        (uint32 meta ||| (META_BIT_MASK <<< ((eId * 2) + MARKED_OFFSET))) |> int
+        int ((uint32 meta ||| (META_BIT_MASK <<< ((eId * 2) + MARKED_OFFSET))))
 
     // TODO maybe replace meta with a meta ref, check shader code
     [<ReflectedDefinition>][<Inline>]
     let unmarkEdge meta eId =
-        (uint32 meta &&& (~~~(META_BIT_MASK <<< ((eId * 2) + MARKED_OFFSET)))) |> int
+        int ((uint32 meta &&& (~~~(META_BIT_MASK <<< ((eId * 2) + MARKED_OFFSET)))))
 
 
     //////////////////////////////////////////////////////////////////////////////////////////
@@ -122,7 +122,11 @@ module EffectApDelaunayDataHandling =
 
     [<ReflectedDefinition>][<Inline>]
     let readFaceVertexId (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId vPos =
-        getIdFromInt vPos (if fId % 2 = 0 then faces.[fId / 2].X else faces.[fId / 2].Z)
+        // getIdFromInt vPos (if fId % 2 = 0 then faces.[fId / 2].X else faces.[fId / 2].Z)
+        if fId % 2 = 0 then
+            getIdFromInt vPos (faces.[fId / 2].X)
+        else
+            getIdFromInt vPos (faces.[fId / 2].Z)
 
     [<ReflectedDefinition>][<Inline>]
     let writeFaceVertexIdsCombined (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId vertices =
@@ -134,7 +138,7 @@ module EffectApDelaunayDataHandling =
 
     [<ReflectedDefinition>][<Inline>]
     let writeFaceVertexIds (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId v0 v1 v2 =
-        writeFaceVertexIdsCombined faces fId ((uint32 (v0 |> offsetId 0) ||| uint32 (v1 |> offsetId 1) ||| uint32 (v2 |> offsetId 2)) |> int)
+        writeFaceVertexIdsCombined faces fId (int (uint32 (offsetId 0 v0) ||| uint32 (offsetId 1 v1) ||| uint32 (offsetId 2 v2)))
 
     // Neighbor Edge Handling
 
@@ -146,9 +150,9 @@ module EffectApDelaunayDataHandling =
     let writeFaceEdgeIds (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId e0 e1 e2 =
         faces.[fId / 2] <- 
             if fId % 2 = 0 then
-                V4i(faces.[fId / 2].X, (e0 |> offsetId 0) ||| (e1 |> offsetId 1) ||| (e2 |> offsetId 2), faces.[fId / 2].Z, faces.[fId / 2].W)
+                V4i(faces.[fId / 2].X, (offsetId 0 e0) ||| (offsetId 1 e1) ||| (offsetId 2 e2), faces.[fId / 2].Z, faces.[fId / 2].W)
             else
-                V4i(faces.[fId / 2].X, faces.[fId / 2].Y, faces.[fId / 2].Z, (e0 |> offsetId 0) ||| (e1 |> offsetId 1) ||| (e2 |> offsetId 2))
+                V4i(faces.[fId / 2].X, faces.[fId / 2].Y, faces.[fId / 2].Z, (offsetId 0 e0) ||| (offsetId 1 e1) ||| (offsetId 2 e2))
 
     [<ReflectedDefinition>][<Inline>]
     let faceIsEmpty (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId =
@@ -161,7 +165,7 @@ module EffectApDelaunayDataHandling =
 
     [<ReflectedDefinition>][<Inline>]
     let private compareVerticesPermutations24Bit v0 v1 =
-        v0 = v1 || (v0 |> leftShiftWithRotation24Bit 1) = v1 || (v0 |> leftShiftWithRotation24Bit 2) = v1
+        v0 = v1 || (leftShiftWithRotation24Bit 1 v0) = v1 || (leftShiftWithRotation24Bit 2 v0) = v1
 
     [<ReflectedDefinition>][<Inline>]
     let verticesAreFromFace (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId vertices =
@@ -171,9 +175,9 @@ module EffectApDelaunayDataHandling =
     let leftShiftVerticesAndEdgesByOne (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId =
         edges.[eId / 2] <-
             if eId % 2 = 0 then 
-                V4i(edges.[eId / 2].X |> rightShiftWithRotation32Bit 1, edges.[eId / 2].Y |> rightShiftWithRotation32Bit 1, edges.[eId / 2].Z, edges.[eId / 2].W)
+                V4i(rightShiftWithRotation32Bit 1 (edges.[eId / 2].X), rightShiftWithRotation32Bit 1 (edges.[eId / 2].Y), edges.[eId / 2].Z, edges.[eId / 2].W)
             else 
-                V4i(edges.[eId / 2].X, edges.[eId / 2].Y, edges.[eId / 2].Z |> rightShiftWithRotation32Bit 1, edges.[eId / 2].W |> rightShiftWithRotation32Bit 1)
+                V4i(edges.[eId / 2].X, edges.[eId / 2].Y, rightShiftWithRotation32Bit 1 (edges.[eId / 2].Z), rightShiftWithRotation32Bit 1 (edges.[eId / 2].W))
 
 
     [<ReflectedDefinition>][<Inline>]
@@ -201,25 +205,25 @@ module EffectApDelaunayDataHandling =
     // Data Import
 
     let generateCompactEdgeV4i (v0 : V4i) (e0 : V4i) (v1 : V4i) (e1 : V4i) =
-        V4i(v0 |> genIntFromV4i, e0 |> genIntFromV4i, v1 |> genIntFromV4i, e1 |> genIntFromV4i) 
+        V4i(genIntFromV4i v0, genIntFromV4i e0, genIntFromV4i v1, genIntFromV4i e1) 
 
     let generateCompactFaceV4i (fv0 : V3i) (fe0 : V3i) (fv1 : V3i) (fe1 : V3i) =
-        V4i(fv0 |> genIntFromV3i, fe0 |> genIntFromV3i, fv1 |> genIntFromV3i, fe1 |> genIntFromV3i) 
+        V4i(genIntFromV3i fv0, genIntFromV3i fe0, genIntFromV3i fv1, genIntFromV3i fe1) 
 
     let private  replaceMinusOneWithNone v = 
         if v = -1 then NONE else v
 
     let private replaceMinusOneWithNoneInV4i (v : V4i) =
-        V4i(v.X |> replaceMinusOneWithNone, v.Y |> replaceMinusOneWithNone, v.Z |> replaceMinusOneWithNone, v.W |> replaceMinusOneWithNone)
+        V4i(replaceMinusOneWithNone (v.X), replaceMinusOneWithNone (v.Y), replaceMinusOneWithNone (v.Z), replaceMinusOneWithNone (v.W))
 
     let private replaceMinusOneWithNoneInV3i (v : V3i) =
-        V3i(v.X |> replaceMinusOneWithNone, v.Y |> replaceMinusOneWithNone, v.Z |> replaceMinusOneWithNone)
+        V3i(replaceMinusOneWithNone (v.X), replaceMinusOneWithNone (v.Y), replaceMinusOneWithNone (v.Z))
 
     let transformEdgesToCompactRepresentation (V : V4i array) (E : V4i array) (M : V2i array) = 
             
         let edges = [|
                         for i in 0 .. 2 .. MAX_EDGES - 2 do
-                            yield generateCompactEdgeV4i (V.[i] |> replaceMinusOneWithNoneInV4i) (E.[i] |> replaceMinusOneWithNoneInV4i) (V.[i + 1] |> replaceMinusOneWithNoneInV4i) (E.[i + 1] |> replaceMinusOneWithNoneInV4i)
+                            yield generateCompactEdgeV4i (replaceMinusOneWithNoneInV4i (V.[i])) (replaceMinusOneWithNoneInV4i (E.[i])) (replaceMinusOneWithNoneInV4i (V.[i + 1])) (replaceMinusOneWithNoneInV4i (E.[i + 1]))
                     |]
             
         let mutable meta = 0x00000000
@@ -227,10 +231,10 @@ module EffectApDelaunayDataHandling =
         for i in 0 .. MAX_EDGES - 1 do
 
             if M.[i].X = 1 then
-                meta <- i |> makeEdgeInside meta
+                meta <- makeEdgeInside meta i
 
             if M.[i].Y = 1 then
-                meta <- i |> markEdge meta
+                meta <- markEdge meta i
 
         (edges, meta)
 
@@ -254,7 +258,7 @@ module EffectApDelaunayDataHandling =
     let transformFacesToCompactRepresentation (FV : V4i array) (FE : V3i array) =
         [|
             for i in 0 .. 2 .. MAX_FACES - 2 do
-                yield generateCompactFaceV4i (FV.[i].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i] |> replaceMinusOneWithNoneInV3i) (FV.[i + 1].XYZ |> replaceMinusOneWithNoneInV3i) (FE.[i + 1] |> replaceMinusOneWithNoneInV3i)
+                yield generateCompactFaceV4i (replaceMinusOneWithNoneInV3i (FV.[i].XYZ)) (replaceMinusOneWithNoneInV3i (FE.[i] )) (replaceMinusOneWithNoneInV3i (FV.[i + 1].XYZ)) (replaceMinusOneWithNoneInV3i (FE.[i + 1]))
         |]
 
     let transformFaceollectionToCompactCollection (FV : V4i array) (FE : V3i array) numOfCollectionElements =
