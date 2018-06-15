@@ -535,39 +535,45 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     ////////////////////////////////////////
                                     // load inital data
-                                    (*
-                                    Does not work for some reason
-                                    Turns into
-                                    ivec4 delFaceData[5]
+                                    
 
                                     let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
                                     let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
 
-                                    caseOffset |> QUAD_DATA.getInitEdgeData delEdgeData
-                                    caseOffset |> QUAD_DATA.getInitFaceData delFaceData
+                                    QUAD_DATA.getInitEdgeData delEdgeData caseOffset
+                                    QUAD_DATA.getInitFaceData delFaceData caseOffset
+                                    
+                                    (*
+                                    let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
+                                    for i in 0 .. MAX_EDGES_HALF - 1 do
+                                        delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
+
+                                    let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
+                                    for i in 0 .. MAX_FACES_HALF - 1 do
+                                        delFaceData.[i] <- QUAD_DATA.ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
+
+                                    let mutable delMetaData = QUAD_DATA.ALL.META.[caseOffset]
                                     *)
 
-                                    let delEdgeData = caseOffset |> QUAD_DATA.getInitEdgeData' 
-                                    let delFaceData = caseOffset |> QUAD_DATA.getInitFaceData'       
+                                    let mutable delMetaData = QUAD_DATA.getInitMetaData caseOffset
+                                    
 
-                                    let mutable delMetaData = caseOffset |> QUAD_DATA.getInitMetaData 
-
-                                    let mutable delNextFreeEdgeAddr = caseOffset |> QUAD_DATA.getInitFreeEdgeAddr
-                                    let mutable delNextFreeFaceAddr = caseOffset |> QUAD_DATA.getInitFreeFaceAddr
+                                    let mutable delNextFreeEdgeAddr =  QUAD_DATA.getInitFreeEdgeAddr caseOffset
+                                    let mutable delNextFreeFaceAddr =  QUAD_DATA.getInitFreeFaceAddr caseOffset
 
 
 
                                     ////////////////////////////////////////
                                     // execute edge flip algorithm
 
-                                    let mutable stack = Arr<N<MAX_EDGES>, int>()
+                                    let stack = Arr<N<MAX_EDGES>, int>()
                                     let mutable SP = -1
                                     
                                     for i in 0 .. MAX_EDGES - 1 do
-                                        if i |> edgeIsInside delMetaData then
+                                        if edgeIsInside delMetaData i then
                                             SP <- SP + 1
                                             stack.[SP] <- i
-                                            delMetaData <- i |> markEdge delMetaData
+                                            delMetaData <- markEdge delMetaData i
                                     
 
                                     ////////////////////////////////////////
@@ -579,21 +585,21 @@ module EffectApDelaunayIrradianceIntegration =
                                         SP <- SP - 1
 
                                         // unmark edge
-                                        delMetaData <- eId |> unmarkEdge delMetaData
+                                        delMetaData <- unmarkEdge delMetaData eId
                                         
                                         // test if edge is locally delaunay
                                             // true if flip, false otherwise
                                 
-                                        let a = vertices.[ 0 |> readVertexId delEdgeData eId].XYZ |> Vec.normalize
-                                        let b = vertices.[ 1 |> readVertexId delEdgeData eId].XYZ |> Vec.normalize
-                                        let c = vertices.[ 2 |> readVertexId delEdgeData eId].XYZ |> Vec.normalize
-                                        let d = vertices.[ 3 |> readVertexId delEdgeData eId].XYZ |> Vec.normalize
+                                        let a = vertices.[ readVertexId delEdgeData eId 0].XYZ |> Vec.normalize
+                                        let b = vertices.[ readVertexId delEdgeData eId 1].XYZ |> Vec.normalize
+                                        let c = vertices.[ readVertexId delEdgeData eId 2].XYZ |> Vec.normalize
+                                        let d = vertices.[ readVertexId delEdgeData eId 3].XYZ |> Vec.normalize
                                         let notLD = (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0   
                                         
                                         if notLD then
                                             // flip edge
 
-                                            let (meta, sp) = eId |>  flipEdge delEdgeData delMetaData delFaceData stack SP 
+                                            let (meta, sp) = flipEdge delEdgeData delMetaData delFaceData stack SP eId
 
                                             SP <- sp
                                             delMetaData <- meta
@@ -860,13 +866,16 @@ module EffectApDelaunayIrradianceIntegration =
                         caseOffset |> QUAD_DATA.getInitFaceData delFaceData
                         *)
 
-                        let delEdgeData = caseOffset |> QUAD_DATA.getInitEdgeData' 
-                        let delFaceData = caseOffset |> QUAD_DATA.getInitFaceData'    
+                        let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
+                        for i in 0 .. MAX_EDGES_HALF - 1 do
+                            delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
 
-                        caseOffset |> QUAD_DATA.getInitEdgeData delEdgeData
-                        caseOffset |> QUAD_DATA.getInitFaceData delFaceData
-                                    
-                        let mutable delMetaData = caseOffset |> QUAD_DATA.getInitMetaData 
+                        
+                        let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
+                        for i in 0 .. MAX_FACES_HALF - 1 do
+                            delFaceData.[i] <- QUAD_DATA.ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
+  
+                        let mutable delMetaData = QUAD_DATA.ALL.META.[caseOffset]
 
                         let mutable delNextFreeEdgeAddr = caseOffset |> QUAD_DATA.getInitFreeEdgeAddr
                         let mutable delNextFreeFaceAddr = caseOffset |> QUAD_DATA.getInitFreeFaceAddr
