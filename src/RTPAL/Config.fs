@@ -81,28 +81,28 @@ module Config =
         let CASE_INSIDE_OFFSET = 2
                         
         [<Literal>]
-        let MAX_EDGES = 14
+        let MAX_EDGES = 8
                         
         [<Literal>]
-        let MAX_EDGES_ALL = 42
+        let MAX_EDGES_ALL = 24
                         
         [<Literal>]
-        let MAX_EDGES_ALL_HALF = 21
+        let MAX_EDGES_ALL_HALF = 12
                         
         [<Literal>]
-        let MAX_EDGES_HALF = 7
+        let MAX_EDGES_HALF = 4
                         
         [<Literal>]
-        let MAX_FACES = 10
+        let MAX_FACES = 4
                         
         [<Literal>]
-        let MAX_FACES_ALL = 30
+        let MAX_FACES_ALL = 12
                         
         [<Literal>]
-        let MAX_FACES_ALL_HALF = 15
+        let MAX_FACES_ALL_HALF = 6
                         
         [<Literal>]
-        let MAX_FACES_HALF = 5
+        let MAX_FACES_HALF = 2
                         
         [<Literal>]
         let NUM_CASE = 3

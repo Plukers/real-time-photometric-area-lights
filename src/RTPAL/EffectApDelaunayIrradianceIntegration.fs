@@ -543,18 +543,6 @@ module EffectApDelaunayIrradianceIntegration =
                                     QUAD_DATA.getInitEdgeData delEdgeData caseOffset
                                     QUAD_DATA.getInitFaceData delFaceData caseOffset
                                     
-                                    (*
-                                    let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
-                                    for i in 0 .. MAX_EDGES_HALF - 1 do
-                                        delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
-
-                                    let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
-                                    for i in 0 .. MAX_FACES_HALF - 1 do
-                                        delFaceData.[i] <- QUAD_DATA.ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
-
-                                    let mutable delMetaData = QUAD_DATA.ALL.META.[caseOffset]
-                                    *)
-
                                     let mutable delMetaData = QUAD_DATA.getInitMetaData caseOffset
                                     
 
@@ -1000,14 +988,14 @@ module EffectApDelaunayIrradianceIntegration =
 
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
 
-            
+            (*
             let sceneSg = 
                 [
                     sceneSg
                     Debug.delaunyScene data.lights |> Sg.dynamic
                 ]
                 |> Sg.group'
-            
+            *)
             
             sceneSg
                 |> setupFbEffects [ 

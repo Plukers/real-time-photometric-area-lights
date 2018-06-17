@@ -65,11 +65,11 @@ let delaunayConfig =
     let c = Map.empty
 
     // DEFINE CONFIG HERE    
-    let (MAX_EDGES, c) = c |> newEntry "MAX_EDGES" 14
+    let (MAX_EDGES, c) = c |> newEntry "MAX_EDGES" 8
     
     let (MAX_EDGES_HALF, c) = c |> newEntry "MAX_EDGES_HALF" (MAX_EDGES / 2)
 
-    let (MAX_FACES, c) = c |> newEntry "MAX_FACES" 10
+    let (MAX_FACES, c) = c |> newEntry "MAX_FACES" 4
     
     let (MAX_FACES_HALF, c) = c |> newEntry "MAX_FACES_HALF" (MAX_FACES / 2)
 
