@@ -348,6 +348,14 @@
                         //let mode = RenderMode.MRPApprox
                         //mode |> renderApprox path step
                         //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+
+                        let mode = RenderMode.DelaunayIrradianceSampling
+                        mode |> renderApprox path step
+                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+
+                        let mode = RenderMode.VoronoiIrradianceSampling
+                        mode |> renderApprox path step
+                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
                     
 
                         updateSampleLight true
@@ -355,18 +363,35 @@
 
                         let mode = RenderMode.StructuredSampling                        
 
-                        for mask in 1 .. 31 do
-                            updateSamplesBitmask mask // corners barycenter closest norm mrp random
-                            mode |> renderApprox path step
-                            approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+                        //for mask in 1 .. 31 do
+                        //    updateSamplesBitmask mask // corners barycenter closest norm mrp random
+                        //    mode |> renderApprox path step
+                        //    approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+
+                        
+                        updateSamples true false true false false false
+                        mode |> renderApprox path step
+                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+
+                        updateSamples false false false false true false
+                        mode |> renderApprox path step
+                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
                         
 
                         let mode = RenderMode.StructuredIrrSampling                        
 
-                        for mask in 1 .. 31 do
-                            updateSamplesBitmask mask // corners barycenter closest norm mrp random
-                            mode |> renderApprox path step
-                            approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+                        //for mask in 1 .. 31 do
+                        //    updateSamplesBitmask mask // corners barycenter closest norm mrp random
+                        //    mode |> renderApprox path step
+                        //    approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+
+                        updateSamples true false true false false false
+                        mode |> renderApprox path step
+                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
+
+                        updateSamples false false false false true false
+                        mode |> renderApprox path step
+                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
                         
                         //updateSampleIrrUniform false
 

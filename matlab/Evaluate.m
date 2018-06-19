@@ -83,11 +83,11 @@ fclose(ResultFile);
 
 %% Generate Plots
 
-PlotPath = strcat(EvalPath, '/Plots/');
-if exist(PlotPath, 'dir')
-    cmd_rmdir(PlotPath);
-end
-mkdir(PlotPath);
+%PlotPath = strcat(EvalPath, '/Plots/');
+%if exist(PlotPath, 'dir')
+%    cmd_rmdir(PlotPath);
+%end
+%mkdir(PlotPath);
 
 %BuildApproximationGraphs(approximations, errorImage, errorSign, solidAngle, numSteps, PlotPath);
 
