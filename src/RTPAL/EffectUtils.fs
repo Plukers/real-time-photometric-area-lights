@@ -491,7 +491,7 @@ module EffectUtils =
             line is given counterclockwise
     *)
     [<ReflectedDefinition>] 
-    let clampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCountStartIdx : int) (polygonVertexCount : int) (p : V3d) = 
+    let clampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCountStartIdx : int) (polygonVertexCount : int) (polygonClockwiseOrder : bool) (p : V3d) = 
 
         if polygonVertexCount = 0 then
             (p, CLAMP_POLYGON_RESULT_NONE, -1, -1)
@@ -512,7 +512,7 @@ module EffectUtils =
                 let v1 = polygonVertices.[(i + 1) % polygonVertexCount]
 
                 let dotPlane = Vec.cross (v0 |> Vec.normalize) (v1 |> Vec.normalize) |> Vec.normalize |> Vec.dot p
-                if dotPlane >= -1e-9 then
+                if (not polygonClockwiseOrder && dotPlane >= -1e-9) || (polygonClockwiseOrder && dotPlane <= -1e-9) then
                     
                     inside <- false
 

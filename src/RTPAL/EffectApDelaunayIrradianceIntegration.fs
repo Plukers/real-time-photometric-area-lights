@@ -483,8 +483,9 @@ module EffectApDelaunayIrradianceIntegration =
                                 
                                 if not insideLightPlane then
 
+                                    let behindLight = Vec.dot (uniform.LForwards.[addr]) (t2w *(clippedVa.[0] |> Vec.normalize)) > 0.0
                                     
-                                    let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc closestPoint
+                                    let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc behindLight closestPoint
 
                                     ////////////////////////////////////////
                                     // create triangulation
@@ -519,7 +520,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     // is the point in front of the light or behind?
                                     // if behind, iterate the light vertices backwards for counter clockwise order
-                                    if Vec.dot (uniform.LForwards.[addr]) (t2w *(closestPointClamped |> Vec.normalize)) < 0.0 then 
+                                    if not behindLight then 
                                     
                                         for i in 0 .. clippedVc - 1 do 
                                             vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
@@ -798,8 +799,10 @@ module EffectApDelaunayIrradianceIntegration =
                     let insideLightPlane = (Vec.length closestPoint) < eps
                                 
                     if not insideLightPlane then
+
+                        let behindLight = Vec.dot (lForwards.[addr]) (t2w *(clippedVa.[0] |> Vec.normalize)) > 0.0
                                                                                 
-                        let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc closestPoint
+                        let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc behindLight closestPoint
 
                                                                         
                         // let (closestPoint, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
@@ -829,7 +832,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                         // is the point in front of the light or behind?
                         // if behind, iterate the light vertices backwards for counter clockwise order
-                        if Vec.dot (lForwards.[addr]) (t2w *(closestPointClamped |> Vec.normalize)) < 0.0 then 
+                        if not behindLight then 
                                     
                             for i in 0 .. clippedVc - 1 do 
                                 vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
@@ -988,14 +991,14 @@ module EffectApDelaunayIrradianceIntegration =
 
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
 
-            (*
+            
             let sceneSg = 
                 [
                     sceneSg
                     Debug.delaunyScene data.lights |> Sg.dynamic
                 ]
                 |> Sg.group'
-            *)
+            
             
             sceneSg
                 |> setupFbEffects [ 
