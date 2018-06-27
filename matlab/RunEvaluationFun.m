@@ -75,6 +75,122 @@ for i = 1:size(Approximations,1)
     ErrorReport(i + 1,1) = Approximations(i);
 end
 
+    function [] = BuildCompareGraphForLight(errorImage, savePath)
+       
+        %% Plot all
+        
+        h = figure;
+        title('Solid Angle');
+        hold on
+        
+        for a = 1:size(Approximations,1)
+            
+            e = errorImage(:,:,a);
+            e = e(:);
+            
+            p = polyfit(SolidAngleVec,e,3);
+            x1 = linspace(0,max(max(SolidAngle)));
+            y1 = polyval(p,x1);
+            plot(x1,y1,'LineWidth', 1);
+            
+        end
+        legend(Approximations,'location','southoutside');
+        
+        hold off;
+        
+        saveas(h,strcat(savePath, 'Solid_Angle.png'))
+        close(h);
+        
+        end
+
+
+    function [] = BuildApproximationGraphsForLight(errorImage, errorSign, savePath)
+
+        %% Setup
+        imgWidth = size(errorImage, 2) / NumSteps;
+        
+        stepLegend = cell(NumSteps, 1);
+        stepSolidAngle = cell(NumSteps, 1);
+        for step = 1:NumSteps
+            stepSolidAngle(step) = {SolidAngle(1:end, (step * imgWidth - imgWidth + 1):(step * imgWidth))};
+            stepLegend(step) = {num2str(step)};
+        end
+        
+        %% Plot per approximation
+        
+        for a = 1:size(Approximations,1)
+            
+            e = errorImage(:,:,a);
+            
+            h = figure;
+            for step = 1:NumSteps
+                
+                stepErrorImg = e(1:end, (step * imgWidth - imgWidth + 1):(step * imgWidth));
+                seStep = stepErrorImg(:);
+                stepSolidAngleImg = stepSolidAngle{step};
+                ssaStep = stepSolidAngleImg(:);
+                plot(ssaStep, seStep,'.','markersize',0.5);
+                hold on
+            end
+            grid on
+            title(Approximations(a));
+            legend(stepLegend,'location','northwest');
+            legendmarkeradjust(20);
+            
+            e = e(:);
+            p = polyfit(SolidAngleVec,e,3);
+            x1 = linspace(0,max(max(SolidAngle)));
+            y1 = polyval(p,x1);
+            plot(x1,y1,'LineWidth', 3);
+            hold off;
+            
+            saveas(h,strcat(savePath, Approximations{a},'_solid_angle.png'))
+            close(h);
+        end
+        
+        for a = 1:size(Approximations,1)
+            
+            e = errorSign(:,:,a) .* errorImage(:,:,a);
+            
+            h = figure;
+            for step = 1:NumSteps
+                
+                stepErrorImg = e(1:end, (step * imgWidth - imgWidth + 1):(step * imgWidth));
+                seStep = stepErrorImg(:);
+                stepSolidAngleImg = stepSolidAngle{step};
+                ssaStep = stepSolidAngleImg(:);
+                plot(ssaStep, seStep,'.','markersize',0.5);
+                hold on
+            end
+            grid on
+            title(Approximations(a));
+            legend(stepLegend,'location','northwest');
+            legendmarkeradjust(20);
+            
+            e = e(:);
+            
+            ep = e(e(:) >= 0, :);
+            sp = SolidAngleVec(e(:) >= 0, :);
+            p = polyfit(sp,ep,3);
+            x1 = linspace(0,max(sp));
+            y1 = polyval(p,x1);
+            plot(x1,y1,'LineWidth', 3);
+            
+            en = e(e(:) < 0, :);
+            sn = SolidAngle(e(:) < 0, :);
+            p = polyfit(sn,en,3);
+            x1 = linspace(0,max(sn));
+            y1 = polyval(p,x1);
+            plot(x1,y1,'LineWidth', 3)
+            
+            hold off;
+            
+            saveas(h,strcat(savePath, Approximations{a},'_solid_angle_signed.png'))
+            close(h);
+        end
+        
+        end
+
 
     function [errorReportEntry, errorPerSolidAngle] = EvaluateLight(light)
 
@@ -108,7 +224,7 @@ end
             GroundTruth = cat(2, GroundTruth, GT);
             GroundTruthTone = cat(2, GroundTruthTone, CustomToneMap(GT, toneMapScale));
         end
-        disp(sprintf('Writing GroundTruthTone to: %s', strcat(evalPath, '/', 'GroundTruth.png')));
+        % disp(sprintf('Writing GroundTruthTone to: %s', strcat(evalPath, '/', 'GroundTruth.png')));
         imwrite(GroundTruthTone, strcat(evalPath, '/', 'GroundTruth.png'));
         GroundTruth = double(GroundTruth (:,:,1));
         
@@ -132,7 +248,7 @@ end
                 Approx = cat(2, Approx, A);
                 ApproxTone = cat(2, ApproxTone, CustomToneMap(A, toneMapScale));
             end
-            disp(sprintf('Writing ApproxTone to: %s', strcat(evalPath, '/', Approximations{a}, '.png')));
+            % disp(sprintf('Writing ApproxTone to: %s', strcat(evalPath, '/', Approximations{a}, '.png')));
             imwrite(ApproxTone, strcat(evalPath, '/', Approximations{a}, '.png'));
             Approx = double(Approx(:,:,1));
             
@@ -153,7 +269,7 @@ end
             
             fprintf(ResultFile, strcat(Approximations{a}, ';', num2str(msError), ';', num2str(maxError), ';', num2str(corrFF), ';', num2str(corrSA), '\n'));
 
-            disp(sprintf('Writing errorImg to: %s', strcat(evalPath, '/', Approximations{a}, '_error.png')));
+            % disp(sprintf('Writing errorImg to: %s', strcat(evalPath, '/', Approximations{a}, '_error.png')));
             imwrite(errorImg, strcat(evalPath, '/', Approximations{a}, '_error.png'));
             
             errorReportEntry(eri) = {num2str(msError)};
@@ -165,15 +281,15 @@ end
         
         %% Generate Plots
         
-        %PlotPath = strcat(evalPath, '/Plots/');
-        %if exist(PlotPath, 'dir')
-        %    cmd_rmdir(PlotPath);
-        %end
-        %mkdir(PlotPath);
+        PlotPath = strcat(evalPath, '/Plots/');
+        if exist(PlotPath, 'dir')
+            cmd_rmdir(PlotPath);
+        end
+        mkdir(PlotPath);
         
-        %BuildApproximationGraphs(Approximations, errorImage, errorSign, SolidAngle, NumSteps, PlotPath);
+        BuildApproximationGraphsForLight( errorImage, errorSign, PlotPath);
         
-        %BuildCompareGraph(Approximations, errorImage, SolidAngle, PlotPath);
+        BuildCompareGraphForLight(errorImage, PlotPath);
         
         
         

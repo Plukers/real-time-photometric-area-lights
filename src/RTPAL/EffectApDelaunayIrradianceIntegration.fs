@@ -407,7 +407,6 @@ module EffectApDelaunayIrradianceIntegration =
         let iw = t2w * -i
  
         let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
-        let invDistSquared = 1.0 / (Vec.lengthSquared p + 1e-9)
 
         // simplified
         let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
@@ -605,7 +604,7 @@ module EffectApDelaunayIrradianceIntegration =
                                         if not (faceIsEmpty delFaceData f) then
                                             let area = computeSphericalExcess (vertices.[readFaceVertexId delFaceData f 0] |> Vec.normalize) (vertices.[readFaceVertexId delFaceData f 1] |> Vec.normalize) (vertices.[readFaceVertexId delFaceData f 2] |> Vec.normalize)
 
-                                            patchIllumination <- patchIllumination + area * (funVal.[0 |> readFaceVertexId delFaceData f].X + funVal.[1 |> readFaceVertexId delFaceData f].X + funVal.[2 |> readFaceVertexId delFaceData f].X) / 3.0
+                                            patchIllumination <- patchIllumination + area * (funVal.[readFaceVertexId delFaceData f 0].X + funVal.[readFaceVertexId delFaceData f 1].X + funVal.[readFaceVertexId delFaceData f 2].X) / 3.0
                                             weightSum <- weightSum + area * (funVal.[readFaceVertexId delFaceData f 0].Y + funVal.[readFaceVertexId delFaceData f 1].Y + funVal.[readFaceVertexId delFaceData f 2].Y) / 3.0
 
 
@@ -954,7 +953,7 @@ module EffectApDelaunayIrradianceIntegration =
                             
             
                         
-                        printfn "Vertices %A : %A" vc verticesNormalized
+                        printfn "Vertices %A : %A" vc vertices
 
                         printfn "Edges: "
                         for i in 0 .. MAX_EDGES - 1 do         
@@ -990,15 +989,15 @@ module EffectApDelaunayIrradianceIntegration =
 
 
         let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
-
-            
+    
+            (*
             let sceneSg = 
                 [
                     sceneSg
                     Debug.delaunyScene data.lights |> Sg.dynamic
                 ]
                 |> Sg.group'
-            
+            *)
             
             sceneSg
                 |> setupFbEffects [ 
