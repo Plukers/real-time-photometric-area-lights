@@ -31,12 +31,20 @@ module EffectApDelaunayDataHandling =
         id <<< (BIT_PER_ID * offset)
 
     [<ReflectedDefinition>][<Inline>]
-    let genIntFromV3i (v : V3i) =
-        int ((uint32 (offsetId 0 v.X) ||| uint32 (offsetId 1 v.Y) ||| uint32 (offsetId 2 v.Z)))
+    let genIntFrom3Int v0 v1 v2 =
+        int ((uint32 (offsetId 0 v0)) ||| (uint32 (offsetId 1 v1)) ||| (uint32 (offsetId 2 v2)))
+
+    [<ReflectedDefinition>][<Inline>]
+    let genIntFromV3i (v : V3i) = 
+        genIntFrom3Int v.X v.Y v.Z
+
+    [<ReflectedDefinition>][<Inline>]
+    let genIntFrom4Int v0 v1 v2 v3 =
+        int (((uint32 (offsetId 0 v0))) ||| ((uint32 (offsetId 1 v1))) ||| ((uint32 (offsetId 2 v2))) ||| ((uint32 (offsetId 3 v3))))
 
     [<ReflectedDefinition>][<Inline>]
     let genIntFromV4i (v : V4i) =
-        (offsetId 0 v.X) ||| (offsetId 1 v.Y) ||| (offsetId 2 v.Z) ||| (offsetId 3 v.W)
+        genIntFrom4Int v.X v.Y v.Z v.W
 
     [<ReflectedDefinition>][<Inline>]
     let private leftShiftWithRotation24Bit shift v =
@@ -70,6 +78,15 @@ module EffectApDelaunayDataHandling =
             else 
                 V4i(edges.[eId / 2].X, edges.[eId / 2].Y, setIdInInt vPos (edges.[eId / 2].Z) vertexId, edges.[eId / 2].W)
  
+    [<ReflectedDefinition>][<Inline>]
+    let writeAllVertexIds (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId vertexId0 vertexId1 vertexId2 vertexId3 =
+        edges.[eId / 2] <- 
+            if eId % 2 = 0 then 
+                V4i(genIntFrom4Int vertexId0 vertexId1 vertexId2 vertexId3, edges.[eId / 2].Y, edges.[eId / 2].Z, edges.[eId / 2].W)
+            else 
+                V4i(edges.[eId / 2].X, edges.[eId / 2].Y, genIntFrom4Int vertexId0 vertexId1 vertexId2 vertexId3, edges.[eId / 2].W)
+ 
+
     // Neighbor Edge Handling
 
     [<ReflectedDefinition>][<Inline>]
@@ -84,6 +101,14 @@ module EffectApDelaunayDataHandling =
             else 
                 V4i(edges.[eId / 2].X, edges.[eId / 2].Y, edges.[eId / 2].Z, setIdInInt ePos (edges.[eId / 2].W) edgeId)
 
+    [<ReflectedDefinition>][<Inline>]
+    let writeAllEdgeIds (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId edgeId0 edgeId1 edgeId2 edgeId3 =
+        edges.[eId / 2] <-
+            if eId % 2 = 0 then 
+                V4i(edges.[eId / 2].X, genIntFrom4Int edgeId0 edgeId1 edgeId2 edgeId3, edges.[eId / 2].Z, edges.[eId / 2].W)
+            else 
+                V4i(edges.[eId / 2].X, edges.[eId / 2].Y, edges.[eId / 2].Z, genIntFrom4Int edgeId0 edgeId1 edgeId2 edgeId3)
+                
     // Meta Handling
 
     let private META_BIT_MASK = uint32 0x00000001
@@ -158,18 +183,26 @@ module EffectApDelaunayDataHandling =
     let faceIsEmpty (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId =
         (if fId % 2 = 0 then faces.[fId / 2].X else faces.[fId / 2].Z) = 0x00FFFFFF
             
+    // Face Handling
 
+    [<ReflectedDefinition>][<Inline>]
+    let clearFaceVertices (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId =
+        writeFaceVertexIds faces fId NONE NONE NONE
+
+    [<ReflectedDefinition>][<Inline>]
+    let clearFaceEdges (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId =
+        writeFaceEdgeIds faces fId NONE NONE NONE
 
     //////////////////////////////////////////////////////////////////////////////////////////
     // Misc Handling
 
     [<ReflectedDefinition>][<Inline>]
-    let private compareVerticesPermutations24Bit v0 v1 =
+    let private compareVertexPermutations24Bit v0 v1 =
         v0 = v1 || (leftShiftWithRotation24Bit 1 v0) = v1 || (leftShiftWithRotation24Bit 2 v0) = v1
 
     [<ReflectedDefinition>][<Inline>]
     let verticesAreFromFace (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId vertices =
-        compareVerticesPermutations24Bit (if fId % 2 = 0 then  faces.[fId / 2].X else faces.[fId / 2].Z) vertices
+        compareVertexPermutations24Bit (if fId % 2 = 0 then  faces.[fId / 2].X else faces.[fId / 2].Z) vertices
 
     [<ReflectedDefinition>][<Inline>]
     let leftShiftVerticesAndEdgesByOne (edges : Arr<N<MAX_EDGES_HALF>, V4i>) eId =
@@ -568,11 +601,11 @@ module EffectApDelaunayDataHandling =
         let ``Compare Vertices Permutations 24Bit``() =
             
             Assert.Multiple( fun _ ->
-                compareVerticesPermutations24Bit 0x00AABBCC 0x00AABBCC |> should equal true
-                compareVerticesPermutations24Bit 0x00CCBBAA 0x00BBAACC |> should equal true
-                compareVerticesPermutations24Bit 0x00CCBBAA 0x00AACCBB |> should equal true
-                compareVerticesPermutations24Bit 0x00AABBCC 0x00CCBBAA |> should equal false
-                compareVerticesPermutations24Bit 0x00CCBBAA 0x00CCAABB |> should equal false
+                compareVertexPermutations24Bit 0x00AABBCC 0x00AABBCC |> should equal true
+                compareVertexPermutations24Bit 0x00CCBBAA 0x00BBAACC |> should equal true
+                compareVertexPermutations24Bit 0x00CCBBAA 0x00AACCBB |> should equal true
+                compareVertexPermutations24Bit 0x00AABBCC 0x00CCBBAA |> should equal false
+                compareVertexPermutations24Bit 0x00CCBBAA 0x00CCAABB |> should equal false
             )
 
         [<Test>]
