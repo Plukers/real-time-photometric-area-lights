@@ -1151,8 +1151,11 @@
         let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"IYON_M_60714889_(STD_LEO).LDT"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         
+        
         let photometryData = Some(IntensityProfileSampler(lightData))    
-                
+
+         
+
         // initial state
         {            
             lights = lc

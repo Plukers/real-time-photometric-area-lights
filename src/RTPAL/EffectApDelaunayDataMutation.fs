@@ -151,77 +151,78 @@ module EffectApDelaunayDataMutation =
     [<ReflectedDefinition>]
     let spliteEdge (edges : Arr<N<MAX_EDGES_HALF>, V4i>) (meta : int) (faces : Arr<N<MAX_FACES_HALF>, V4i>) nextFreeEdgeAddr nextFreeFaceAddr edgeId vId =
         
-        let fhash1 = IDHash (vertices.[edgeId].X) (vertices.[edgeId].Y) (vertices.[edgeId].Z)
-        let fhash2 = IDHash (vertices.[edgeId].Z) (vertices.[edgeId].W) (vertices.[edgeId].X)
+        //let fhash1 = IDHash (vertices.[edgeId].X) (vertices.[edgeId].Y) (vertices.[edgeId].Z)
+        //let fhash2 = IDHash (vertices.[edgeId].Z) (vertices.[edgeId].W) (vertices.[edgeId].X)
             
-        let splitEdgeV = Arr<N<4>, int>([| vertices.[edgeId].X; vertices.[edgeId].Y; vertices.[edgeId].Z; vertices.[edgeId].W |])
-        let splitEdgeE = Arr<N<4>, int>([| edges.[edgeId].X; edges.[edgeId].Y; edges.[edgeId].Z; edges.[edgeId].W |])
+        //let splitEdgeV = Arr<N<4>, int>([| vertices.[edgeId].X; vertices.[edgeId].Y; vertices.[edgeId].Z; vertices.[edgeId].W |])
+        //let splitEdgeE = Arr<N<4>, int>([| edges.[edgeId].X; edges.[edgeId].Y; edges.[edgeId].Z; edges.[edgeId].W |])
 
 
-        let mutable nextFreeFaceAddrDynamic = nextFreeFaceAddr
+        //let mutable nextFreeFaceAddrDynamic = nextFreeFaceAddr
 
-        for eIdx in 0 .. 3 do
-            if splitEdgeV.[eIdx] <> -1 then
+        //for eIdx in 0 .. 3 do
+        //    if splitEdgeV.[eIdx] <> -1 then
                     
                     
                     
-                let thisGlobalId = eIdx |> mapLocalToGlobalId edgeId nextFreeEdgeAddr
+        //        let thisGlobalId = eIdx |> mapLocalToGlobalId edgeId nextFreeEdgeAddr
 
 
-                ///////////////////////////////////////////////////
-                // Insert new Edge
+        //        ///////////////////////////////////////////////////
+        //        // Insert new Edge
 
-                vertices.[thisGlobalId] <- V4i(splitEdgeV.[eIdx], splitEdgeV.[(eIdx + 1) % 4], vId, splitEdgeV.[(eIdx + 3) % 4])
+        //        vertices.[thisGlobalId] <- V4i(splitEdgeV.[eIdx], splitEdgeV.[(eIdx + 1) % 4], vId, splitEdgeV.[(eIdx + 3) % 4])
 
-                let mutable eO1IsEmpty = false
-                let mutable eO2IsEmpty = false
+        //        let mutable eO1IsEmpty = false
+        //        let mutable eO2IsEmpty = false
 
-                let eO1 =
-                    if splitEdgeV.[(eIdx + 1) % 4] = -1 then
-                        eO1IsEmpty <- true
-                        V2i(-1, -1)
-                    else
-                        V2i(splitEdgeE.[eIdx], ((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr)
+        //        let eO1 =
+        //            if splitEdgeV.[(eIdx + 1) % 4] = -1 then
+        //                eO1IsEmpty <- true
+        //                V2i(-1, -1)
+        //            else
+        //                V2i(splitEdgeE.[eIdx], ((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr)
 
-                let eO2 =
-                    if splitEdgeV.[(eIdx + 3) % 4] = -1 then
-                        eO2IsEmpty <- true
-                        V2i(-1, -1)
-                    else
-                        V2i(((eIdx + 3) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, splitEdgeE.[(eIdx + 3) % 4])
+        //        let eO2 =
+        //            if splitEdgeV.[(eIdx + 3) % 4] = -1 then
+        //                eO2IsEmpty <- true
+        //                V2i(-1, -1)
+        //            else
+        //                V2i(((eIdx + 3) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, splitEdgeE.[(eIdx + 3) % 4])
 
-                edges.[thisGlobalId] <- V4i(eO1.X, eO1.Y, eO2.X, eO2.Y)
+        //        edges.[thisGlobalId] <- V4i(eO1.X, eO1.Y, eO2.X, eO2.Y)
                     
-                meta.[thisGlobalId] <- if eO1IsEmpty || eO2IsEmpty then V2i(0, 0) else V2i(1, 0)
+        //        meta.[thisGlobalId] <- if eO1IsEmpty || eO2IsEmpty then V2i(0, 0) else V2i(1, 0)
                     
 
 
-                if not eO1IsEmpty then
+        //        if not eO1IsEmpty then
 
-                    ///////////////////////////////////////////////////
-                    // Update Existing Edge
+        //            ///////////////////////////////////////////////////
+        //            // Update Existing Edge
 
-                    let currentOppositeOffset = if eIdx = 1 || eIdx = 3 then 3 else 2
+        //            let currentOppositeOffset = if eIdx = 1 || eIdx = 3 then 3 else 2
 
-                    if vertices.[splitEdgeE.[eIdx]].Y <> -1 && vertices.[splitEdgeE.[eIdx]].Y = splitEdgeV.[(eIdx + currentOppositeOffset) % 4] then
-                        vertices.[splitEdgeE.[eIdx]] <- V4i(vertices.[splitEdgeE.[eIdx]].X, vId, vertices.[splitEdgeE.[eIdx]].Z, vertices.[splitEdgeE.[eIdx]].W)
-                        edges.[splitEdgeE.[eIdx]] <- V4i(((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, thisGlobalId, edges.[splitEdgeE.[eIdx]].Z, edges.[splitEdgeE.[eIdx]].W)
-                    else
-                        vertices.[splitEdgeE.[eIdx]] <- V4i(vertices.[splitEdgeE.[eIdx]].X, vertices.[splitEdgeE.[eIdx]].Y, vertices.[splitEdgeE.[eIdx]].Z, vId)
-                        edges.[splitEdgeE.[eIdx]] <- V4i(edges.[splitEdgeE.[eIdx]].X, edges.[splitEdgeE.[eIdx]].Y, ((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, thisGlobalId)
+        //            if vertices.[splitEdgeE.[eIdx]].Y <> -1 && vertices.[splitEdgeE.[eIdx]].Y = splitEdgeV.[(eIdx + currentOppositeOffset) % 4] then
+        //                vertices.[splitEdgeE.[eIdx]] <- V4i(vertices.[splitEdgeE.[eIdx]].X, vId, vertices.[splitEdgeE.[eIdx]].Z, vertices.[splitEdgeE.[eIdx]].W)
+        //                edges.[splitEdgeE.[eIdx]] <- V4i(((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, thisGlobalId, edges.[splitEdgeE.[eIdx]].Z, edges.[splitEdgeE.[eIdx]].W)
+        //            else
+        //                vertices.[splitEdgeE.[eIdx]] <- V4i(vertices.[splitEdgeE.[eIdx]].X, vertices.[splitEdgeE.[eIdx]].Y, vertices.[splitEdgeE.[eIdx]].Z, vId)
+        //                edges.[splitEdgeE.[eIdx]] <- V4i(edges.[splitEdgeE.[eIdx]].X, edges.[splitEdgeE.[eIdx]].Y, ((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, thisGlobalId)
 
-                    ///////////////////////////////////////////////////
-                    // Insert new Face
+        //            ///////////////////////////////////////////////////
+        //            // Insert new Face
 
-                    faceVertices.[nextFreeFaceAddrDynamic] <- V4i(splitEdgeV.[eIdx], splitEdgeV.[(eIdx + 1) % 4], vId, IDHash splitEdgeV.[eIdx] splitEdgeV.[(eIdx + 1) % 4] vId)
-                    faceEdges.[nextFreeFaceAddrDynamic] <- V3i(splitEdgeE.[eIdx], ((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, thisGlobalId)
-                    nextFreeFaceAddrDynamic <- nextFreeFaceAddrDynamic + 1
+        //            faceVertices.[nextFreeFaceAddrDynamic] <- V4i(splitEdgeV.[eIdx], splitEdgeV.[(eIdx + 1) % 4], vId, IDHash splitEdgeV.[eIdx] splitEdgeV.[(eIdx + 1) % 4] vId)
+        //            faceEdges.[nextFreeFaceAddrDynamic] <- V3i(splitEdgeE.[eIdx], ((eIdx + 1) % 4) |> mapLocalToGlobalId edgeId nextFreeEdgeAddr, thisGlobalId)
+        //            nextFreeFaceAddrDynamic <- nextFreeFaceAddrDynamic + 1
 
-        for i in 0 .. nextFreeFaceAddr - 1 do
-            if faceVertices.[i].W = fhash1 || faceVertices.[i].W = fhash2 then
-                faceVertices.[i] <- V4i(-1)
+        //for i in 0 .. nextFreeFaceAddr - 1 do
+        //    if faceVertices.[i].W = fhash1 || faceVertices.[i].W = fhash2 then
+        //        faceVertices.[i] <- V4i(-1)
 
-        (meta, nextFreeEdgeAddr + 3, nextFreeFaceAddrDynamic)
+        //(meta, nextFreeEdgeAddr + 3, nextFreeFaceAddrDynamic)
+        (meta, nextFreeEdgeAddr, nextFreeFaceAddr)
 
     module Test = 
         open NUnit.Framework

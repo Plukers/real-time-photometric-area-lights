@@ -80,7 +80,8 @@ module EffectGT =
                 //let brdfPDF = 1.0 / PI // uniform spherical sampling
 
                 let i = cosineSampleHemisphere u1 u2                   
-                let brdfPDF = i.Z / PI // cosine spherical sampling
+                // let brdfPDF = i.Z / (2 * PI) // cosine spherical sampling
+                let brdfPDF = i.Z / (2.0 * PI) // cosine spherical sampling
 
 
                 for addr in 0 .. (Config.Light.NUM_LIGHTS - 1) do 
@@ -150,6 +151,7 @@ module EffectGT =
                                 if uniform.samplingMode = GTSamplingMode.Light then
                                 
                                     // This generates the samples on the projected light
+                                    (*
                                     let ex = vt.[1] - vt.[0]
                                     let ey = vt.[3] - vt.[0]
                                     let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
@@ -159,8 +161,8 @@ module EffectGT =
                                     samplePointDir <- w2t * (samplePoint |> Vec.normalize)
 
                                     lightPDF <- 1.0 / squad.S 
+                                    *)
                                     
-                                    (*
                                     // This generates the samples on the light
 
                                     for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
@@ -173,8 +175,14 @@ module EffectGT =
 
                                     let dotOut = max 1e-9 (abs (Vec.dot (t2w * -samplePointDir) uniform.LForwards.[addr]))
 
+                                    // light pdf is only 1 / Area, but the other values are needed for a correct computation
                                     lightPDF <- samplePointDistSqrd / (uniform.LAreas.[addr] * dotOut )
-                                    *)
+
+                                    
+
+                                    // test
+                                    // lightPDF <- 1.0 / (uniform.LAreas.[addr])
+                                    
                             | _ -> ()  
                             
 
@@ -205,12 +213,53 @@ module EffectGT =
                         ()       
                 ()
 
-            illumination <- illumination / V4d(Config.Light.NUM_SAMPLES)
+            // illumination <- illumination / V4d(Config.Light.NUM_SAMPLES)
 
-            let alpha = 1.0 / (float)(uniform.FrameCount)
+            // let alpha = 1.0 / (float)(uniform.FrameCount)
+
+            illumination <- illumination / V4d(Config.Light.NUM_SAMPLES * uniform.FrameCount)
+
+            let alpha = (float)(uniform.FrameCount - 1) / (float)(uniform.FrameCount)
 
             return V4d(illumination.XYZ, alpha)
             }
+
+
+
+    let private SourceTex =
+        sampler2d {
+            texture uniform?Source
+            filter Filter.MinMagLinear
+            addressU FShade.WrapMode.Wrap
+            addressV FShade.WrapMode.Wrap
+        }
+
+    let private DestinationTex =
+        sampler2d {
+            texture uniform?Destination
+            filter Filter.MinMagLinear
+            addressU FShade.WrapMode.Wrap
+            addressV FShade.WrapMode.Wrap
+        }
+
+    type BlendVertex = {
+        [<TexCoord>] tc : V2d
+    } 
+
+    let blend (v : BlendVertex) = 
+        fragment {   
+            
+            let S = SourceTex.Sample v.tc
+            let D = DestinationTex.Sample v.tc
+
+            if uniform?clear then
+                return S
+            else
+                let frameCount = (float)(uniform.FrameCount)
+                let invFrameCount = 1.0 / frameCount
+
+                return invFrameCount * ((frameCount - 1.0) * D + S)             
+        }
 
 
     module Rendering = 
@@ -244,7 +293,7 @@ module EffectGT =
             {
                 haltonSequence = HaltonSequence.init |> Mod.init
                 clear = false |> Mod.init
-                frameCount = 0 |> Mod.init
+                frameCount = 1 |> Mod.init
                 updateGroundTruth = update
                 samplingMode = samplingMode
             }
@@ -278,8 +327,8 @@ module EffectGT =
                     else    
                         BlendMode(
                             true, 
-                            SourceFactor = BlendFactor.SourceAlpha, 
-                            DestinationFactor = BlendFactor.InvSourceAlpha,
+                            SourceFactor = BlendFactor.One, 
+                            DestinationFactor = BlendFactor.SourceAlpha,
                             Operation = BlendOperation.Add,
                             SourceAlphaFactor = BlendFactor.SourceAlpha,
                             DestinationAlphaFactor = BlendFactor.DestinationAlpha,
@@ -302,6 +351,8 @@ module EffectGT =
                     |> Sg.uniform "FrameCount" gtData.frameCount
                     |> Sg.compile data.runtime signature
                     |> RenderTask.renderToColor data.viewportSize
+
+            
               
             Sg.fullscreenQuad data.viewportSize
                 |> Sg.blendMode mode

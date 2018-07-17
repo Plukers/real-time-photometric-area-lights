@@ -101,7 +101,9 @@ module EffectUtils =
         let r = Math.Sqrt(u1)
         let theta = 2.0 * PI * u2
 
-        V3d(r * (cos theta), r * (sin theta), Math.Sqrt(max 0.0 (1.0 - u1))) |> Vec.normalize
+        //V3d(r * (cos theta), r * (sin theta), Math.Sqrt(max 0.0 (1.0 - u1))) |> Vec.normalize
+
+        V3d(u1 * (cos theta), u1 * (sin theta), Math.Sqrt(max 0.0 (1.0 - u1 * u1))) |> Vec.normalize
 
     // glsl mat3 is column major
     // transpose because of inverted multiplication logic
