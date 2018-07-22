@@ -39,6 +39,8 @@
     open EffectApStructuredSampling.Rendering
     open EffectCompare.Rendering
 
+    open OfflineRenderTasks
+
     open Rendering.Render
 
 
@@ -193,7 +195,7 @@
 
         let (scRenderTask, _) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData saData
 
-        let update = groundTruthRenderUpdate renderData gtData
+        let groundTruthRenderUpdate = groundTruthRenderUpdate renderData gtData
 
         let scSignature =
             app.Runtime.CreateFramebufferSignature [
@@ -278,6 +280,42 @@
                 doRotationIteration renderReferenceData
             }
 
+
+        let API = {
+                setRenderMode = updateRenderMode
+                render = fun _ -> scRenderTask.Run(RenderToken.Empty, fbo)
+                saveImage = fun _ -> ()
+
+                gtAPI = {
+                            overwriteEstimate = groundTruthRenderUpdate
+                        }
+            }
+
+        let generateSaveImage step path = 
+            fun (_ : unit) ->
+                app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
+
+        let executeTask step path (task : TaskAPI -> unit) = 
+            task { API with saveImage = generateSaveImage step path }
+
+        let renderOfflineTask (offlineTasks : Map<string, (TaskAPI -> unit)>) (task : string) = 
+            async {
+                doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step resultPath |> ignore)
+            }
+
+        let renderOfflineTaskForeachPhotometry (offlineTasks : Map<string, (TaskAPI -> unit)>) (task : string) = 
+            async {
+                for f in photometryFiles do
+                    let dataPath =  Path.combine [resultPath; (System.IO.Path.GetFileNameWithoutExtension f)]
+                    if not (System.IO.Directory.Exists dataPath) then
+                        System.IO.Directory.CreateDirectory dataPath |> ignore
+                    
+                    updatePhotometryData f
+
+                    doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step dataPath |> ignore)
+                    
+            }
+
         let groundTruthAsyncRender = 
             async {
                 
@@ -286,11 +324,11 @@
                         // Ground Truth
                         updateRenderMode RenderMode.GroundTruth
                         
-                        update true
+                        groundTruthRenderUpdate true
 
                         for _ in 1 .. (numOfSamples / Config.Light.NUM_SAMPLES) do
                             scRenderTask.Run(RenderToken.Empty, fbo)
-                            update false
+                            groundTruthRenderUpdate false
                             
                         app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;(renderData.mode |> Mod.force |> createFileName (Some step) None)], imageFormat);
 
@@ -319,8 +357,7 @@
                     updateRenderMode renderMode
                     scRenderTask.Run(RenderToken.Empty, fbo)
                     app.Runtime.Download(scColor).SaveAsImage(Path.combine [path; renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);   
-
-
+                    
                 let approximations = 
                      [
                         RenderMode.CenterPointApprox 
@@ -487,8 +524,8 @@
         let createImageTask = 
             m.offlineRenderMode |> Mod.map (fun mode ->
                 match mode with
-                | OfflineRenderMode.AbstractData    -> abstractDataAsyncRender
-                | OfflineRenderMode.GroundTruth     -> groundTruthAsyncRender
+                | OfflineRenderMode.AbstractData    -> renderOfflineTask offlineRenderTasks "AbstractData" // abstractDataAsyncRender
+                | OfflineRenderMode.GroundTruth     -> renderOfflineTask offlineRenderTasks "GroundTruth" // groundTruthAsyncRender
                 | _ (* Approximations *)            -> approxAsyncRender 
                     
             )

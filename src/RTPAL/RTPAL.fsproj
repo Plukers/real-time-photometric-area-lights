@@ -2322,6 +2322,7 @@
     <Compile Include="EffectFormFactor.fs" />
     <Compile Include="MRPApproxDebug.fs" />
     <Compile Include="Rendering.fs" />
+    <Compile Include="OfflineRenderTasks.fs" />
     <Compile Include="RenderApp.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
