@@ -60,6 +60,7 @@ type Action =
     | ROTATE_LIGHT of int * V3d // lightID, euler angles
 
     | CHANGE_OFFLINE_RENDER_MODE of OfflineRenderMode
+    | TOGGLE_OFFLINE_RENDER_EVALUATION
 
     | SET_MRP_CLOSEST_WEIGHT of string
     | SET_MRP_NORMAL_WEIGHT of string
@@ -99,7 +100,8 @@ type RenderState =
         gtSamplingMode       : GTSamplingMode
         solidAngleCompMethod : SolidAngleCompMethod 
 
-        offlineRenderMode  : OfflineRenderMode
+        offlineRenderMode     : OfflineRenderMode
+        evaluateOfflineRender : bool
 
         mrpWeights         : V3d // closest, normal, barycenter
 

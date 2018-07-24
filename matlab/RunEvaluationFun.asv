@@ -7,8 +7,6 @@ disp(sprintf('Starting Evaluation'));
 % General
 NumSteps = 5;
 
-DataPath = fullfile('results', evaluation, 'Data');
-
 EvalPath = fullfile('results', evaluation, 'Evaluation');
 if exist(EvalPath, 'dir')
     cmd_rmdir(EvalPath);
@@ -29,7 +27,7 @@ end
 fclose(fLightData);
 
 % Approximations
-fApproxData = fopen(fullfile(DataPath, 'ApproximationData.txt'), 'r');
+fApproxData = fopen(fullfile('results', evaluation, 'Data', 'ApproximationData.txt'), 'r');
 tline = fgetl(fApproxData);
 i = 1;
 while ischar(tline)
@@ -126,7 +124,7 @@ end
             grid on
             title(Approximations(a));
             legend(stepLegend,'location','northwest');
-            %legendmarkeradjust(20);
+            legendmarkeradjust(20);
             
             e = e(:);
             p = polyfit(SolidAngleVec,e,3);
@@ -156,7 +154,7 @@ end
             grid on
             title(Approximations(a));
             legend(stepLegend,'location','northwest');
-            %legendmarkeradjust(20);
+            legendmarkeradjust(20);
             
             e = e(:);
             
@@ -168,7 +166,7 @@ end
             plot(x1,y1,'LineWidth', 3);
             
             en = e(e(:) < 0, :);
-            sn = SolidAngleVec(e(:) < 0, :);
+            sn = SolidAngle(e(:) < 0, :);
             p = polyfit(sn,en,3);
             x1 = linspace(0,max(sn));
             y1 = polyval(p,x1);
@@ -188,8 +186,10 @@ end
         disp(sprintf('Evaluating Light: %s', light));
 
         toneMapScale = 1.0;
-                
-        evalPath = fullfile(EvalPath, light)
+        
+        LightPath = fullfile('results', evaluation, light);
+        
+        evalPath = strcat(EvalPath, light); 
         if exist(evalPath, 'dir')
             cmd_rmdir(evalPath);
         end
@@ -205,7 +205,7 @@ end
         
         %% Load Ground Truth
         
-        createGTFilePath = @(iter) fullfile('results', light, strcat('GroundTruth', '_', int2str(iter), '.exr'));
+        createGTFilePath = @(iter) fullfile(LightPath, strcat('GroundTruth', '_', int2str(iter), '.exr'));
         GroundTruth = exrread(createGTFilePath(0));
         GroundTruthTone = CustomToneMap(GroundTruth, toneMapScale);
         for j = 1:(NumSteps - 1)
@@ -229,7 +229,7 @@ end
         
         for a = 1:size(Approximations,1)
         
-            createApproxFilePath = @(iter)  fullfile(DataPath, light, strcat(Approximations{a}, '_', int2str(iter), '.exr'));
+            createApproxFilePath = @(iter)  fullfile(LightPath, strcat(Approximations{a}, '_', int2str(iter), '.exr'));
             Approx = (exrread(createApproxFilePath(0)));
             ApproxTone = CustomToneMap(Approx, toneMapScale);
             for j = 1:(NumSteps - 1)
@@ -295,7 +295,7 @@ for i = 1:size(Lights,1)
 end
 
 
-fErrorReport = fopen(fullfile(EvalPath, 'data.csv'), 'w');
+fErrorReport = fopen(strcat(EvalPath, 'data.csv'), 'w');
 for i = 1:(size(Approximations,1) + 1)
     sep = '';
     for e = ErrorReport(i, 1:end)

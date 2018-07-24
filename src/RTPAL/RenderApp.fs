@@ -271,7 +271,7 @@
                 setRenderMode = updateRenderMode
                 render = fun _ -> scRenderTask.Run(RenderToken.Empty, fbo)
                 saveImage = fun _ -> () // is overwriten per renderstep
-                setUsePhotometry = setUsePhotometry
+                usePhotometry = setUsePhotometry
 
                 gtAPI = {
                             overwriteEstimate = groundTruthRenderUpdate
@@ -313,6 +313,8 @@
         let renderOfflineEvaluationTasks (offlineTasks : Map<string, (TaskAPI -> unit)>) (tasks : string list) = 
             async {
 
+                let evaluation = (sprintf "%s_%s" "Evaluation" (System.DateTime.Now.ToString("dd-M-yyyy--HH-mm")))
+
                 let mutable approxList = HashSet.empty<string>
 
                 let API = { API with evalAPI = {
@@ -321,7 +323,7 @@
                                                                         )
                                                 }}
                 
-                let resultPath = Path.combine [resultPath; (sprintf "%s_%s" "Evaluation" (System.DateTime.Now.ToString("dd-M-yyyy--HH-mm")))];
+                let resultPath = Path.combine [resultPath; evaluation; "Data"];
 
                 for f in photometryFiles do
                     let dataPath =  Path.combine [resultPath; (System.IO.Path.GetFileNameWithoutExtension f)]
@@ -347,6 +349,10 @@
                     l
 
                 writeMetaData resultPath "ApproximationData.txt" approxList
+
+                if m.evaluateOfflineRender |> Mod.force then
+                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';RunEvaluation;exit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
+                    System.Diagnostics.Process.Start("cmd", command) |> ignore
             }
             
         let createPhotometryList =
@@ -365,7 +371,7 @@
                 | OfflineRenderMode.AbstractData    -> renderOfflineTask false offlineRenderTasks "AbstractData" 
                 | OfflineRenderMode.GroundTruth     -> renderOfflineTask true  offlineRenderTasks "GroundTruth" 
                 | OfflineRenderMode.PhotometryList  -> createPhotometryList
-                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks ([ "Delaunay"; "StructuredLuminanceSampling" ])
+                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks ([ "Delaunay" ])
                     
             )
             
@@ -463,6 +469,7 @@
                     s
             | CHANGE_RENDER_MODE mode -> { s with renderMode = mode }    
             | CHANGE_OFFLINE_RENDER_MODE mode -> { s with offlineRenderMode = mode }
+            | TOGGLE_OFFLINE_RENDER_EVALUATION -> { s with evaluateOfflineRender = (not s.evaluateOfflineRender) }
             | CHANGE_COMPARE mode -> { s with compare = mode }
             | COMPUTED_ERROR (error, brightError, darkError) -> { s with error = error; brightError = brightError; darkError = darkError }
             | OPENED_WINDOW -> s
@@ -777,6 +784,10 @@
                                                 dropDown m.offlineRenderMode (fun mode -> CHANGE_OFFLINE_RENDER_MODE mode)
                                             ]
 
+                                            toggleBox m.usePhotometry TOGGLE_OFFLINE_RENDER_EVALUATION      
+                                            text "Evaluate (requires Matlab)"                                                    
+                                            br[] 
+
                                             button [ clazz "ui button" ; onClick (fun () -> 
                                                 RENDER_IMAGES (offlineRenderTask)
                                             )] [text "Render Offline"]    
@@ -1039,6 +1050,7 @@
             updateGroundTruth = true
             usePhotometry = true
             offlineRenderMode = OfflineRenderMode.Approximations
+            evaluateOfflineRender = true
             gtSamplingMode = GTSamplingMode.Light
             solidAngleCompMethod = SolidAngleCompMethod.Square
             compare = RenderMode.StructuredIrrSampling 

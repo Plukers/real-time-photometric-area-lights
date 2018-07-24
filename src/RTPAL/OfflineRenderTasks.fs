@@ -41,7 +41,7 @@ module OfflineRenderTasks =
             saveImage : unit -> unit
 
             // Use photometry or diffuse emitter
-            setUsePhotometry : bool -> unit
+            usePhotometry : bool -> unit
 
             gtAPI : GroundTruthAPI
             ssAPI : StructuredSamplingAPI
