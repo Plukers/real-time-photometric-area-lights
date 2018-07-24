@@ -83,6 +83,7 @@
             transact (fun _ ->
                 tms |> Mod.change toneMapScale
             )
+
         
         let mutable photometryName = ""
         let photometryData = None |> Mod.init
@@ -97,6 +98,13 @@
 
             photometryName <- name
            
+        
+        let usePhotometry = true |> Mod.init
+        let setUsePhotometry up = 
+            transact (fun _ ->
+                up |> Mod.change usePhotometry
+            )
+        
         updatePhotometryData "ARC3_60712332_(STD).ldt"
         
         let renderData = 
@@ -218,11 +226,7 @@
         
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
-
-        let numOfSamples = 50000
         
-
-
         let imageFormat = PixFileFormat.Exr //PixFileFormat.Exr
 
         let createFileName step renderModeData mode =
@@ -232,7 +236,6 @@
                 | Some rmd -> rmd
                 | None ->
                     match mode with
-                    | RenderMode.GroundTruth -> sprintf "_%i" numOfSamples
                     | RenderMode.StructuredIrrSampling -> sprintf "_%s" (EffectApStructuredSampling.Rendering.encodeSettingsForName ssData)
                     | RenderMode.StructuredSampling -> sprintf "_%s" (EffectApStructuredSampling.Rendering.encodeSettingsForName ssData)
                     | _ -> ""
@@ -262,32 +265,25 @@
             |> Array.map System.IO.Path.GetFileName 
 
         let nl = System.Environment.NewLine
-        let writeMetaData name data = File.writeAllText (Path.combine[resultPath;name]) data 
-
-        
-        let abstractDataAsyncRender = 
-            async {
-                let renderReferenceData = 
-                    fun step ->
-                        updateRenderMode RenderMode.FormFactor
-                        scRenderTask.Run(RenderToken.Empty, fbo)
-                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath; renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
-                                                    
-                        updateRenderMode RenderMode.SolidAngle
-                        scRenderTask.Run(RenderToken.Empty, fbo)
-                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [resultPath;  renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
-
-                doRotationIteration renderReferenceData
-            }
-
+        let writeMetaData path name data = File.writeAllText (Path.combine[path;name]) data 
 
         let API = {
                 setRenderMode = updateRenderMode
                 render = fun _ -> scRenderTask.Run(RenderToken.Empty, fbo)
-                saveImage = fun _ -> ()
+                saveImage = fun _ -> () // is overwriten per renderstep
+                setUsePhotometry = setUsePhotometry
 
                 gtAPI = {
                             overwriteEstimate = groundTruthRenderUpdate
+                        }
+                ssAPI = {
+                            setSamples = updateSamples
+                            setSampleBitmask = updateSamplesBitmask
+                            sampleLight = updateSampleLight 
+                            setRandomSampleCount = updateRandomSampleCount
+                        }                              
+                evalAPI = {
+                            updateEffectList = fun _ -> () // is overwriten as needed
                         }
             }
 
@@ -295,16 +291,38 @@
             fun (_ : unit) ->
                 app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
 
-        let executeTask step path (task : TaskAPI -> unit) = 
-            task { API with saveImage = generateSaveImage step path }
+        let executeTask step path api (task : TaskAPI -> unit) = 
+            task { api with saveImage = generateSaveImage step path }
 
-        let renderOfflineTask (offlineTasks : Map<string, (TaskAPI -> unit)>) (task : string) = 
+        let renderOfflineTask forPhotometry (offlineTasks : Map<string, (TaskAPI -> unit)>) (task : string) = 
             async {
-                doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step resultPath |> ignore)
+                if forPhotometry then
+                    for f in photometryFiles do
+                        let dataPath =  Path.combine [resultPath; (System.IO.Path.GetFileNameWithoutExtension f)]
+                        if not (System.IO.Directory.Exists dataPath) then
+                            System.IO.Directory.CreateDirectory dataPath |> ignore
+                    
+                        updatePhotometryData f
+
+                        doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step dataPath API |> ignore)
+
+                else
+                    doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step resultPath API |> ignore)
             }
 
-        let renderOfflineTaskForeachPhotometry (offlineTasks : Map<string, (TaskAPI -> unit)>) (task : string) = 
+        let renderOfflineEvaluationTasks (offlineTasks : Map<string, (TaskAPI -> unit)>) (tasks : string list) = 
             async {
+
+                let mutable approxList = HashSet.empty<string>
+
+                let API = { API with evalAPI = {
+                                                    updateEffectList = (fun _ ->
+                                                                             renderMode |> Mod.force |> createFileName None None |> approxList.Add |> ignore
+                                                                        )
+                                                }}
+                
+                let resultPath = Path.combine [resultPath; (sprintf "%s_%s" "Evaluation" (System.DateTime.Now.ToString("dd-M-yyyy--HH-mm")))];
+
                 for f in photometryFiles do
                     let dataPath =  Path.combine [resultPath; (System.IO.Path.GetFileNameWithoutExtension f)]
                     if not (System.IO.Directory.Exists dataPath) then
@@ -312,221 +330,42 @@
                     
                     updatePhotometryData f
 
-                    doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step dataPath |> ignore)
-                    
-            }
-
-        let groundTruthAsyncRender = 
-            async {
-                
-                let GTRender path = 
-                    fun step -> 
-                        // Ground Truth
-                        updateRenderMode RenderMode.GroundTruth
+                    for t in tasks do
+                        doRotationIteration (fun step -> offlineTasks |> Map.find t |> executeTask step dataPath API |> ignore)      
                         
-                        groundTruthRenderUpdate true
 
-                        for _ in 1 .. (numOfSamples / Config.Light.NUM_SAMPLES) do
-                            scRenderTask.Run(RenderToken.Empty, fbo)
-                            groundTruthRenderUpdate false
-                            
-                        app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;(renderData.mode |> Mod.force |> createFileName (Some step) None)], imageFormat);
+                let approxList =
+                    let mutable l = ""
+                    let mutable addedFirstApprox = false
+                    for approx in approxList do
+                        if addedFirstApprox then
+                            l <- String.concat nl [l; approx ]
+                        else
+                            l <- approx
+                            addedFirstApprox <- true
 
-                
+                    l
+
+                writeMetaData resultPath "ApproximationData.txt" approxList
+            }
+            
+        let createPhotometryList =
+            async {
                 let mutable photometryList = sprintf "%i" (photometryFiles.Length)
                         
                 for f in photometryFiles do
-                        let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
-                        if not (System.IO.Directory.Exists dataPath) then
-                            System.IO.Directory.CreateDirectory dataPath |> ignore
-                    
-                        updatePhotometryData f
-
-                        doRotationIteration (GTRender dataPath)
-
-                        photometryList <- String.concat nl [ photometryList; (System.IO.Path.GetFileNameWithoutExtension f) ]
-
-                writeMetaData "GTData.txt" (sprintf "%i"  numOfSamples)
-                writeMetaData "PhotometryData.txt" photometryList
-            }
-
-        let approxAsyncRender =
-            async {
-
-                let renderApprox path step renderMode = 
-                    updateRenderMode renderMode
-                    scRenderTask.Run(RenderToken.Empty, fbo)
-                    app.Runtime.Download(scColor).SaveAsImage(Path.combine [path; renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);   
-                    
-                let approximations = 
-                     [
-                        RenderMode.CenterPointApprox 
-                        RenderMode.BaumFFApprox 
-                        RenderMode.MRPApprox 
-                        RenderMode.StructuredIrrSampling
-                        RenderMode.StructuredSampling 
-                     ]
-                
-                let mutable approxList = ""
-
-                let render path = 
-                    fun step -> 
-
-                        //let mode = RenderMode.CenterPointApprox
-                        //mode |> renderApprox path step
-                        //approxList <- mode |> createFileName None None
-
-
-                        //let mode = RenderMode.BaumFFApprox
-                        //mode |> renderApprox path step
-                        //approxList <- String.concat nl [approxList; mode |> createFileName None None ]
-
-
-                        //let mode = RenderMode.MRPApprox
-                        //mode |> renderApprox path step
-                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                        let mode = RenderMode.DelaunayIrradianceSampling
-                        mode |> renderApprox path step
-                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                        //let mode = RenderMode.VoronoiIrradianceSampling
-                        //mode |> renderApprox path step
-                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                    
-
-                        //updateSampleLight true
-                        //updateBlendSamples false
-
-                        //let mode = RenderMode.StructuredSampling                        
-
-                        //for mask in 1 .. 31 do
-                        //    updateSamplesBitmask mask // corners barycenter closest norm mrp random
-                        //    mode |> renderApprox path step
-                        //    approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                        
-                        //updateSamples true false true false false false
-                        //mode |> renderApprox path step
-                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                        //updateSamples false false false false true false
-                        //mode |> renderApprox path step
-                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                        
-
-                        //let mode = RenderMode.StructuredIrrSampling                        
-
-                        //for mask in 1 .. 31 do
-                        //    updateSamplesBitmask mask // corners barycenter closest norm mrp random
-                        //    mode |> renderApprox path step
-                        //    approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                        //updateSamples true false true false false false
-                        //mode |> renderApprox path step
-                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                        //updateSamples false false false false true false
-                        //mode |> renderApprox path step
-                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                        
-                        //updateSampleIrrUniform false
-
-                        //for mask in 1 .. 31 do
-                        //    updateSamplesBitmask mask // corners barycenter closest norm mrp random
-                        //    mode |> renderApprox path step
-                        //    approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-
-                        // corners barycenter closest norm mrp random
-                        (*
-                        updateSamples true true true false true false
-
-                        let mode = RenderMode.StructuredIrrSampling
-
-                        updateBlendSamples false
-                        updateSampleIrrUniform false
-                        mode |> renderApprox path step
-                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                        updateSampleIrrUniform true
-                        mode |> renderApprox path step
-                        approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                        
-                        updateBlendSamples true
-                        for i in 0.0 .. 0.1 .. 1.0 do
-                        
-                            updateBlendDistance i
-
-                            updateSampleIrrUniform false
-                            mode |> renderApprox path step
-                            approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                            updateSampleIrrUniform true
-                            mode |> renderApprox path step
-                            approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                        *)
-
-                        //let mode = RenderMode.StructuredSampling
-                        
-                        //updateBlendSamples false
-                        //mode |> renderApprox path step
-                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                        (*
-                        updateBlendSamples true
-                        for i in 0.0 .. 0.1 .. 1.0 do
-                        
-                            updateBlendDistance i
-                            
-                            mode |> renderApprox path step
-                            approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                        *)
-                        
-                        
-                        //updateSamples false false false false false true
-                        //updateRandomSampleCount 380
-
-                        //let mode = RenderMode.StructuredIrrSampling
-                        //updateBlendSamples false
-                        //updateSampleIrrUniform false
-                        //mode |> renderApprox path step
-                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-                        
-                        //let mode = RenderMode.StructuredSampling
-                        //updateBlendSamples false
-                        //mode |> renderApprox path step
-                        //approxList <-String.concat nl [approxList; mode |> createFileName None None ]
-
-                        //updateSamples false false false false false false
-
-                                
-                  
-                let mutable photometryList = sprintf "%i" (photometryFiles.Length)
-                        
-                for f in photometryFiles do
-                    let dataPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results";(System.IO.Path.GetFileNameWithoutExtension f)]
-                    if not (System.IO.Directory.Exists dataPath) then
-                        System.IO.Directory.CreateDirectory dataPath |> ignore
-                    
-                    updatePhotometryData f
-                        
-                    doRotationIteration (render dataPath)
-
                     photometryList <- String.concat nl [ photometryList; (System.IO.Path.GetFileNameWithoutExtension f) ]
 
-                writeMetaData "PhotometryData.txt" photometryList
-
-                    
-                writeMetaData "ApproximationData.txt" approxList
+                writeMetaData resultPath "PhotometryData.txt" photometryList
             }
 
         let createImageTask = 
             m.offlineRenderMode |> Mod.map (fun mode ->
                 match mode with
-                | OfflineRenderMode.AbstractData    -> renderOfflineTask offlineRenderTasks "AbstractData" // abstractDataAsyncRender
-                | OfflineRenderMode.GroundTruth     -> renderOfflineTask offlineRenderTasks "GroundTruth" // groundTruthAsyncRender
-                | _ (* Approximations *)            -> approxAsyncRender 
+                | OfflineRenderMode.AbstractData    -> renderOfflineTask false offlineRenderTasks "AbstractData" 
+                | OfflineRenderMode.GroundTruth     -> renderOfflineTask true  offlineRenderTasks "GroundTruth" 
+                | OfflineRenderMode.PhotometryList  -> createPhotometryList
+                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks ([ "Delaunay"; "StructuredLuminanceSampling" ])
                     
             )
             

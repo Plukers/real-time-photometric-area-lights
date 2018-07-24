@@ -27,6 +27,7 @@ type OfflineRenderMode =
     | AbstractData = 0
     | GroundTruth = 1
     | Approximations = 2
+    | PhotometryList = 3
 
 type LightTransformMode =
     | Translate
