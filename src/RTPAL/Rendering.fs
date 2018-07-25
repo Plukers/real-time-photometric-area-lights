@@ -71,39 +71,30 @@ module Rendering =
             update
 
         let CreateAndLinkRenderTask (data : RenderData) (gtData : GroundTruthData) (mrpData : MRPData) (ssData : SSData) (saData : SolidAngleData) =
-
-            //let randomTex =  FileTexture(Path.combine [__SOURCE_DIRECTORY__;"misc";"uniform_rnd_1024_1024.exr"], TextureParams.empty)
-            //printfn "%A" randomTex.GetHashCode
-
-            let sceneSg = 
-                data.sceneSg 
-                    //|> Light.Sg.setLightCollectionUniforms data.lights
-                    //|> setupPhotometricData data.photometricData
-                    //|> setupCamera data.view data.projTrafo data.viewportSize 
                     
             let signature = signature data.runtime
 
             let effectFbs = 
                 Map.empty
-                |> Map.add RenderMode.GroundTruth                   (groundTruthFb          data gtData     signature sceneSg |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.CenterPointApprox             (centerPointApproxFb    data            signature sceneSg |> applyTonemappingOnFb data signature)
-             // |> Map.add RenderMode.MRPApprox                     (mrpApproxFb            data mrpData    signature sceneSg |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.BaumFFApprox                  (baumFFApproxFb         data            signature sceneSg |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.StructuredIrrSampling         (ssIrrApproxFb          data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.StructuredSampling            (ssApproxFb             data ssData     signature sceneSg |> applyTonemappingOnFb data signature)
-             // |> Map.add RenderMode.StructuredPoissonSampling     (psIrrApproxFb          data            signature sceneSg |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.VoronoiIrradianceSampling     (voronoiIrrIntApproxFb  data            signature sceneSg |> applyTonemappingOnFb data signature)
-                |> Map.add RenderMode.DelaunayIrradianceSampling    (delIrrIntApproxFb      data            signature sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.GroundTruth                   (groundTruthFb          data gtData     signature data.sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.CenterPointApprox             (centerPointApproxFb    data            signature data.sceneSg |> applyTonemappingOnFb data signature)
+             // |> Map.add RenderMode.MRPApprox                     (mrpApproxFb            data mrpData    signature data.sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.BaumFFApprox                  (baumFFApproxFb         data            signature data.sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.StructuredIrrSampling         (ssIrrApproxFb          data ssData     signature data.sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.StructuredSampling            (ssApproxFb             data ssData     signature data.sceneSg |> applyTonemappingOnFb data signature)
+             // |> Map.add RenderMode.StructuredPoissonSampling     (psIrrApproxFb          data            signature data.sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.VoronoiIrradianceSampling     (voronoiIrrIntApproxFb  data            signature data.sceneSg |> applyTonemappingOnFb data signature)
+                |> Map.add RenderMode.DelaunayIrradianceSampling    (delIrrIntApproxFb      data            signature data.sceneSg |> applyTonemappingOnFb data signature)
                                            
-                |> Map.add RenderMode.FormFactor                    (formFactorFb           data            signature sceneSg)
-                |> Map.add RenderMode.SolidAngle                    (solidAngleFb           data saData     signature sceneSg)
+                |> Map.add RenderMode.FormFactor                    (formFactorFb           data            signature data.sceneSg)
+                |> Map.add RenderMode.SolidAngle                    (solidAngleFb           data saData     signature data.sceneSg)
 
             let diffFrameBuffer = diffFb data effectFbs
             
             let tasks = 
                 let mutable map = 
                     Map.empty
-                    |> Map.add RenderMode.Compare (compareSg data gtData signature sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
+                    |> Map.add RenderMode.Compare (compareSg data gtData signature data.sceneSg diffFrameBuffer |> Sg.compile data.runtime signature)
 
                 for kv in effectFbs do
                     map <- map |> Map.add (kv.Key) (kv.Value |> fbToSg data.viewportSize |> Sg.compile data.runtime signature)

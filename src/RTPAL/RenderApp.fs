@@ -45,22 +45,49 @@
 
 
     let setupOfflineRendering (app : OpenGlApplication) (m : MRenderState) (sceneSg : ISg) = 
+    
 
-        let viewportSize = V2i(2048, 2048)
+        let viewportSize = 
+            m.offlineCamera |> Mod.map(fun cam ->
+                match cam with 
+                | OfflineCamera.Evaluation -> V2i(2048, 2048)
+                | _ -> V2i(1920, 1080)
+            )
 
-        let view = CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO |> Mod.init
+        let view = 
+            m.offlineCamera |> Mod.map(fun cam ->
+                match cam with 
+                | OfflineCamera.Camera1 ->
+                    new CameraView (
+                        V3d(0.0, 0.0, 1.0),
+                        V3d(2.78320759582539, -4.29061577613338, 8.35097691401838),
+                        V3d(-0.296704906935568, 0.432968079084731, -0.851178501076028),
+                        V3d(-0.48115875045812, 0.702133247718419, 0.524876327629629),
+                        V3d(0.824895420679456, 0.56528536593659, 0.0)
+                    )
+                | _ (* Evaluation *) ->
+                    CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO
+            )
 
-        let projTrafo = 
-            { 
-                left = -20.0
-                right = 20.0
-                bottom = -20.0
-                top = 20.0
-                near = 0.1
-                far = 20.1
-            } 
-            |> Frustum.orthoTrafo |> Mod.init
+        let projTrafo =
+            Mod.map2(fun cam (v : V2i) ->
+                match cam with 
+                | OfflineCamera.Evaluation ->
+                    { 
+                        left = -20.0
+                        right = 20.0
+                        bottom = -20.0
+                        top = 20.0
+                        near = 0.1
+                        far = 20.1
+                    } 
+                    |> Frustum.orthoTrafo
+                | _ ->
+                    Frustum.perspective 60.0 0.1 100.0 ((float)(v.X) / (float)(v.Y))
+                    |> Frustum.projTrafo
 
+            ) m.offlineCamera viewportSize
+        
         let renderMode = RenderMode.GroundTruth |> Mod.init
         let updateRenderMode mode = 
             transact (fun _ ->
@@ -73,7 +100,7 @@
             )
 
         let toneMap = false |> Mod.init
-        let changeToneMap tm = 
+        let setToneMap tm = 
             transact (fun _ ->
                 tm |> Mod.change toneMap 
             )
@@ -115,7 +142,7 @@
                 sceneSg = sceneSg
                 view = view
                 projTrafo = projTrafo 
-                viewportSize = viewportSize |> Mod.init
+                viewportSize = viewportSize
                 lights = m.lights |> Mod.force // mod force necessary ? 
                 photometricData = photometryData
                 mode = renderMode
@@ -123,6 +150,8 @@
                 toneMap = toneMap
                 toneMapScale = toneMapScale
             }
+
+        let renderDataWithLight = { renderData with sceneSg = renderData.sceneSg  |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force) } 
             
             
 
@@ -200,26 +229,59 @@
             }
 
         let saData = Render.EffectSolidAngle.Rendering.initSolidAngleData' (SolidAngleCompMethod.Square |> Mod.init) 
+        
+        let renderTask =
+            let (scRenderTask, _) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData saData
+            let (scRenderTaskWithLight, _) = Rendering.Render.CreateAndLinkRenderTask renderDataWithLight gtData mrpData ssData saData
+            m.offlineCamera |> Mod.map(fun cam ->
+                match cam with 
+                | OfflineCamera.Evaluation -> scRenderTask
+                | _ -> scRenderTaskWithLight
+            )
+        
+        let updateGroundTruth =
+            let updateGroundTruth = groundTruthRenderUpdate renderData gtData
+            let updateGroundTruthWithLight = groundTruthRenderUpdate renderDataWithLight gtData
+            m.offlineCamera |> Mod.map(fun cam ->
+                match cam with 
+                    | OfflineCamera.Evaluation -> updateGroundTruth
+                    | _ -> updateGroundTruthWithLight
+            )
 
-        let (scRenderTask, _) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData saData
-
-        let groundTruthRenderUpdate = groundTruthRenderUpdate renderData gtData
+        let bufferFormat =
+            m.offlineCamera |> Mod.map(fun cam ->
+                match cam with 
+                    | OfflineCamera.Evaluation -> RenderbufferFormat.Rgba32f
+                    | _ -> RenderbufferFormat.Rgba8
+            )
 
         let scSignature =
-            app.Runtime.CreateFramebufferSignature [
-                DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
-            ]
-
-        let scColor = app.Runtime.CreateTexture(viewportSize, TextureFormat.Rgba32f, 1, 1, 1)
-
-        // Create a framebuffer matching signature and capturing the render to texture targets
-        let fbo = 
-            app.Runtime.CreateFramebuffer(
-                scSignature, 
-                Map.ofList [
-                    DefaultSemantic.Colors, ({ texture = scColor; slice = 0; level = 0 } :> IFramebufferOutput)
+            bufferFormat |> Mod.map (fun bf ->
+                app.Runtime.CreateFramebufferSignature [
+                    DefaultSemantic.Colors, { format = bf; samples = 1 }
                 ]
             )
+
+        let textureFormat =
+            m.offlineCamera |> Mod.map(fun cam ->
+                match cam with 
+                    | OfflineCamera.Evaluation -> TextureFormat.Rgba32f
+                    | _ -> TextureFormat.Rgba8
+            )
+
+        let scColor =
+            Mod.map2(fun v tf ->
+                app.Runtime.CreateTexture(v, tf, 1, 1, 1)
+            )  viewportSize textureFormat
+
+        let fbo = 
+            Mod.map2(fun c signature ->
+                app.Runtime.CreateFramebuffer(
+                    signature, 
+                    Map.ofList [
+                        DefaultSemantic.Colors, ({ texture = c; slice = 0; level = 0 } :> IFramebufferOutput)
+                    ])
+            ) scColor scSignature
 
         
         let activeTrafoLightId = 0        
@@ -227,7 +289,12 @@
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
         
-        let imageFormat = PixFileFormat.Exr //PixFileFormat.Exr
+        let imageFormat =
+            m.offlineCamera |> Mod.map(fun cam ->
+                match cam with 
+                    | OfflineCamera.Evaluation -> PixFileFormat.Exr 
+                    | _ -> PixFileFormat.Png
+            )
 
         let createFileName step renderModeData mode =
 
@@ -269,12 +336,12 @@
 
         let API = {
                 setRenderMode = updateRenderMode
-                render = fun _ -> scRenderTask.Run(RenderToken.Empty, fbo)
+                render = fun _ -> (renderTask |> Mod.force).Run(RenderToken.Empty, fbo |> Mod.force)
                 saveImage = fun _ -> () // is overwriten per renderstep
                 usePhotometry = setUsePhotometry
 
                 gtAPI = {
-                            overwriteEstimate = groundTruthRenderUpdate
+                            overwriteEstimate = fun overwrite -> (updateGroundTruth |> Mod.force) overwrite
                         }
                 ssAPI = {
                             setSamples = updateSamples
@@ -289,13 +356,18 @@
 
         let generateSaveImage step path = 
             fun (_ : unit) ->
-                app.Runtime.Download(scColor).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
+                app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) None], (imageFormat |> Mod.force));
 
         let executeTask step path api (task : TaskAPI -> unit) = 
             task { api with saveImage = generateSaveImage step path }
 
         let renderOfflineTask forPhotometry (offlineTasks : Map<string, (TaskAPI -> unit)>) (task : string) = 
             async {
+                if (m.offlineCamera |> Mod.force) <> OfflineCamera.Evaluation then
+                    setToneMap true
+                else 
+                    setToneMap false
+
                 if forPhotometry then
                     for f in photometryFiles do
                         let dataPath =  Path.combine [resultPath; (System.IO.Path.GetFileNameWithoutExtension f)]
@@ -325,6 +397,11 @@
                 
                 let resultPath = Path.combine [resultPath; evaluation; "Data"];
 
+                if (m.offlineCamera |> Mod.force) <> OfflineCamera.Evaluation then
+                    setToneMap true
+                else 
+                    setToneMap false
+
                 for f in photometryFiles do
                     let dataPath =  Path.combine [resultPath; (System.IO.Path.GetFileNameWithoutExtension f)]
                     if not (System.IO.Directory.Exists dataPath) then
@@ -351,7 +428,7 @@
                 writeMetaData resultPath "ApproximationData.txt" approxList
 
                 if m.evaluateOfflineRender |> Mod.force then
-                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';RunEvaluation;exit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
+                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';RunEvaluation;fclose('all');exit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
                     System.Diagnostics.Process.Start("cmd", command) |> ignore
             }
             
@@ -470,6 +547,7 @@
             | CHANGE_RENDER_MODE mode -> { s with renderMode = mode }    
             | CHANGE_OFFLINE_RENDER_MODE mode -> { s with offlineRenderMode = mode }
             | TOGGLE_OFFLINE_RENDER_EVALUATION -> { s with evaluateOfflineRender = (not s.evaluateOfflineRender) }
+            | CHANGE_OFFLINE_CAMERA cam -> {s with offlineCamera = cam}
             | CHANGE_COMPARE mode -> { s with compare = mode }
             | COMPUTED_ERROR (error, brightError, darkError) -> { s with error = error; brightError = brightError; darkError = darkError }
             | OPENED_WINDOW -> s
@@ -784,6 +862,12 @@
                                                 dropDown m.offlineRenderMode (fun mode -> CHANGE_OFFLINE_RENDER_MODE mode)
                                             ]
 
+                                            p [] [
+                                                text "Camera"                                                    
+                                                br[] 
+                                                dropDown m.offlineCamera (fun cam -> CHANGE_OFFLINE_CAMERA cam)
+                                            ]
+
                                             toggleBox m.usePhotometry TOGGLE_OFFLINE_RENDER_EVALUATION      
                                             text "Evaluate (requires Matlab)"                                                    
                                             br[] 
@@ -1051,6 +1135,7 @@
             usePhotometry = true
             offlineRenderMode = OfflineRenderMode.Approximations
             evaluateOfflineRender = true
+            offlineCamera = OfflineCamera.Evaluation
             gtSamplingMode = GTSamplingMode.Light
             solidAngleCompMethod = SolidAngleCompMethod.Square
             compare = RenderMode.StructuredIrrSampling 

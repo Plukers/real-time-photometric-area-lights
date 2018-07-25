@@ -29,6 +29,10 @@ type OfflineRenderMode =
     | Approximations = 2
     | PhotometryList = 3
 
+type OfflineCamera =
+    | Evaluation = 0
+    | Camera1 = 1
+
 type LightTransformMode =
     | Translate
     | Rotate
@@ -61,6 +65,7 @@ type Action =
 
     | CHANGE_OFFLINE_RENDER_MODE of OfflineRenderMode
     | TOGGLE_OFFLINE_RENDER_EVALUATION
+    | CHANGE_OFFLINE_CAMERA of OfflineCamera
 
     | SET_MRP_CLOSEST_WEIGHT of string
     | SET_MRP_NORMAL_WEIGHT of string
@@ -102,6 +107,7 @@ type RenderState =
 
         offlineRenderMode     : OfflineRenderMode
         evaluateOfflineRender : bool
+        offlineCamera         : OfflineCamera
 
         mrpWeights         : V3d // closest, normal, barycenter
 

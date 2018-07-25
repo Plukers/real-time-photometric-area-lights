@@ -21,8 +21,15 @@ module Utils =
 
 
         let setupCamera (view : IMod<CameraView>) (projTrafo : IMod<Trafo3d>) (viewportSize : IMod<V2i>) sg =
+
+            let a = view |> Mod.map (fun v -> CameraView.viewTrafo v)
+
             sg
-                |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
+                // |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
+                |> Sg.viewTrafo (view |> Mod.map (fun v ->
+                                                    printfn "Trafo %A" v
+                                                    CameraView.viewTrafo v
+                                                    ))
                 |> Sg.projTrafo projTrafo
                 |> Sg.uniform "ViewportSize" viewportSize
                 
