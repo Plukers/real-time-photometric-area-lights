@@ -1,1 +1,2 @@
 RunEvaluationFun(evaluation);
+fclose('all');

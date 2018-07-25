@@ -248,40 +248,25 @@
                     | _ -> updateGroundTruthWithLight
             )
 
-        let bufferFormat =
-            m.offlineCamera |> Mod.map(fun cam ->
-                match cam with 
-                    | OfflineCamera.Evaluation -> RenderbufferFormat.Rgba32f
-                    | _ -> RenderbufferFormat.Rgba8
-            )
 
         let scSignature =
-            bufferFormat |> Mod.map (fun bf ->
-                app.Runtime.CreateFramebufferSignature [
-                    DefaultSemantic.Colors, { format = bf; samples = 1 }
-                ]
-            )
-
-        let textureFormat =
-            m.offlineCamera |> Mod.map(fun cam ->
-                match cam with 
-                    | OfflineCamera.Evaluation -> TextureFormat.Rgba32f
-                    | _ -> TextureFormat.Rgba8
-            )
-
+            app.Runtime.CreateFramebufferSignature [
+                DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba32f; samples = 1 }
+            ]
+    
         let scColor =
-            Mod.map2(fun v tf ->
-                app.Runtime.CreateTexture(v, tf, 1, 1, 1)
-            )  viewportSize textureFormat
+            viewportSize |> Mod.map(fun v ->
+                app.Runtime.CreateTexture(v, TextureFormat.Rgba32f, 1, 1, 1)
+            )  
 
         let fbo = 
-            Mod.map2(fun c signature ->
+            scColor |> Mod.map(fun c ->
                 app.Runtime.CreateFramebuffer(
-                    signature, 
+                    scSignature, 
                     Map.ofList [
                         DefaultSemantic.Colors, ({ texture = c; slice = 0; level = 0 } :> IFramebufferOutput)
                     ])
-            ) scColor scSignature
+            )
 
         
         let activeTrafoLightId = 0        
@@ -289,12 +274,7 @@
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
         
-        let imageFormat =
-            m.offlineCamera |> Mod.map(fun cam ->
-                match cam with 
-                    | OfflineCamera.Evaluation -> PixFileFormat.Exr 
-                    | _ -> PixFileFormat.Png
-            )
+        let imageFormat = PixFileFormat.Exr 
 
         let createFileName step renderModeData mode =
 
@@ -356,7 +336,7 @@
 
         let generateSaveImage step path = 
             fun (_ : unit) ->
-                app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) None], (imageFormat |> Mod.force));
+                app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
 
         let executeTask step path api (task : TaskAPI -> unit) = 
             task { api with saveImage = generateSaveImage step path }
@@ -428,7 +408,7 @@
                 writeMetaData resultPath "ApproximationData.txt" approxList
 
                 if m.evaluateOfflineRender |> Mod.force then
-                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';RunEvaluation;fclose('all');exit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
+                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';RunEvaluation;exit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
                     System.Diagnostics.Process.Start("cmd", command) |> ignore
             }
             

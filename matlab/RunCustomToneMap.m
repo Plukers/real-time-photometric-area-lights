@@ -1,0 +1,2 @@
+RunCustomToneMapFun(evaluation);
+fclose('all');
