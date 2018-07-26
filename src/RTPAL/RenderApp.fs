@@ -444,7 +444,7 @@
                 | OfflineRenderMode.AbstractData    -> renderOfflineTask false offlineRenderTasks "AbstractData" 
                 | OfflineRenderMode.GroundTruth     -> renderOfflineTask true  offlineRenderTasks "GroundTruth" 
                 | OfflineRenderMode.PhotometryList  -> createPhotometryList
-                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks ([ "Delaunay" ])
+                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks ([ "GroundTruth" ])
                     
             )
             

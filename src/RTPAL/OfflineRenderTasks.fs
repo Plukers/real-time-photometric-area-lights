@@ -71,7 +71,7 @@ module OfflineRenderTasks =
                                 api.setRenderMode RenderMode.GroundTruth
                         
                                 api.gtAPI.overwriteEstimate true
-                                for _ in 1 .. (800 / Config.Light.NUM_SAMPLES) do
+                                for _ in 1 .. (50000 / Config.Light.NUM_SAMPLES) do
                                     api.render ()
                                     api.gtAPI.overwriteEstimate false
                             
