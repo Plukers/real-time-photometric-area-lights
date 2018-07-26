@@ -309,9 +309,37 @@ module Light =
     module Sg = 
         open System
         open Aardvark.Base.Rendering
-        open Aardvark.SceneGraph
 
-        let addLightCollectionSg ( lc : LightCollection ) sg =
+        open Aardvark.SceneGraph        
+        open FShade
+
+        open Effect
+
+        let setLightCollectionUniforms ( lc : LightCollection ) sg =
+
+            sg
+                |> Sg.uniform "Lights"            lc.Lights
+                |> Sg.uniform "LBaseComponents"   lc.BaseComponents
+                |> Sg.uniform "LVertices"         lc.Vertices
+                |> Sg.uniform "LNumVertices"      lc.NumVertices
+                |> Sg.uniform "LRenderIndices"    lc.RenderIndices
+                |> Sg.uniform "LNumRenderIndices" lc.NumRenderIndices
+                |> Sg.uniform "LPatchIndices"     lc.PatchIndices
+                |> Sg.uniform "LNumPatchIndices"  lc.NumPatchIndices
+                |> Sg.uniform "LSamplePoints"     lc.SamplePoints
+                |> Sg.uniform "LUVSamplePoints"   lc.UVSamplePoints
+                |> Sg.uniform "LForwards"         lc.Forwards
+                |> Sg.uniform "LUps"              lc.Ups
+                |> Sg.uniform "LAreas"            lc.Areas
+        
+
+        type LightSgData = 
+            {
+                usePhotometry : IMod<bool>                
+                photometricData : IMod<Option<Aardvark.Data.Photometry.IntensityProfileSampler>>
+            }
+
+        let addLightCollectionSg ( lc : LightCollection ) (data : LightSgData) sg =
 
             let lightSgList = [
 
@@ -351,16 +379,32 @@ module Light =
                                     ]
                             )
             
-                        let lightTrafo = Mod.map (fun (trafos : Trafo3d[]) -> 
-                            trafos.[addr]) lc.Trafos
+                        let lightTrafo = Mod.map (fun (trafos : Trafo3d[]) -> trafos.[addr]) lc.Trafos
+
+                        let lightShading (v : Aardvark.Base.Rendering.Effects.Vertex) = 
+                            FShade.ShaderBuilders.fragment {
+                                
+                                let C = uniform.CameraLocation
+                                let P = V3d(v.wp)
+                                
+                                let dir = C - P |> Vec.normalize
+                                let i = Render.EffectUtils.getPhotometricIntensity dir uniform.LForwards.[addr]  uniform.LUps.[addr]
+
+                                // return V4d(V3d(i), 1.0)
+                                return V4d(V3d(100000), 1.0)
+                            }
                            
                         let lightSg = lightGeometry 
                                         |> Sg.ofIndexedGeometry 
                                         |> Sg.trafo lightTrafo
                                         |> Sg.effect [
                                                 DefaultSurfaces.trafo |> toEffect
-                                                DefaultSurfaces.vertexColor |> toEffect
+                                                // DefaultSurfaces.vertexColor |> toEffect
+                                                lightShading |> toEffect
                                             ]
+                                        |> setLightCollectionUniforms lc
+                                        |> Render.PhotometricLight.setupPhotometricData data.photometricData
+                                        |> Render.EffectUtils.setUniformUsePhotometry data.usePhotometry
                         (*
                         let lightCoordSysSg = 
                             [
@@ -387,19 +431,4 @@ module Light =
             
             Sg.group (sg :: lightSgList) :> ISg
 
-        let setLightCollectionUniforms ( lc : LightCollection ) sg =
 
-            sg
-                |> Sg.uniform "Lights"            lc.Lights
-                |> Sg.uniform "LBaseComponents"   lc.BaseComponents
-                |> Sg.uniform "LVertices"         lc.Vertices
-                |> Sg.uniform "LNumVertices"      lc.NumVertices
-                |> Sg.uniform "LRenderIndices"    lc.RenderIndices
-                |> Sg.uniform "LNumRenderIndices" lc.NumRenderIndices
-                |> Sg.uniform "LPatchIndices"     lc.PatchIndices
-                |> Sg.uniform "LNumPatchIndices"  lc.NumPatchIndices
-                |> Sg.uniform "LSamplePoints"     lc.SamplePoints
-                |> Sg.uniform "LUVSamplePoints"   lc.UVSamplePoints
-                |> Sg.uniform "LForwards"         lc.Forwards
-                |> Sg.uniform "LUps"              lc.Ups
-                |> Sg.uniform "LAreas"            lc.Areas

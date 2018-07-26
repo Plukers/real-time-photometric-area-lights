@@ -60,10 +60,10 @@
                 | OfflineCamera.Camera1 ->
                     new CameraView (
                         V3d(0.0, 0.0, 1.0),
-                        V3d(2.78320759582539, -4.29061577613338, 8.35097691401838),
-                        V3d(-0.296704906935568, 0.432968079084731, -0.851178501076028),
-                        V3d(-0.48115875045812, 0.702133247718419, 0.524876327629629),
-                        V3d(0.824895420679456, 0.56528536593659, 0.0)
+                        V3d(4.67545488218773, -6.2681695650426, 8.20436584604461),
+                        V3d(-0.173032163783345, 0.549018034530654, -0.817703533107539),
+                        V3d(-0.245794443827743, 0.779887273546608, 0.57563958510812),
+                        V3d(0.953753092618768, 0.300591148106753, 0.0)
                     )
                 | _ (* Evaluation *) ->
                     CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO
@@ -151,7 +151,13 @@
                 toneMapScale = toneMapScale
             }
 
-        let renderDataWithLight = { renderData with sceneSg = renderData.sceneSg  |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force) } 
+        let lightData : Render.Light.Sg.LightSgData = 
+            {
+                usePhotometry = true |> Mod.init
+                photometricData = photometryData
+            }   
+
+        let renderDataWithLight = { renderData with sceneSg = renderData.sceneSg  |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force) lightData } 
             
             
 
@@ -475,8 +481,13 @@
             Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y)
             |> Frustum.projTrafo |> Mod.init
         
+        let lightData : Render.Light.Sg.LightSgData = 
+            {
+                usePhotometry =  m.usePhotometry
+                photometricData = m.photometryData
+            }   
         
-        let sceneSg = sceneSg |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force)
+        let sceneSg = sceneSg |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force) lightData
 
                 
         let gtData = initGTData m 
@@ -642,7 +653,7 @@
         
         let viewFunc (m : MRenderState) =
             
-            let (win, renderFeedback, offlineRenderTask) = setupRendering app (V2i(1024, 768)) m
+            let (win, renderFeedback, offlineRenderTask) = setupRendering app (V2i(1600, 900)) m
             
             let openGameWindowAction : System.Action = 
                 new System.Action( fun () -> 

@@ -6,7 +6,7 @@ disp(sprintf('Starting Evaluation'));
 
 % General
 NumSteps = 5;
-toneMapScale = 1.0;
+toneMapScale = 2.0;
 
 DataPath = fullfile('results', evaluation, 'Data');
 
