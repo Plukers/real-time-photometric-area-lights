@@ -65,6 +65,7 @@ type Action =
 
     | CHANGE_OFFLINE_RENDER_MODE of OfflineRenderMode
     | TOGGLE_OFFLINE_RENDER_EVALUATION
+    | TOGGLE_OFFLINE_RENDER_TONEMAP
     | CHANGE_OFFLINE_CAMERA of OfflineCamera
 
     | SET_MRP_CLOSEST_WEIGHT of string
@@ -107,6 +108,7 @@ type RenderState =
 
         offlineRenderMode     : OfflineRenderMode
         evaluateOfflineRender : bool
+        tonemapOfflineRender  : bool
         offlineCamera         : OfflineCamera
 
         mrpWeights         : V3d // closest, normal, barycenter

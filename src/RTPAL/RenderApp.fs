@@ -407,9 +407,19 @@
 
                 writeMetaData resultPath "ApproximationData.txt" approxList
 
-                if m.evaluateOfflineRender |> Mod.force then
-                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';RunEvaluation;exit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
+                let evaluateOfflineRender = m.evaluateOfflineRender |> Mod.force
+                let tonemapOfflineRender  = m.tonemapOfflineRender  |> Mod.force
+
+                let postprocess = evaluateOfflineRender || tonemapOfflineRender
+
+                if postprocess then 
+                    let mutable scripts = ""
+                    if evaluateOfflineRender then scripts <- String.concat "" [scripts; "RunEvaluation;"]
+                    if tonemapOfflineRender then scripts <- String.concat "" [scripts; "RunCustomToneMap;"]
+
+                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';%sexit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation scripts (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
                     System.Diagnostics.Process.Start("cmd", command) |> ignore
+
             }
             
         let createPhotometryList =
@@ -527,6 +537,7 @@
             | CHANGE_RENDER_MODE mode -> { s with renderMode = mode }    
             | CHANGE_OFFLINE_RENDER_MODE mode -> { s with offlineRenderMode = mode }
             | TOGGLE_OFFLINE_RENDER_EVALUATION -> { s with evaluateOfflineRender = (not s.evaluateOfflineRender) }
+            | TOGGLE_OFFLINE_RENDER_TONEMAP -> { s with tonemapOfflineRender = (not s.tonemapOfflineRender) }
             | CHANGE_OFFLINE_CAMERA cam -> {s with offlineCamera = cam}
             | CHANGE_COMPARE mode -> { s with compare = mode }
             | COMPUTED_ERROR (error, brightError, darkError) -> { s with error = error; brightError = brightError; darkError = darkError }
@@ -848,9 +859,13 @@
                                                 dropDown m.offlineCamera (fun cam -> CHANGE_OFFLINE_CAMERA cam)
                                             ]
 
-                                            toggleBox m.usePhotometry TOGGLE_OFFLINE_RENDER_EVALUATION      
+                                            toggleBox m.evaluateOfflineRender TOGGLE_OFFLINE_RENDER_EVALUATION      
                                             text "Evaluate (requires Matlab)"                                                    
                                             br[] 
+
+                                            toggleBox m.tonemapOfflineRender TOGGLE_OFFLINE_RENDER_TONEMAP      
+                                            text "Tonemap (requires Matlab)"                                                    
+                                            br[]                                             
 
                                             button [ clazz "ui button" ; onClick (fun () -> 
                                                 RENDER_IMAGES (offlineRenderTask)
@@ -1115,6 +1130,7 @@
             usePhotometry = true
             offlineRenderMode = OfflineRenderMode.Approximations
             evaluateOfflineRender = true
+            tonemapOfflineRender = false
             offlineCamera = OfflineCamera.Evaluation
             gtSamplingMode = GTSamplingMode.Light
             solidAngleCompMethod = SolidAngleCompMethod.Square
