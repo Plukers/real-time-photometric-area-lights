@@ -337,98 +337,108 @@ module Light =
             {
                 usePhotometry : IMod<bool>                
                 photometricData : IMod<Option<Aardvark.Data.Photometry.IntensityProfileSampler>>
+                diffuseExitance : IMod<float>
+                renderLight : IMod<bool>
             }
 
         let addLightCollectionSg ( lc : LightCollection ) (data : LightSgData) sg =
 
-            let lightSgList = [
+            data.renderLight |> Mod.map (fun rl -> 
+                printfn "RenderLight %A" rl
+                if rl then
 
-                for addr in 0 .. lc.Lights.Value.Length - 1 do
-                    if Array.get lc.Lights.Value addr <> -1 then
+                    let lightSgList = [
 
-                        let vAddr = addr * Config.Light.VERT_PER_LIGHT
-                        let iAddr = addr * Config.Light.MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT
+                        for addr in 0 .. lc.Lights.Value.Length - 1 do
+                            if Array.get lc.Lights.Value addr <> -1 then
 
-                        let lightGeometry =
-                            IndexedGeometry(
-                                Mode = IndexedGeometryMode.TriangleList,
-                                IndexArray = (Array.sub lc.RenderIndices.Value iAddr lc.NumRenderIndices.Value.[addr] :> Array),
-                                IndexedAttributes =
-                                    SymDict.ofList [
-                                        DefaultSemantic.Positions, 
-                                            (Array.sub lc.Vertices.Value vAddr lc.NumVertices.Value.[addr]) 
-                                            |> Array.map (fun v -> // use original vertex positions
-                                                 V3d(
-                                                    lc.Trafos.Value.[addr].Backward * V4d(v, 1.0)
-                                                 )
-                                                )                                            
-                                            :> Array
-                                        DefaultSemantic.Colors, [| 
-                                                for i in 1 .. lc.NumVertices.Value.[addr] do
-                                                    yield C4b.White
-                                            |] :> Array
-                                        DefaultSemantic.Normals, [| 
-                                                for i in 1 .. lc.NumVertices.Value.[addr] do
-                                                    yield lc.Forwards.Value.[addr]
-                                            |]
-                                            |> Array.map (fun n -> // use original vertex normals
-                                                  Mat.transformDir lc.Trafos.Value.[addr].Backward n
-                                                  |> Vec.normalize
-                                                )
-                                            :> Array
-                                    ]
-                            )
-            
-                        let lightTrafo = Mod.map (fun (trafos : Trafo3d[]) -> trafos.[addr]) lc.Trafos
+                                let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                                let iAddr = addr * Config.Light.MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT
 
-                        let lightShading (v : Aardvark.Base.Rendering.Effects.Vertex) = 
-                            FShade.ShaderBuilders.fragment {
-                                
-                                let C = uniform.CameraLocation
-                                let P = V3d(v.wp)
-                                
-                                let dir = C - P |> Vec.normalize
-                                let i = Render.EffectUtils.getPhotometricIntensity dir uniform.LForwards.[addr]  uniform.LUps.[addr]
-
-                                // return V4d(V3d(i), 1.0)
-                                return V4d(V3d(100000), 1.0)
-                            }
-                           
-                        let lightSg = lightGeometry 
-                                        |> Sg.ofIndexedGeometry 
-                                        |> Sg.trafo lightTrafo
-                                        |> Sg.effect [
-                                                DefaultSurfaces.trafo |> toEffect
-                                                // DefaultSurfaces.vertexColor |> toEffect
-                                                lightShading |> toEffect
+                                let lightGeometry =
+                                    IndexedGeometry(
+                                        Mode = IndexedGeometryMode.TriangleList,
+                                        IndexArray = (Array.sub lc.RenderIndices.Value iAddr lc.NumRenderIndices.Value.[addr] :> Array),
+                                        IndexedAttributes =
+                                            SymDict.ofList [
+                                                DefaultSemantic.Positions, 
+                                                    (Array.sub lc.Vertices.Value vAddr lc.NumVertices.Value.[addr]) 
+                                                    |> Array.map (fun v -> // use original vertex positions
+                                                         V3d(
+                                                            lc.Trafos.Value.[addr].Backward * V4d(v, 1.0)
+                                                         )
+                                                        )                                            
+                                                    :> Array
+                                                DefaultSemantic.Colors, [| 
+                                                        for i in 1 .. lc.NumVertices.Value.[addr] do
+                                                            yield C4b.White
+                                                    |] :> Array
+                                                DefaultSemantic.Normals, [| 
+                                                        for i in 1 .. lc.NumVertices.Value.[addr] do
+                                                            yield lc.Forwards.Value.[addr]
+                                                    |]
+                                                    |> Array.map (fun n -> // use original vertex normals
+                                                          Mat.transformDir lc.Trafos.Value.[addr].Backward n
+                                                          |> Vec.normalize
+                                                        )
+                                                    :> Array
                                             ]
-                                        |> setLightCollectionUniforms lc
-                                        |> Render.PhotometricLight.setupPhotometricData data.photometricData
-                                        |> Render.EffectUtils.setUniformUsePhotometry data.usePhotometry
-                        (*
-                        let lightCoordSysSg = 
-                            [
-                                yield IndexedGeometryPrimitives.wireframeCone
-                                    V3d.Zero V3d.OOI 0.3 0.05 10 C4b.Green 
-
-                                yield IndexedGeometryPrimitives.wireframeCone
-                                    V3d.Zero V3d.IOO 0.3 0.05 10 C4b.Red
-
-                                yield IndexedGeometryPrimitives.wireframeCone
-                                    V3d.Zero V3d.OIO 0.3 0.05 10 C4b.Blue
-                            ]
-                            |> List.map Sg.ofIndexedGeometry
-                            |> Sg.group'
-                            |> Sg.trafo lightTrafo
-                            |> Sg.effect [
-                                    DefaultSurfaces.trafo |> toEffect
-                                    DefaultSurfaces.vertexColor |> toEffect
-                                ]
-                        *)
-
-                        yield [lightSg(*; lightCoordSysSg*)] |> Sg.group'
-            ]
+                                    )
             
-            Sg.group (sg :: lightSgList) :> ISg
+                                let lightTrafo = Mod.map (fun (trafos : Trafo3d[]) -> trafos.[addr]) lc.Trafos
+
+                                let lightShading (v : Aardvark.Base.Rendering.Effects.Vertex) = 
+                                    FShade.ShaderBuilders.fragment {
+                                
+                                        let C = uniform.CameraLocation
+                                        let P = V3d(v.wp)
+                                
+                                        let dir = C - P |> Vec.normalize
+                                        let i = Render.EffectUtils.getPhotometricIntensity dir uniform.LForwards.[addr]  uniform.LUps.[addr]
+
+                                        // return V4d(V3d(i), 1.0)
+                                        return V4d(V3d(10000), 1.0)
+                                    }
+                           
+                                let lightSg = lightGeometry 
+                                                |> Sg.ofIndexedGeometry 
+                                                |> Sg.trafo lightTrafo
+                                                |> Sg.effect [
+                                                        DefaultSurfaces.trafo |> toEffect
+                                                        // DefaultSurfaces.vertexColor |> toEffect
+                                                        lightShading |> toEffect
+                                                    ]
+                                                |> setLightCollectionUniforms lc
+                                                |> Render.PhotometricLight.setupPhotometricData data.photometricData
+                                                |> Render.EffectUtils.setUniformUsePhotometry data.usePhotometry
+                                (*
+                                let lightCoordSysSg = 
+                                    [
+                                        yield IndexedGeometryPrimitives.wireframeCone
+                                            V3d.Zero V3d.OOI 0.3 0.05 10 C4b.Green 
+
+                                        yield IndexedGeometryPrimitives.wireframeCone
+                                            V3d.Zero V3d.IOO 0.3 0.05 10 C4b.Red
+
+                                        yield IndexedGeometryPrimitives.wireframeCone
+                                            V3d.Zero V3d.OIO 0.3 0.05 10 C4b.Blue
+                                    ]
+                                    |> List.map Sg.ofIndexedGeometry
+                                    |> Sg.group'
+                                    |> Sg.trafo lightTrafo
+                                    |> Sg.effect [
+                                            DefaultSurfaces.trafo |> toEffect
+                                            DefaultSurfaces.vertexColor |> toEffect
+                                        ]
+                                *)
+
+                                yield [lightSg(*; lightCoordSysSg*)] |> Sg.group'
+                        ]
+            
+                    Sg.group (sg :: lightSgList) :> ISg
+
+                else
+                    sg
+            ) |> Sg.dynamic
 
 

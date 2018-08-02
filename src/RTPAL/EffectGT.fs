@@ -342,10 +342,12 @@ module EffectGT =
                             groundTruthLighting |> toEffect 
                             EffectUtils.effectClearNaN |> toEffect
                         ]
+                    |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                     |> Light.Sg.setLightCollectionUniforms data.lights
                     |> setupPhotometricData data.photometricData
                     |> setupCamera data.view data.projTrafo data.viewportSize 
-                    |> setUniformUsePhotometry data.usePhotometry
+                    |> setUniformUsePhotometry data.lightData.usePhotometry
+                    |> setUniformDiffuseExitance data.lightData.diffuseExitance
                     |> Sg.uniform "samplingMode" (gtData.samplingMode |> Mod.map (fun sm -> sm |> int))
                     |> Sg.uniform "HaltonSamples" gtData.haltonSequence
                     |> Sg.uniform "FrameCount" gtData.frameCount

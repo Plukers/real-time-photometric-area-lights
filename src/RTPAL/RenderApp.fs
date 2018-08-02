@@ -65,6 +65,14 @@
                         V3d(-0.245794443827743, 0.779887273546608, 0.57563958510812),
                         V3d(0.953753092618768, 0.300591148106753, 0.0)
                     )
+                | OfflineCamera.Camera2 ->
+                    new CameraView (
+                        V3d(0.0, 0.0, 1.0),
+                        V3d(-0.308925339524174, -3.5006080422878, 3.42414845522788),
+                        V3d(-0.382990393911838, 0.67917950957668, -0.626125827563786),
+                        V3d(-0.307545724403983, 0.545389016522395, 0.77972203255876),
+                        V3d(0.871053376993675, 0.491188369597566, 0.0)
+                    )
                 | _ (* Evaluation *) ->
                     CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO
             )
@@ -131,36 +139,46 @@
             transact (fun _ ->
                 up |> Mod.change usePhotometry
             )
+
+        let diffuseExitance = 1.0 |> Mod.init
+        let setDiffuseExitance de = 
+            transact (fun _ ->
+                de |> Mod.change diffuseExitance
+            )
+
+        let renderLight = false |> Mod.init
+        let setRenderLight rl = 
+            transact (fun _ ->
+                rl |> Mod.change renderLight
+            )
         
         updatePhotometryData "ARC3_60712332_(STD).ldt"
+
+        let lightData : Render.Light.Sg.LightSgData = 
+            {
+                usePhotometry = usePhotometry
+                photometricData = photometryData
+                diffuseExitance = diffuseExitance
+                renderLight = renderLight
+            }   
         
         let renderData = 
             {
                 runtime = app.Runtime
                 dt = 0.0 |> Mod.init
-                usePhotometry = usePhotometry
                 sceneSg = sceneSg
                 view = view
                 projTrafo = projTrafo 
                 viewportSize = viewportSize
                 lights = m.lights |> Mod.force // mod force necessary ? 
+                lightData = lightData
                 photometricData = photometryData
                 mode = renderMode
                 compare = compareMode
                 toneMap = toneMap
                 toneMapScale = toneMapScale
             }
-
-        let lightData : Render.Light.Sg.LightSgData = 
-            {
-                usePhotometry = true |> Mod.init
-                photometricData = photometryData
-            }   
-
-        let renderDataWithLight = { renderData with sceneSg = renderData.sceneSg  |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force) lightData } 
-            
-            
-
+                       
         let gtData = initGTData' (true |> Mod.init) (GTSamplingMode.Light |> Mod.init)
         let mrpData = initMRPData m
 
@@ -236,23 +254,9 @@
 
         let saData = Render.EffectSolidAngle.Rendering.initSolidAngleData' (SolidAngleCompMethod.Square |> Mod.init) 
         
-        let renderTask =
-            let (scRenderTask, _) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData saData
-            let (scRenderTaskWithLight, _) = Rendering.Render.CreateAndLinkRenderTask renderDataWithLight gtData mrpData ssData saData
-            m.offlineCamera |> Mod.map(fun cam ->
-                match cam with 
-                | OfflineCamera.Evaluation -> scRenderTask
-                | _ -> scRenderTaskWithLight
-            )
+        let (renderTask, _) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData saData
         
-        let updateGroundTruth =
-            let updateGroundTruth = groundTruthRenderUpdate renderData gtData
-            let updateGroundTruthWithLight = groundTruthRenderUpdate renderDataWithLight gtData
-            m.offlineCamera |> Mod.map(fun cam ->
-                match cam with 
-                    | OfflineCamera.Evaluation -> updateGroundTruth
-                    | _ -> updateGroundTruthWithLight
-            )
+        let updateGroundTruth = groundTruthRenderUpdate renderData gtData
 
 
         let scSignature =
@@ -322,12 +326,14 @@
 
         let API = {
                 setRenderMode = updateRenderMode
-                render = fun _ -> (renderTask |> Mod.force).Run(RenderToken.Empty, fbo |> Mod.force)
+                render = fun _ -> renderTask.Run(RenderToken.Empty, fbo |> Mod.force)
                 saveImage = fun _ -> () // is overwriten per renderstep
                 usePhotometry = setUsePhotometry
+                setDiffuseExitance = setDiffuseExitance
+                setRenderLight = setRenderLight
 
                 gtAPI = {
-                            overwriteEstimate = fun overwrite -> (updateGroundTruth |> Mod.force) overwrite
+                            overwriteEstimate = fun overwrite -> updateGroundTruth overwrite
                         }
                 ssAPI = {
                             setSamples = updateSamples
@@ -485,9 +491,11 @@
             {
                 usePhotometry =  m.usePhotometry
                 photometricData = m.photometryData
+                diffuseExitance = m.diffuseExitance.value
+                renderLight = true |> Mod.init
             }   
         
-        let sceneSg = sceneSg |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force) lightData
+        // let sceneSg = sceneSg |> Light.Sg.addLightCollectionSg (m.lights |> Mod.force) lightData
 
                 
         let gtData = initGTData m 
@@ -501,7 +509,7 @@
         win.UpdateFrame.Add(fun args -> transact (fun _ -> if gtData.updateGroundTruth |> Mod.force then dt.Value <- args.Time) )
             
         
-        let renderData = initialRenderData app view projTrafo viewportSize m dt sceneSg
+        let renderData = initialRenderData app view projTrafo viewportSize m dt sceneSg lightData
 
 
 
@@ -558,6 +566,7 @@
             | SET_SOLID_ANGLE_COMP_METHOD sacm -> { s with solidAngleCompMethod = sacm }
             | CHANGE_LIGHT_TRANSFORM_MODE mode -> { s with lightTransformMode = mode }
             | TOGGLE_USE_PHOTOMETRY -> { s with usePhotometry = (not s.usePhotometry) }
+            | CHANGE_DIFFUSE_EXITANCE de -> { s with diffuseExitance = Numeric.update s.diffuseExitance de }
             | TRANSLATE_LIGHT (lightID, dir) ->             
                 transformLight s.lights lightID (Trafo3d.Translation(dir))
                 s
@@ -851,7 +860,10 @@
                                             toggleBox m.usePhotometry TOGGLE_USE_PHOTOMETRY      
                                             text "Use Photometry"                                                    
                                             br[] 
-                                              
+
+                                            text "Diffuse Exitance"
+                                            div [clazz "ui input"] [ Numeric.view' [InputBox] m.diffuseExitance |> UI.map CHANGE_DIFFUSE_EXITANCE ]
+
                                         ]
 
                                         div [ clazz "ui segment" ] [
@@ -1139,7 +1151,13 @@
             renderMode = RenderMode.GroundTruth
             updateGroundTruth = true
             usePhotometry = true
-            diffuseExitance = 10.0
+            diffuseExitance = {
+                                value   = 10.0
+                                min     = 0.0
+                                max     = 1000.0
+                                step    = 1.0
+                                format  = "{0:F1}"
+                                }  
             offlineRenderMode = OfflineRenderMode.Approximations
             evaluateOfflineRender = true
             tonemapOfflineRender = false

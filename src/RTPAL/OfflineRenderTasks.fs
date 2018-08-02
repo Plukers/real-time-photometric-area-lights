@@ -43,6 +43,10 @@ module OfflineRenderTasks =
             // Use photometry or diffuse emitter
             usePhotometry : bool -> unit
 
+            setDiffuseExitance : float -> unit
+
+            setRenderLight : bool -> unit
+
             gtAPI : GroundTruthAPI
             ssAPI : StructuredSamplingAPI
             evalAPI : EvaluationAPI
@@ -170,16 +174,33 @@ module OfflineRenderTasks =
         let taskMap = taskMap |> Map.add 
                             "Compare"
                             (fun (api : TaskAPI) ->
+                            
+                                api.setRenderLight true
+                                api.setDiffuseExitance 10.0            
+
+                                api.usePhotometry false
+                                    
                                 api.setRenderMode RenderMode.StructuredIrrSampling
 
                                 api.ssAPI.setSamples true true false false false false
                                 api.ssAPI.sampleLight true
-
-                                api.usePhotometry false
-
+                                
                                 api.render ()
                                 api.saveImage () 
                                 api.evalAPI.updateEffectList ()
+
+                                api.setRenderMode RenderMode.GroundTruth
+                        
+                                api.gtAPI.overwriteEstimate true
+                                for _ in 1 .. (20000 / Config.Light.NUM_SAMPLES) do
+                                    api.render ()
+                                    api.gtAPI.overwriteEstimate false
+                            
+                                api.saveImage ()
+                                api.evalAPI.updateEffectList ()
+
+                                
+
                             )
 
 

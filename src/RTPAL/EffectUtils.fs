@@ -27,6 +27,10 @@ module EffectUtils =
     let setUniformUsePhotometry usePhotometry sg =
         sg
         |> Aardvark.SceneGraph.SgFSharp.Sg.uniform "usePhotometry" usePhotometry
+    
+    let setUniformDiffuseExitance diffuseExitance sg =
+        sg
+        |> Aardvark.SceneGraph.SgFSharp.Sg.uniform "diffuseExitance" diffuseExitance
 
     [<ReflectedDefinition>]
     let PI = Math.PI
@@ -815,7 +819,7 @@ module EffectUtils =
     let public getPhotometricIntensity (i : V3d) (forward : V3d) (up : V3d) =   
         
         if not uniform.usePhotometry then
-            10.0 * (abs (Vec.dot i forward))
+            uniform?diffuseExitance * (abs (Vec.dot i forward))
         else
             let basis = // TODO compute once and pass as uniform
                 M33dFromCols (V3d.Cross(up, -forward)) up -forward

@@ -123,6 +123,7 @@ module EffectSolidAngle =
                         solidAngle |> toEffect 
                         EffectUtils.effectClearNaN |> toEffect
                     ]
+                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> Sg.uniform "compMethod" (saData.compMethod |> Mod.map (fun cm -> cm |> int))
                 |> setupPhotometricData data.photometricData

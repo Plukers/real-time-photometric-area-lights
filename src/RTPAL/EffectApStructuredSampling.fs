@@ -973,11 +973,13 @@ module EffectApStructuredSampling =
                         ssEffect
                         EffectUtils.effectClearNaN |> toEffect
                     ]
+                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
                 |> setUniformDT data.dt
-                |> setUniformUsePhotometry data.usePhotometry
+                |> setUniformUsePhotometry data.lightData.usePhotometry
+                |> setUniformDiffuseExitance data.lightData.diffuseExitance
                 |> Sg.uniform "sampleCorners"           ssData.sampleCorners
                 |> Sg.uniform "sampleBarycenter"        ssData.sampleBarycenter
                 |> Sg.uniform "sampleClosest"           ssData.sampleClosest

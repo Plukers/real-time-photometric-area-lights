@@ -96,12 +96,14 @@ module EffectApBaumFF =
                 |> setupFbEffects [ 
                         baumFFApprox |> toEffect 
                         EffectUtils.effectClearNaN |> toEffect
-                    ]
+                    ]                    
+                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
                 |> setUniformDT data.dt
-                |> setUniformUsePhotometry data.usePhotometry
+                |> setUniformUsePhotometry data.lightData.usePhotometry
+                |> setUniformDiffuseExitance data.lightData.diffuseExitance
                 |> Sg.compile data.runtime signature
 
         let baumFFApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 

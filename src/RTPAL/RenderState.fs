@@ -32,6 +32,7 @@ type OfflineRenderMode =
 type OfflineCamera =
     | Evaluation = 0
     | Camera1 = 1
+    | Camera2 = 2
 
 type LightTransformMode =
     | Translate
@@ -57,6 +58,7 @@ type Action =
     | SET_SOLID_ANGLE_COMP_METHOD of SolidAngleCompMethod
 
     | TOGGLE_USE_PHOTOMETRY
+    | CHANGE_DIFFUSE_EXITANCE of Numeric.Action
 
     | OPENED_WINDOW 
     | CHANGE_LIGHT_TRANSFORM_MODE of LightTransformMode
@@ -99,7 +101,7 @@ type RenderState =
         lights             : LightCollection
 
         usePhotometry      : bool
-        diffuseExitance    : float
+        diffuseExitance    : NumericInput
 
         renderMode         : RenderMode
         updateGroundTruth  : bool

@@ -13,14 +13,13 @@ module RenderInterop =
     open Aardvark.Application.WinForms
 
     open Light
+    open Light.Sg
 
     type RenderData = {
             runtime : Aardvark.Rendering.GL.Runtime
 
             dt : IMod<float>
-
-            usePhotometry : IMod<bool>
-
+            
             sceneSg : ISg
 
             view         : IMod<CameraView>
@@ -30,6 +29,7 @@ module RenderInterop =
             mode            : IMod<RenderMode>
             compare         : IMod<RenderMode>
             lights          : LightCollection
+            lightData       : LightSgData
             photometricData : IMod<Option<IntensityProfileSampler>>
 
             toneMap : IMod<bool>
@@ -47,16 +47,16 @@ module RenderInterop =
             compareTexture : IOutputMod<ITexture>
         }
 
-    let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (projTrafo : IMod<Trafo3d>) (viewportSize : V2i) (m : MRenderState) (dt : IMod<float>) (sceneSg : ISg)=
+    let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (projTrafo : IMod<Trafo3d>) (viewportSize : V2i) (m : MRenderState) (dt : IMod<float>) (sceneSg : ISg) (lightData : LightSgData) =
         {
             runtime = app.Runtime
             dt = dt
-            usePhotometry = m.usePhotometry
             sceneSg = sceneSg
             view = view
             projTrafo = projTrafo 
             viewportSize = viewportSize |> Mod.init
             lights = m.lights |> Mod.force // mod force necessary ? 
+            lightData = lightData
             photometricData = m.photometryData
             mode = m.renderMode
             compare = m.compare

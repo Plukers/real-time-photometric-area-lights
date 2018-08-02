@@ -332,11 +332,13 @@ module EffectApPoissonSampling =
                 |> setupFbEffects [ 
                         poissonIrradianceSampling |> toEffect
                     ]
+                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
                 |> setUniformDT data.dt
-                |> setUniformUsePhotometry data.usePhotometry
+                |> setUniformUsePhotometry data.lightData.usePhotometry
+                |> setUniformDiffuseExitance data.lightData.diffuseExitance
                 |> Sg.uniform "uniformRandomSamples" uniformRandomSamples
                 |> Sg.compile data.runtime signature
 

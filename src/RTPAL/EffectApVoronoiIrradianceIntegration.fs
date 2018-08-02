@@ -210,11 +210,13 @@ module EffectApVoronoiIrradianceIntegration =
             |> setupFbEffects [ 
                     voronoiIrrIntegration |> toEffect
                 ]
+            |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
             |> Light.Sg.setLightCollectionUniforms data.lights
             |> setupPhotometricData data.photometricData
             |> setupCamera data.view data.projTrafo data.viewportSize 
             |> setUniformDT data.dt
-            |> setUniformUsePhotometry data.usePhotometry
+            |> setUniformUsePhotometry data.lightData.usePhotometry
+            |> setUniformDiffuseExitance data.lightData.diffuseExitance
             |> Sg.texture (Sym.ofString "voronoiTexCorners")       ((voronoiTexA :> ITexture) |> Mod.constant)    
             |> Sg.texture (Sym.ofString "voronoiTexCenterCustom")  ((voronoiTexB :> ITexture) |> Mod.constant)    
             |> Sg.compile data.runtime signature

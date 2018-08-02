@@ -1003,11 +1003,13 @@ module EffectApDelaunayIrradianceIntegration =
                 |> setupFbEffects [ 
                         delaunyIrrIntegration false |> toEffect
                     ]
+                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
                 |> setUniformDT data.dt
-                |> setUniformUsePhotometry data.usePhotometry
+                |> setUniformUsePhotometry data.lightData.usePhotometry
+                |> setUniformDiffuseExitance data.lightData.diffuseExitance                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Sg.compile data.runtime signature
 
 

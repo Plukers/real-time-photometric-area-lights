@@ -84,6 +84,7 @@ module EffectFormFactor =
                         formFactor |> toEffect 
                         EffectUtils.effectClearNaN |> toEffect
                     ]
+                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Light.Sg.setLightCollectionUniforms data.lights
                 |> setupPhotometricData data.photometricData
                 |> setupCamera data.view data.projTrafo data.viewportSize 
