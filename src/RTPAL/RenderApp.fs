@@ -138,7 +138,7 @@
             {
                 runtime = app.Runtime
                 dt = 0.0 |> Mod.init
-                usePhotometry = true |> Mod.init
+                usePhotometry = usePhotometry
                 sceneSg = sceneSg
                 view = view
                 projTrafo = projTrafo 
@@ -444,7 +444,7 @@
                 | OfflineRenderMode.AbstractData    -> renderOfflineTask false offlineRenderTasks "AbstractData" 
                 | OfflineRenderMode.GroundTruth     -> renderOfflineTask true  offlineRenderTasks "GroundTruth" 
                 | OfflineRenderMode.PhotometryList  -> createPhotometryList
-                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks ([ "GroundTruth" ])
+                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks ([ "Compare" ])
                     
             )
             
@@ -1139,6 +1139,7 @@
             renderMode = RenderMode.GroundTruth
             updateGroundTruth = true
             usePhotometry = true
+            diffuseExitance = 10.0
             offlineRenderMode = OfflineRenderMode.Approximations
             evaluateOfflineRender = true
             tonemapOfflineRender = false

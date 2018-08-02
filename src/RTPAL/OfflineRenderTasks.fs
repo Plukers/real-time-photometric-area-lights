@@ -167,6 +167,21 @@ module OfflineRenderTasks =
                                     api.evalAPI.updateEffectList ()
                             )
 
+        let taskMap = taskMap |> Map.add 
+                            "Compare"
+                            (fun (api : TaskAPI) ->
+                                api.setRenderMode RenderMode.StructuredIrrSampling
+
+                                api.ssAPI.setSamples true true false false false false
+                                api.ssAPI.sampleLight true
+
+                                api.usePhotometry false
+
+                                api.render ()
+                                api.saveImage () 
+                                api.evalAPI.updateEffectList ()
+                            )
+
 
         taskMap
 

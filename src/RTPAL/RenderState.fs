@@ -99,6 +99,7 @@ type RenderState =
         lights             : LightCollection
 
         usePhotometry      : bool
+        diffuseExitance    : float
 
         renderMode         : RenderMode
         updateGroundTruth  : bool

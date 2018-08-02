@@ -815,7 +815,7 @@ module EffectUtils =
     let public getPhotometricIntensity (i : V3d) (forward : V3d) (up : V3d) =   
         
         if not uniform.usePhotometry then
-            Vec.dot i forward |> abs
+            10.0 * (abs (Vec.dot i forward))
         else
             let basis = // TODO compute once and pass as uniform
                 M33dFromCols (V3d.Cross(up, -forward)) up -forward
