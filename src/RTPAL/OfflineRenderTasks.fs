@@ -160,11 +160,16 @@ module OfflineRenderTasks =
         let taskMap = taskMap |> Map.add 
                             "StructuredLuminanceSamplingRandom"
                             (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.StructuredIrrSampling
+                                api.setRenderLight true   
+                                api.usePhotometry true
+                                
+                                api.setRenderMode RenderMode.StructuredSampling
+
+                                api.ssAPI.sampleLight true
 
                                 api.ssAPI.setSamples false false false false false true
 
-                                for n in [16; 64; 128; 380] do
+                                for n in [16; 32; 64; 128; 256] do
                                     api.ssAPI.setRandomSampleCount n                                
                                     api.render ()
                                     api.saveImage () 
@@ -176,11 +181,11 @@ module OfflineRenderTasks =
                             (fun (api : TaskAPI) ->
                             
                                 api.setRenderLight true
-                                api.setDiffuseExitance 10.0            
+                                api.setDiffuseExitance 5.0            
 
-                                api.usePhotometry false
+                                api.usePhotometry true
                                     
-                                api.setRenderMode RenderMode.StructuredIrrSampling
+                                api.setRenderMode RenderMode.StructuredSampling
 
                                 api.ssAPI.setSamples true true false false false false
                                 api.ssAPI.sampleLight true
@@ -197,9 +202,7 @@ module OfflineRenderTasks =
                                     api.gtAPI.overwriteEstimate false
                             
                                 api.saveImage ()
-                                api.evalAPI.updateEffectList ()
-
-                                
+                                api.evalAPI.updateEffectList ()                                
 
                             )
 
