@@ -506,7 +506,7 @@
         
         let dt = 0.0 |> Mod.init
 
-        win.UpdateFrame.Add(fun args -> transact (fun _ -> if gtData.updateGroundTruth |> Mod.force then dt.Value <- args.Time) )
+        win.UpdateFrame.Add(fun args -> transact (fun _ -> dt.Value <- args.Time) )
             
         
         let renderData = initialRenderData app view projTrafo viewportSize m dt sceneSg lightData

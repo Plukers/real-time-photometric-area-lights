@@ -217,13 +217,21 @@ module Light =
     // Adds a new square light to the given light collection
     // Returns the updated light collection and the id of the added light
     // If the light could not be added because there is no space left, no id is returned
-    let addSquareLight (lc : LightCollection) =
-        [|
-            V3d(0.0, -0.5, -0.5)
-            V3d(0.0,  0.5, -0.5)
-            V3d(0.0,  0.5,  0.5)
-            V3d(0.0, -0.5,  0.5)
-        |] |> addOrthoganlQuadrilateralLight lc
+    //let addSquareLight (lc : LightCollection) =
+    //    [|
+    //        V3d(0.0, -0.5, -0.5)
+    //        V3d(0.0,  0.5, -0.5)
+    //        V3d(0.0,  0.5,  0.5)
+    //        V3d(0.0, -0.5,  0.5)
+    //    |] |> addOrthoganlQuadrilateralLight lc
+
+    //let addRectangleLight (lc : LightCollection) width height =
+    //    [|
+    //        V3d(0.0, -0.7, -0.5)
+    //        V3d(0.0,  0.3, -0.2)
+    //        V3d(0.0,  0.5,  0.8)
+    //        V3d(0.0, -0.5,  0.5)
+    //    |] |> addOrthoganlQuadrilateralLight lc
 
     // Adds a new rectangle light to the given light collection
     // Returns the updated light collection and the id of the added light
