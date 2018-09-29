@@ -430,13 +430,14 @@ module EffectApStructuredSampling =
                                 let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
                                 squad
 
-                            for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
-                                let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
-                                vt.[vtc] <- w2t * (vt.[vtc] - P)
+                            //for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
+                            //    let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
+                            //    vt.[vtc] <- w2t * (vt.[vtc] - P)
 
                             ////////////////////////////////////////////////////////
 
-                            let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
+                            // let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
+                            let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
 
                             if clippedVc <> 0 then
 
@@ -526,48 +527,11 @@ module EffectApStructuredSampling =
                                     if uniform.sampleRandom then        
                                         sampleCount <- sampleCount + uniform.numSRSamples
                                                                                                                           
-
-                                    let samplesWeightScale = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, float>()
-                                    let neighborhoodSize = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, int>() 
                                                      
                                     let mutable patchIllumination = 0.0
 
                                     if sampleIdx > 0 then
-                                        for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                            if r < sampleIdx then 
-                                                samplesWeightScale.[r] <- 1.0
-
-                                        if uniform.blendSamples then 
-
-                                            for r in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                                if r < sampleIdx then 
-
-                                                    for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                                        if r < o && o < sampleIdx then
-
-                                                            let dist  = Vec.length (samples.[r] - samples.[o])
-
-                                                            if dist < uniform.blendDistance then
-                                                                neighborhoodSize.[r] <- neighborhoodSize.[r] + 1
-                                                                neighborhoodSize.[o] <- neighborhoodSize.[o] + 1
-
-
-                                                    let scale = 
-                                                        if neighborhoodSize.[r] = 0 then
-                                                            1.0
-                                                        elif neighborhoodSize.[r] = 1 then
-                                                            MIN_WEIGHT_SCALE_FACTOR_1
-                                                        elif neighborhoodSize.[r] = 2 then 
-                                                            MIN_WEIGHT_SCALE_FACTOR_2
-                                                        else
-                                                            MIN_WEIGHT_SCALE_FACTOR_3
-
-                                                    for o in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                                        if o < sampleIdx && o <> r then
-                                                            let dist  = Vec.length (samples.[r] - samples.[o])
-                                                            samplesWeightScale.[r] <- (computeSampleScale (uniform.blendDistance) dist scale) * samplesWeightScale.[r]
-                                                            
-
+                                                                                                            
                                         for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
                                             if l < sampleIdx then 
 
