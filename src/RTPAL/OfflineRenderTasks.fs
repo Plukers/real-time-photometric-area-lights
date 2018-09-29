@@ -53,7 +53,7 @@ module OfflineRenderTasks =
         }
 
     
-    let offlineRenderTasks : Map<string, (TaskAPI -> unit)> = 
+    let offlineRenderTasks : (Map<string, (TaskAPI -> unit)> * string list) = 
         let taskMap = Map.empty
 
         let taskMap = taskMap |> Map.add 
@@ -75,7 +75,7 @@ module OfflineRenderTasks =
                                 api.setRenderMode RenderMode.GroundTruth
                         
                                 api.gtAPI.overwriteEstimate true
-                                for _ in 1 .. (50000 / Config.Light.NUM_SAMPLES) do
+                                for _ in 1 .. (25000 / Config.Light.NUM_SAMPLES) do
                                     api.render ()
                                     api.gtAPI.overwriteEstimate false
                             
@@ -137,7 +137,7 @@ module OfflineRenderTasks =
 
                                 api.ssAPI.setSamples false false false false false true
                                 
-                                for n in [16; 64; 128; 380] do
+                                for n in [16; 24; 32; 40; 48; 56; 64; 128; 256] do
                                     api.ssAPI.setRandomSampleCount n                                
                                     api.render ()
                                     api.saveImage () 
@@ -169,7 +169,7 @@ module OfflineRenderTasks =
 
                                 api.ssAPI.setSamples false false false false false true
 
-                                for n in [16; 32; 64; 128; 256] do
+                                for n in [16; 24; 32; 40; 48; 56; 64; 128; 256] do
                                     api.ssAPI.setRandomSampleCount n                                
                                     api.render ()
                                     api.saveImage () 
@@ -206,6 +206,20 @@ module OfflineRenderTasks =
 
                             )
 
+        let taskMap = taskMap |> Map.add 
+                            "Custom"
+                            (fun (api : TaskAPI) ->
 
-        taskMap
+                                api.setRenderMode RenderMode.GroundTruth
+                        
+                                api.gtAPI.overwriteEstimate true
+                                for _ in 1 .. (20000 / Config.Light.NUM_SAMPLES) do
+                                    api.render ()
+                                    api.gtAPI.overwriteEstimate false
+                            
+                                api.saveImage ()
+                            )
+
+
+        (taskMap, [ "Delaunay"; "StructuredSamplingRandom" ])
 

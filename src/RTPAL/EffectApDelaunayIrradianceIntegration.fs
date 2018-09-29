@@ -452,15 +452,16 @@ module EffectApDelaunayIrradianceIntegration =
 
                         for iIdx in iAddr .. Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
                             
-                            let vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
+                            //let vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
-                            for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
-                                let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
-                                vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+                            //for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
+                            //    let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
+                            //    vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
 
                             ////////////////////////////////////////////////////////
 
-                            let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
+                            //let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
+                            let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
 
                             if clippedVc <> 0 then
 
@@ -769,15 +770,16 @@ module EffectApDelaunayIrradianceIntegration =
 
                 let iIdx = 0
 
-                let vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
+                //let vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
                             
-                for vtc in 0 .. lBaseComponents.[addr] - 1 do
-                    let vtcAddr = lPatchIndices.[iIdx + vtc] + vAddr
-                    vt.[vtc] <- w2t * (lVertices.[vtcAddr] - P)
+                //for vtc in 0 .. lBaseComponents.[addr] - 1 do
+                //    let vtcAddr = lPatchIndices.[iIdx + vtc] + vAddr
+                //    vt.[vtc] <- w2t * (lVertices.[vtcAddr] - P)
 
                 ////////////////////////////////////////////////////////
 
-                let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, lBaseComponents.[addr])
+                // let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, lBaseComponents.[addr])
+                let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
 
                 if clippedVc <> 0 then
 

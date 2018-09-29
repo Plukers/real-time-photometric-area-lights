@@ -152,7 +152,7 @@
                 rl |> Mod.change renderLight
             )
         
-        updatePhotometryData "ARC3_60712332_(STD).ldt"
+        updatePhotometryData "ARCOS3_60712332.ldt"
 
         let lightData : Render.Light.Sg.LightSgData = 
             {
@@ -444,13 +444,15 @@
                 writeMetaData resultPath "PhotometryData.txt" photometryList
             }
 
+        let (taskMap, tasks) = offlineRenderTasks
+
         let createImageTask = 
             m.offlineRenderMode |> Mod.map (fun mode ->
                 match mode with
-                | OfflineRenderMode.AbstractData    -> renderOfflineTask false offlineRenderTasks "AbstractData" 
-                | OfflineRenderMode.GroundTruth     -> renderOfflineTask true  offlineRenderTasks "GroundTruth" 
+                | OfflineRenderMode.AbstractData    -> renderOfflineTask false taskMap "AbstractData" 
+                | OfflineRenderMode.GroundTruth     -> renderOfflineTask true  taskMap "GroundTruth" 
                 | OfflineRenderMode.PhotometryList  -> createPhotometryList
-                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks ([ "StructuredLuminanceSamplingRandom" ])
+                | _ (* Approximations *)            -> renderOfflineEvaluationTasks taskMap (tasks)
                     
             )
             
@@ -486,6 +488,20 @@
         let projTrafo =
             Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y)
             |> Frustum.projTrafo |> Mod.init
+
+        //let view =
+        //    CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO
+        //    |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
+        //let projTrafo = 
+        //    { 
+        //        left = -20.0
+        //        right = 20.0
+        //        bottom = -20.0
+        //        top = 20.0
+        //        near = 0.1
+        //        far = 20.1
+        //    } 
+        //    |> Frustum.orthoTrafo |> Mod.init
         
         let lightData : Render.Light.Sg.LightSgData = 
             {
@@ -662,7 +678,7 @@
         
         let viewFunc (m : MRenderState) =
             
-            let (win, renderFeedback, offlineRenderTask) = setupRendering app (V2i(1600, 900)) m
+            let (win, renderFeedback, offlineRenderTask) = setupRendering app (V2i(1920, 1080)) m
             
             let openGameWindowAction : System.Action = 
                 new System.Action( fun () -> 
@@ -1137,7 +1153,7 @@
             transformLight lc lightId t |> ignore
         | None -> ()
         
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"IYON_M_60714889_(STD_LEO).LDT"]
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"SLOTLIGHT_42184612.LDT"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         
         

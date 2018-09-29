@@ -648,6 +648,9 @@ module EffectUtils =
     [<ReflectedDefinition>] 
     let Lerp (a : V3d) (b : V3d) (s : float) : V3d = (1.0 - s) * a + s * b
 
+    [<GLSLIntrinsic("mix({0},{1},{2})")>]
+    let Mix<'a when 'a :> IVector> (a : 'a) (b : 'a) (s : float) : 'a = failwith ""
+
     [<ReflectedDefinition>] 
     let clipTriangle(p : V3d, n : V3d, vertices : Arr<N<3>, V3d>) =
         let plane = V4d(n, -V3d.Dot(p, n))
@@ -739,6 +742,53 @@ module EffectUtils =
         // last edge to vertices[0]
         if (h0v && hbn || h0n && hbv) then
             va.[vc] <- Lerp v0.XYZ vb.XYZ (h0 / (h0 - hb))
+            vc <- vc + 1
+
+        (va,vc)
+
+    [<ReflectedDefinition>] [<Inline>]
+    let clipPatchTS(vertices : Arr<N<Config.Light.VERT_ALL_LIGHT>, V3d>, vertexCount : int, P : V3d, w2t : M33d) =
+
+        let eps = 1e-9
+
+        let mutable vc = 0
+        let va = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>()
+
+        let vb = w2t * (vertices.[0] - P)
+        let hb = vb.Z
+        let hbv = hb > eps
+        let hbn = hb < -eps
+        
+        if (hb >= -eps) then 
+            va.[vc] <- vb
+            vc <- vc + 1
+
+        let mutable v0 = vb
+        let mutable h0 = hb
+        let mutable h0v = hbv
+        let mutable h0n = hbn
+        
+        for vi in 1..vertexCount-1 do
+            let v1 = w2t * (vertices.[vi] - P)
+            let h1 = v1.Z
+            let h1v = h1 > eps
+            let h1n = h1 < -eps
+            if (h0v && h1n || h0n && h1v) then
+                va.[vc] <- Mix v0 v1 (h0 / (h0 - h1))
+                vc <- vc + 1
+
+            if (h1 >= -eps) then 
+                va.[vc] <- v1
+                vc <- vc + 1
+
+            v0 <- v1
+            h0 <- h1
+            h0v <- h1v
+            h0n <- h1n
+        
+        // last edge to vertices[0]
+        if (h0v && hbn || h0n && hbv) then
+            va.[vc] <- Mix v0 vb (h0 / (h0 - hb))
             vc <- vc + 1
 
         (va,vc)
