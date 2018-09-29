@@ -283,10 +283,12 @@
         
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
+
+        let translations = [0.0; 1.0; 3.0]
         
         let imageFormat = PixFileFormat.Exr 
 
-        let createFileName step renderModeData mode =
+        let createFileName step height renderModeData mode =
 
             let renderModeData = 
                 match renderModeData with
@@ -297,23 +299,35 @@
                     | RenderMode.StructuredSampling -> sprintf "_%s" (EffectApStructuredSampling.Rendering.encodeSettingsForName ssData)
                     | _ -> ""
 
+
                     
             match step with
-            | Some step -> sprintf "%s%s_%i"  (mode.ToString()) renderModeData step
-            | None -> sprintf "%s%s"  (mode.ToString()) renderModeData
+            | Some step -> 
+                match height with
+                | Some height -> sprintf "%s%s_%i_h%f"  (mode.ToString()) renderModeData step height
+                | None -> sprintf "%s%s_%i"  (mode.ToString()) renderModeData step
+            | None -> 
+                match height with
+                | Some height -> sprintf "%s%s_h%f"  (mode.ToString()) renderModeData height
+                | None -> sprintf "%s%s"  (mode.ToString()) renderModeData
 
-        let doRotationIteration action =
 
-            let mutable rotation = Trafo3d.Identity
+
+        let doIteration action =
+
+            let mutable trafo = Trafo3d.Identity
             let rotationStep = Trafo3d.Rotation(V3d(0.0, angle, 0.0));
         
-            for r in 0 .. numOfRotationSteps - 1 do 
-                action r
+            for h in translations do
+                for r in 0 .. numOfRotationSteps - 1 do 
+                    action r h
                 
-                transformLight renderData.lights activeTrafoLightId (rotationStep)
-                rotation <- rotation * rotationStep
+                    let t = rotationStep * Trafo3d.Translation(0.0, 0.0, h)
+
+                    transformLight renderData.lights activeTrafoLightId (t)
+                    trafo <- trafo * t
             
-            transformLight renderData.lights activeTrafoLightId (rotation.Inverse)
+            transformLight renderData.lights activeTrafoLightId (trafo.Inverse)
             
          
         let resultPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
@@ -346,12 +360,12 @@
                         }
             }
 
-        let generateSaveImage step path = 
+        let generateSaveImage step height path = 
             fun (_ : unit) ->
-                app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
+                app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) (Some height) None], imageFormat);
 
-        let executeTask step path api (task : TaskAPI -> unit) = 
-            task { api with saveImage = generateSaveImage step path }
+        let executeTask step height path api (task : TaskAPI -> unit) = 
+            task { api with saveImage = generateSaveImage step height path }
 
         let renderOfflineTask forPhotometry (offlineTasks : Map<string, (TaskAPI -> unit)>) (task : string) = 
             async {
@@ -368,10 +382,10 @@
                     
                         updatePhotometryData f
 
-                        doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step dataPath API |> ignore)
+                        doIteration (fun step height -> offlineTasks |> Map.find task |> executeTask step height dataPath API |> ignore)
 
                 else
-                    doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step resultPath API |> ignore)
+                    doIteration (fun step height -> offlineTasks |> Map.find task |> executeTask step height resultPath API |> ignore)
             }
 
         let renderOfflineEvaluationTasks (offlineTasks : Map<string, (TaskAPI -> unit)>) (tasks : string list) = 
@@ -383,7 +397,7 @@
 
                 let API = { API with evalAPI = {
                                                     updateEffectList = (fun _ ->
-                                                                             renderMode |> Mod.force |> createFileName None None |> approxList.Add |> ignore
+                                                                             renderMode |> Mod.force |> createFileName None None None |> approxList.Add |> ignore
                                                                         )
                                                 }}
                 
@@ -402,7 +416,7 @@
                     updatePhotometryData f
 
                     for t in tasks do
-                        doRotationIteration (fun step -> offlineTasks |> Map.find t |> executeTask step dataPath API |> ignore)      
+                        doIteration (fun step height -> offlineTasks |> Map.find t |> executeTask step height dataPath API |> ignore)      
                         
 
                 let approxList =
