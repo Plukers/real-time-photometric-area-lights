@@ -1,8 +1,9 @@
-function RunCustomToneMapFun(evaluation)
+function RunCustomToneMapFun(evaluation, height)
 
 %% Config
+disp(sprintf('Starting Tonemapping with height %u', height));
 
-disp(sprintf('Starting Evaluation'));
+HeightDirectory =  strcat('h', num2str(height));
 
 % General
 NumSteps = 5;
@@ -10,7 +11,7 @@ toneMapScale = 10.0;
 
 DataPath = fullfile('results', evaluation, 'Data');
 
-SavePath = fullfile('results', evaluation, 'Tonemap');
+SavePath = fullfile('results', evaluation, 'Tonemap', HeightDirectory);
 if exist(SavePath, 'dir')
     cmd_rmdir(SavePath);
 end
@@ -56,7 +57,7 @@ for i = 1:size(Lights,1)
 
     for a = 1:size(Approximations,1)
 
-        createApproxFilePath = @(iter)  fullfile(DataPath, light, strcat(Approximations{a}, '_', int2str(iter), '.exr'));
+        createApproxFilePath = @(iter)  fullfile(DataPath, light, HeightDirectory, strcat(Approximations{a}, '_', int2str(iter), '.exr'));
         createApproxSavePath = @(iter)  fullfile(savePath, strcat(Approximations{a}, '_', int2str(iter), '.png'));
 
         for j = 0:(NumSteps - 1)
@@ -68,5 +69,7 @@ for i = 1:size(Lights,1)
     end
 
 end
+
+disp(sprintf('Finished Tonemapping with height %u', height));
 
 end

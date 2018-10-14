@@ -284,7 +284,7 @@
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
 
-        let translations = [0.0; 1.0; 3.0]
+        let translations = [0.0; 1.0; 3.0; 5.0]
         
         let imageFormat = PixFileFormat.Exr 
 
@@ -314,20 +314,26 @@
 
 
         let doIteration action =
-
-            let mutable trafo = Trafo3d.Identity
-            let rotationStep = Trafo3d.Rotation(V3d(0.0, angle, 0.0));
         
             for h in translations do
-                for r in 0 .. numOfRotationSteps - 1 do 
-                    action r h
-                
-                    let t = rotationStep * Trafo3d.Translation(0.0, 0.0, h)
 
-                    transformLight renderData.lights activeTrafoLightId (t)
-                    trafo <- trafo * t
-            
-            transformLight renderData.lights activeTrafoLightId (trafo.Inverse)
+                let t = Trafo3d.Translation(V3d(0.0, 0.0, h))
+                transformLight renderData.lights activeTrafoLightId (t)
+
+                let mutable rotation = Trafo3d.Identity
+                let rotationStep = Trafo3d.Rotation(V3d(0.0, angle, 0.0));
+
+                for r in 0 .. numOfRotationSteps - 1 do                 
+                    action r h
+
+                    transformLight renderData.lights activeTrafoLightId (rotationStep)
+                    rotation <- rotation * rotationStep
+
+                transformLight renderData.lights activeTrafoLightId (rotation.Inverse)
+
+
+                transformLight renderData.lights activeTrafoLightId (t.Inverse)
+
             
          
         let resultPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
@@ -361,8 +367,11 @@
             }
 
         let generateSaveImage step height path = 
-            fun (_ : unit) ->
-                app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) (Some height) None], imageFormat);
+            fun (_ : unit) ->            
+                let heightPath = Path.combine [path; ( sprintf "h%i" (int height))]
+                if not (System.IO.Directory.Exists heightPath) then
+                    System.IO.Directory.CreateDirectory heightPath |> ignore
+                app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [heightPath; renderData.mode |> Mod.force |> createFileName (Some step) None None], imageFormat);
 
         let executeTask step height path api (task : TaskAPI -> unit) = 
             task { api with saveImage = generateSaveImage step height path }
@@ -437,13 +446,14 @@
                 let tonemapOfflineRender  = m.tonemapOfflineRender  |> Mod.force
 
                 let postprocess = evaluateOfflineRender || tonemapOfflineRender
-
+                
                 if postprocess then 
                     let mutable scripts = ""
                     if evaluateOfflineRender then scripts <- String.concat "" [scripts; "RunEvaluation;"]
                     if tonemapOfflineRender then scripts <- String.concat "" [scripts; "RunCustomToneMap;"]
 
-                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';%sexit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation scripts (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
+
+                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';heights=%A';%sexit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation translations scripts (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
                     System.Diagnostics.Process.Start("cmd", command) |> ignore
 
             }

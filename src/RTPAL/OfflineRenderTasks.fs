@@ -131,6 +131,17 @@ module OfflineRenderTasks =
                             )
 
         let taskMap = taskMap |> Map.add 
+                            "StructuredSamplingDrobot"
+                            (fun (api : TaskAPI) ->
+                                api.setRenderMode RenderMode.StructuredSampling
+
+                                api.ssAPI.setSamples true true false false false false
+                                api.render ()
+                                api.saveImage () 
+                                api.evalAPI.updateEffectList ()
+                            )
+
+        let taskMap = taskMap |> Map.add 
                             "StructuredSamplingRandom"
                             (fun (api : TaskAPI) ->
                                 api.setRenderMode RenderMode.StructuredSampling
@@ -138,6 +149,21 @@ module OfflineRenderTasks =
                                 api.ssAPI.setSamples false false false false false true
                                 
                                 for n in [16; 24; 32; 40; 48; 56; 64; 128; 256] do
+                                    api.ssAPI.setRandomSampleCount n                                
+                                    api.render ()
+                                    api.saveImage () 
+                                    api.evalAPI.updateEffectList ()
+                            
+                            )
+
+        let taskMap = taskMap |> Map.add 
+                            "StructuredSamplingSmall"
+                            (fun (api : TaskAPI) ->
+                                api.setRenderMode RenderMode.StructuredSampling
+
+                                api.ssAPI.setSamples false false false false false true
+                                
+                                for n in [5] do
                                     api.ssAPI.setRandomSampleCount n                                
                                     api.render ()
                                     api.saveImage () 
@@ -221,5 +247,5 @@ module OfflineRenderTasks =
                             )
 
 
-        (taskMap, [ "Delaunay"; "StructuredSamplingRandom" ])
+        (taskMap, [ "StructuredSamplingDrobot"; "StructuredSamplingSmall" ])
 

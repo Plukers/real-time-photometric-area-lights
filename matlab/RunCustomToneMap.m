@@ -1,2 +1,6 @@
-RunCustomToneMapFun(evaluation);
-fclose('all');
+for h = heights
+    RunCustomToneMapFun(evaluation, h);
+    fclose('all');
+end
+
+disp(sprintf('Finished'));

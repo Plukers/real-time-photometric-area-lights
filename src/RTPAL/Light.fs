@@ -261,6 +261,8 @@ module Light =
                             v
                     )
 
+            printfn "Vertices: %A" (lc.Vertices.Value)
+
             lc.SamplePoints.Value <-
                 lc.SamplePoints.Value |> Array.mapi (
                     fun i sp -> 
