@@ -202,12 +202,14 @@ module EffectGT =
 
                                 let i = samplePointDir   
 
-                                let worldI = t2w * -i
-                                let dotOut = max 1e-9 (abs (Vec.dot worldI uniform.LForwards.[addr]))
+                                if i.Z >= 0.0 then
 
-                                let irr = (getPhotometricIntensity (t2w * -i) uniform.LForwards.[addr]  uniform.LUps.[addr]) / (uniform.LAreas.[addr] * dotOut)
+                                    let worldI = t2w * -i
+                                    let dotOut = max 1e-9 (abs (Vec.dot worldI uniform.LForwards.[addr]))
 
-                                illumination <- illumination + (brdf * irr * i.Z) / (lightPDF)
+                                    let irr = (getPhotometricIntensity (t2w * -i) uniform.LForwards.[addr]  uniform.LUps.[addr]) / (uniform.LAreas.[addr] * dotOut)
+
+                                    illumination <- illumination + (brdf * irr * i.Z) / (lightPDF)
 
                             ////////////////////////////////////////////////////////
                         ()       
