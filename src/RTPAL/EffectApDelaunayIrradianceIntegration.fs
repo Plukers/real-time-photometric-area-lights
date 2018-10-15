@@ -13,340 +13,13 @@ module EffectApDelaunayIrradianceIntegration =
 
     open EffectApDelaunayDataHandling
     open EffectApDelaunayDataMutation
-
+    open EffectApDelaunayGenInitTriangulation
    
-
-    [<ReflectedDefinition>]
-    let private IDHash a b c = 
-    
-        let (a, b, c) =
-            if a < b && a < c then
-                (a, b, c)
-            elif b < a && b < c then
-                (b, c, a)
-            else
-                (c, a, b)
-                
-        (a <<< 20) ||| (b <<< 10) ||| c
-
     module QUAD_DATA =
       
 
-        module ALL =
-
-            (*
-
-            v0 is always the special point (e.g. closest)
-            The other points follow in counter clockwise order
-
-            CASE_CORNER
-
-             v3               e2                   v2
-                +--------------------------------+   
-                |                              --|   
-                |                            -/  |   
-                |                          -/    |   
-                |                        -/      |   
-                |                      -/        |   
-                |                   --/          |   
-                |                 -/             |   
-                |               -/               | e1
-             e3 |             -/  e4             |   
-                |          --/                   |   
-                |        -/                      |   
-                |      -/                        |   
-                |    -/                          |   
-                |  -/                            |   
-                |-/                              |   
-                +--------------------------------+   
-              v0                e0                 v1
-            
-
-            CASE_EDGE
-
-             v3               e2                   v2
-                +--------------------------------+   
-                |-                             - |   
-                | \                           /  |   
-                |  \                         /   |   
-                |   \                       /    |   
-                |    \                     /     |   
-                |     \                   /      |   
-                |      \                 /       |   
-                |       \ e6           -/        | e1
-             e3 |        \            / e5       |   
-                |         \          /           |   
-                |          \        /            |   
-                |           \      /             |   
-                |            \    /              |   
-                |             \  /               |   
-                |              \/                |   
-                +--------------------------------+   
-             v4         e4     v0        e0        v1
-
-
-            CASE_INSIDE
-                                                     
-               v4             e2                 v3  
-                +--------------------------------+   
-                |--                            --|   
-                |  \-                        -/  |   
-                |    \-                    -/    |   
-                |      \-e7           e6 -/      |   
-                |        \-            -/        |   
-                |          \--      --/          |   
-                |             \-  -/             |   
-                |               \- v0            | e1
-             e3 |             -/  \-             |   
-                |          --/      \--          |   
-                |        -/            \-        |   
-                |      -/ e4          e5 \-      |   
-                |    -/                    \-    |   
-                |  -/                        \-  |   
-                |-/                            \-|   
-                +--------------------------------+   
-              v1             e0                   v2 
-
-            *)
-
-            // vertices
-            // vertex0 (v0), opposite0 (o0), vertex1 (v1), opposite1 (o1)
-            let V = [|
-                    // CASE_CORNER
-                        for i in 0 .. MAX_EDGES - 1 do
-                            match i with
-                            // outer
-                            | 0 -> yield V4i(0, -1, 1, 2) 
-                            | 1 -> yield V4i(1, -1, 2, 0) 
-                            | 2 -> yield V4i(2, -1, 3, 0) 
-                            | 3 -> yield V4i(3, -1, 0, 2) 
-                            
-                            // inner
-                            | 4 -> yield V4i(0, 1, 2, 3)
-                            
-                            // fill up
-                            | _ -> yield V4i(-1)
-
-
-                    // CASE_EDGE
-                        for i in 0 .. MAX_EDGES - 1 do
-                            match i with
-                            // outer
-                            | 0 -> yield V4i(0, -1, 1, 2) 
-                            | 1 -> yield V4i(1, -1, 2, 0) 
-                            | 2 -> yield V4i(2, -1, 3, 0) 
-                            | 3 -> yield V4i(3, -1, 4, 0) 
-                            | 4 -> yield V4i(4, -1, 0, 3) 
-                            
-                            // inner
-                            | 5 -> yield V4i(0, 1, 2, 3) 
-                            | 6 -> yield V4i(0, 2, 3, 4) 
-                            
-                            // fill up
-                            | _ -> yield V4i(-1)
-
-                    // CASE_INSIDE
-                        for i in 0 .. MAX_EDGES - 1 do
-                            match i with
-                            // outer
-                            | 0 -> yield V4i(1, -1, 2, 0) // 0
-                            | 1 -> yield V4i(2, -1, 3, 0) // 1
-                            | 2 -> yield V4i(3, -1, 4, 0) // 2
-                            | 3 -> yield V4i(4, -1, 1, 0) // 3
-                            
-                            // inner
-                            | 4 -> yield V4i(0, 4, 1, 2) // 4
-                            | 5 -> yield V4i(0, 1, 2, 3) // 5
-                            | 6 -> yield V4i(0, 2, 3, 4) // 6
-                            | 7 -> yield V4i(0, 3, 4, 1) // 7
-                            
-                            // fill up
-                            | _ -> yield V4i(-1)
-                    |]
-
-            // edges
-            // v0 -> o0, o0 -> v1, v1 -> o1, o1 -> v0
-            let E = [|
-                    // CASE_CORNER
-                        for i in 0 .. MAX_EDGES - 1 do
-                            match i with
-                            // outer
-                            | 0 -> yield V4i(-1, -1, 1, 4) 
-                            | 1 -> yield V4i(-1, -1, 4, 0) 
-                            | 2 -> yield V4i(-1, -1, 3, 4) 
-                            | 3 -> yield V4i(-1, -1, 4, 2) 
-                            
-                            // inner
-                            | 4 -> yield V4i(0, 1, 2, 3)
-                            
-                            // fill up
-                            | _ -> yield V4i(-1)
-                                                
-                    // CASE_EDGE
-                        for i in 0 .. MAX_EDGES - 1 do
-                            match i with
-                            // outer
-                            | 0 -> yield V4i(-1, -1, 1, 5)
-                            | 1 -> yield V4i(-1, -1, 5, 0)
-                            | 2 -> yield V4i(-1, -1, 6, 5)
-                            | 3 -> yield V4i(-1, -1, 4, 6)
-                            | 4 -> yield V4i(-1, -1, 6, 3)
-                            
-                            // inner
-                            | 5 -> yield V4i(0, 1, 2, 6)
-                            | 6 -> yield V4i(5, 2, 3, 4)
-                            
-                            // fill up
-                            | _ -> yield V4i(-1)
-
-                    // CASE_INSIDE
-                        for i in 0 .. MAX_EDGES - 1 do
-                            match i with
-                            // outer
-                            | 0 -> yield V4i(-1, -1, 5, 4) 
-                            | 1 -> yield V4i(-1, -1, 6, 5) 
-                            | 2 -> yield V4i(-1, -1, 7, 6) 
-                            | 3 -> yield V4i(-1, -1, 4, 7) 
-                            
-                            // inner
-                            | 4 -> yield V4i(7, 3, 0, 5)
-                            | 5 -> yield V4i(4, 0, 1, 6)
-                            | 6 -> yield V4i(5, 1, 2, 7)
-                            | 7 -> yield V4i(6, 2, 3, 4)
-                            
-                            // fill up
-                            | _ -> yield V4i(-1)
-                    |]
-
-            // meta    
-            // inside, marked
-            // 1 = true, 0 = false
-            let M = [|
-                    // CASE_CORNER
-                        for i in 0 .. MAX_EDGES - 1 do
-                            match i with
-                            // outer
-                            | 0 -> yield V2i(0, 0) 
-                            | 1 -> yield V2i(0, 0) 
-                            | 2 -> yield V2i(0, 0) 
-                            | 3 -> yield V2i(0, 0) 
-                            
-                            // inner
-                            | 4 -> yield V2i(1, 0) 
-                            
-                            // fill up
-                            | _ -> yield V2i(-1) 
-                                                
-                    // CASE_EDGE
-                        for i in 0 .. MAX_EDGES - 1 do
-                            match i with
-                            // outer
-                            | 0 -> yield V2i(0, 0) 
-                            | 1 -> yield V2i(0, 0) 
-                            | 2 -> yield V2i(0, 0) 
-                            | 3 -> yield V2i(0, 0) 
-                            | 4 -> yield V2i(0, 0) 
-                            
-                            // inner
-                            | 5 -> yield V2i(1, 0)
-                            | 6 -> yield V2i(1, 0)
-                            
-                            // fill up
-                            | _ -> yield V2i(-1) 
-
-                    // CASE_INSIDE
-                        for i in 0 .. MAX_EDGES - 1 do
-                            match i with
-                            // outer
-                            | 0 -> yield V2i(0, 0)
-                            | 1 -> yield V2i(0, 0)
-                            | 2 -> yield V2i(0, 0)
-                            | 3 -> yield V2i(0, 0)
-                            
-                            // inner
-                            | 4 -> yield V2i(1, 0) 
-                            | 5 -> yield V2i(1, 0) 
-                            | 6 -> yield V2i(1, 0) 
-                            | 7 -> yield V2i(1, 0) 
-                            
-                            // fill up
-                            | _ -> yield V2i(-1) 
-                    |]
-            
-            // faces vertices
-            // v0, v1, v2, (IDHash v0 v1 v2)
-            // v0 should be the smallest ID, v0, v1, v2 ordered counter clockwise
-            let FV = [|
-                    // CASE_CORNER
-                        for i in 0 .. MAX_FACES - 1 do
-                            match i with
-                            | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2)) 
-                            | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
-                            
-                            // fill 
-                            | _ -> yield V4i(-1)
-                                                
-                    // CASE_EDGE
-                        for i in 0 .. MAX_FACES - 1 do
-                            match i with
-                            | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2)) 
-                            | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
-                            | 2 -> yield V4i(0, 3, 4, (IDHash 0 3 4)) 
-                            
-                            // fill 
-                            | _ -> yield V4i(-1)
-
-                    // CASE_INSIDE
-                        for i in 0 .. MAX_FACES - 1 do
-                            match i with
-                            | 0 -> yield V4i(0, 1, 2, (IDHash 0 1 2)) 
-                            | 1 -> yield V4i(0, 2, 3, (IDHash 0 2 3)) 
-                            | 2 -> yield V4i(0, 3, 4, (IDHash 0 3 4)) 
-                            | 3 -> yield V4i(0, 4, 1, (IDHash 0 4 1)) 
-                            
-                            // fill up
-                            | _ -> yield V4i(-1)
-                    |]
-
-            let FE = [|
-                    // CASE_CORNER
-                        for i in 0 .. MAX_FACES - 1 do
-                            match i with
-                            | 0 -> yield V3i(0, 1, 4) 
-                            | 1 -> yield V3i(4, 2, 3) 
-                            
-                            // fill 
-                            | _ -> yield V3i(-1)
-                                                
-                    // CASE_EDGE
-                        for i in 0 .. MAX_FACES - 1 do
-                            match i with
-                            | 0 -> yield V3i(0, 1, 5) 
-                            | 1 -> yield V3i(5, 2, 6) 
-                            | 2 -> yield V3i(6, 3, 4) 
-                            
-                            // fill 
-                            | _ -> yield V3i(-1)
-
-                    // CASE_INSIDE
-                        for i in 0 .. MAX_FACES - 1 do
-                            match i with
-                            | 0 -> yield V3i(4, 0, 5) 
-                            | 1 -> yield V3i(5, 1, 6) 
-                            | 2 -> yield V3i(6, 2, 7) 
-                            | 3 -> yield V3i(7, 3, 4) 
-                            
-                            // fill up
-                            | _ -> yield V3i(-1)
-                    |]
-
-            let NEXT_FREE_EDGE_ADDR = [| 5; 7; 8 |]
-
-            let NEXT_FREE_FACE_ADDR = [| 2; 3; 4 |]
-
-
-            let (EDGES, META) = transformEdgeCollectionToCompactCollection V E M 3
-            let FACES = transformFaceollectionToCompactCollection FV FE 3
+        module ALL =        
+            let (EDGES, META, FACES) = genInitTriangulation 4
 
         [<ReflectedDefinition>][<Inline>]
         let getInitEdgeData (edgeArray : Arr<N<MAX_EDGES_HALF>, V4i>) caseOffset = 
@@ -375,12 +48,6 @@ module EffectApDelaunayIrradianceIntegration =
                 faceArray.[i] <- ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
             faceArray
         
-        [<ReflectedDefinition>]
-        let getInitFreeEdgeAddr caseOffset = ALL.NEXT_FREE_EDGE_ADDR.[caseOffset]
-
-        [<ReflectedDefinition>]
-        let getInitFreeFaceAddr caseOffset = ALL.NEXT_FREE_FACE_ADDR.[caseOffset]
-
     type Vertex = {
         [<WorldPosition>]   wp      : V4d
         [<Normal>]          n       : V3d
@@ -537,22 +204,6 @@ module EffectApDelaunayIrradianceIntegration =
                                         vc <- vc + 1 
                                         offset <- 1
 
-                                    // is the point in front of the light or behind?
-                                    // if behind, iterate the light vertices backwards for counter clockwise order
-                                    //if not behindLight then 
-                                    
-                                    //    for i in 0 .. clippedVc - 1 do 
-                                    //        vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
-                                    //        funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
-                                            
-                                    //else
-                                    //    let mutable j = 0
-                                    //    for i in clippedVc - 1 .. -1 .. 0 do 
-                                    //        vertices.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
-                                    //        funVal.[j + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
-                                                
-                                    //        j <- j + 1
-
                                     for i in 0 .. clippedVc - 1 do 
                                         vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
                                         funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
@@ -568,11 +219,6 @@ module EffectApDelaunayIrradianceIntegration =
                                     QUAD_DATA.getInitFaceData delFaceData caseOffset
                                     
                                     let mutable delMetaData = QUAD_DATA.getInitMetaData caseOffset
-                                    
-
-                                    let mutable delNextFreeEdgeAddr =  QUAD_DATA.getInitFreeEdgeAddr caseOffset
-                                    let mutable delNextFreeFaceAddr =  QUAD_DATA.getInitFreeFaceAddr caseOffset
-
 
 
                                     ////////////////////////////////////////
@@ -890,8 +536,8 @@ module EffectApDelaunayIrradianceIntegration =
   
                         let mutable delMetaData = QUAD_DATA.ALL.META.[caseOffset]
 
-                        let mutable delNextFreeEdgeAddr = caseOffset |> QUAD_DATA.getInitFreeEdgeAddr
-                        let mutable delNextFreeFaceAddr = caseOffset |> QUAD_DATA.getInitFreeFaceAddr
+                        //let mutable delNextFreeEdgeAddr = caseOffset |> QUAD_DATA.getInitFreeEdgeAddr
+                        //let mutable delNextFreeFaceAddr = caseOffset |> QUAD_DATA.getInitFreeFaceAddr
 
 
 
