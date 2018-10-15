@@ -460,8 +460,27 @@ module EffectApDelaunayIrradianceIntegration =
 
                             ////////////////////////////////////////////////////////
 
+
+                            // linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d)
+                            let mutable clipNormal = V3d.OOI
+                            if uniform.skewClipPlane then
+                                let heightCut = 0.1
+                                let translate = V2d(-uniform.LForwards.[addr].Y, uniform.LForwards.[addr].X)
+
+                                let planeP0 = linePlaneIntersection (V3d(translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
+                                let planeP1 = linePlaneIntersection (V3d(-translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
+
+                                clipNormal <- Vec.cross planeP0 planeP1 |> Vec.normalize
+
+                                if clipNormal.Z < 0.0 then
+                                    clipNormal <- -clipNormal
+
+                            ////////////////////////////////////////////////////////
+
                             //let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
-                            let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
+                            //let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
+                            let (clippedVa, clippedVc) = clipPatchTSwN(clipNormal, uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
+                            
 
                             if clippedVc <> 0 then
 
@@ -520,19 +539,23 @@ module EffectApDelaunayIrradianceIntegration =
 
                                     // is the point in front of the light or behind?
                                     // if behind, iterate the light vertices backwards for counter clockwise order
-                                    if not behindLight then 
+                                    //if not behindLight then 
                                     
-                                        for i in 0 .. clippedVc - 1 do 
-                                            vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
-                                            funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
+                                    //    for i in 0 .. clippedVc - 1 do 
+                                    //        vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
+                                    //        funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
                                             
-                                    else
-                                        let mutable j = 0
-                                        for i in clippedVc - 1 .. -1 .. 0 do 
-                                            vertices.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
-                                            funVal.[j + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
+                                    //else
+                                    //    let mutable j = 0
+                                    //    for i in clippedVc - 1 .. -1 .. 0 do 
+                                    //        vertices.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
+                                    //        funVal.[j + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
                                                 
-                                            j <- j + 1
+                                    //        j <- j + 1
+
+                                    for i in 0 .. clippedVc - 1 do 
+                                        vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
+                                        funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
 
                                     ////////////////////////////////////////
                                     // load inital data
@@ -734,9 +757,7 @@ module EffectApDelaunayIrradianceIntegration =
             lc |> Mod.map (fun lc ->
 
                 let (lights, lPatchIndices, lVertices, lBaseComponents, lForwards, lUps) = lc
-
-                printfn "Light Vertices : %A" lVertices 
-
+                
                 ////////////////////////////////////////////////////////
                 // SHADER START
 
@@ -925,22 +946,15 @@ module EffectApDelaunayIrradianceIntegration =
                         ////////////////////////////////////////////////////////
 
                         let mutable areaSum = 0.0
-
-                        printfn "Faces: "  
-
+                        
                         for f in 0 .. MAX_FACES - 1 do
 
                              if not (faceIsEmpty delFaceData f) then
 
                                 let area = computeSphericalExcess (vertices.[0 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[1 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[2 |> readFaceVertexId delFaceData f] |> Vec.normalize)
-
-                                printfn " - %A - Area: %A" f area
-
+                                
                                 areaSum <- areaSum + area 
-
-
-                        printfn "Area Sum: %A" areaSum
-
+                                
                         let getTrafo pos = Trafo3d.Translation pos |> Mod.init
                         
                         let mutable sg = Sg.empty
@@ -954,17 +968,11 @@ module EffectApDelaunayIrradianceIntegration =
                             | _ -> sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (verticesNormalized.[i] * 0.14))]
                             
             
-                        
-                        printfn "Vertices %A : %A" vc vertices
-
-                        printfn "Edges: "
                         for i in 0 .. MAX_EDGES - 1 do         
                             if (0 |> readVertexId delEdgeData i) <> NONE && (2 |> readVertexId delEdgeData i) <> NONE then 
                                 let edgeStart = verticesNormalized.[0 |> readVertexId delEdgeData i]
                                 let edgeEnd   = verticesNormalized.[2 |> readVertexId delEdgeData i] 
-
-                                printfn " - %A -> %A" edgeStart edgeEnd
-
+                                
 
                                 sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red (Trafo3d.Scale 0.14 |> Mod.init)]
 
@@ -1011,6 +1019,7 @@ module EffectApDelaunayIrradianceIntegration =
                 |> setupCamera data.view data.projTrafo data.viewportSize 
                 |> setUniformDT data.dt
                 |> setUniformUsePhotometry data.lightData.usePhotometry
+                |> setUniformSkewClipPlane data.skewClipPlane
                 |> setUniformDiffuseExitance data.lightData.diffuseExitance                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Sg.compile data.runtime signature
 
@@ -1019,3 +1028,6 @@ module EffectApDelaunayIrradianceIntegration =
         let delIrrIntApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
             delIrrIntApproxRenderTask data signature sceneSg
             |> RenderTask.renderToColor data.viewportSize
+
+
+        

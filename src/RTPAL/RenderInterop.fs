@@ -34,6 +34,8 @@ module RenderInterop =
 
             toneMap : IMod<bool>
             toneMapScale : IMod<float>
+
+            skewClipPlane : IMod<bool>
         }
 
     type RenderFeedback = {
@@ -62,5 +64,6 @@ module RenderInterop =
             compare = m.compare
             toneMap = m.toneMap
             toneMapScale = m.toneMapScale.value
+            skewClipPlane = m.skewClipPlane
         }
 

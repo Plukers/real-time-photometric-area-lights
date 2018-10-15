@@ -8,7 +8,7 @@ end
 mkdir(EvalPath);
 
 for h = heights
-    RunEvaluationFun(evaluation, h, DataPath, EvalPath);
+    RunEvaluationFun(evaluation, h * 10, DataPath, EvalPath);
     fclose('all');
 end
 

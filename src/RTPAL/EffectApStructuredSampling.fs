@@ -548,8 +548,10 @@ module EffectApStructuredSampling =
                                                 let uvSamplePoint = uniform.LUVSamplePoints.[l]
 
                                                 let samplePoint = (SphericalQuad.sphQuadSample squad uvSamplePoint.X uvSamplePoint.Y) - P
-                                                let irr = sample t2w squad.S addr samplePoint
-                                                patchIllumination <- patchIllumination + irr
+
+                                                if samplePoint.Z >= eps then
+                                                    let irr = sample t2w squad.S addr samplePoint
+                                                    patchIllumination <- patchIllumination + irr
 
                                         else
                                             for l in 0 .. uniform.numSRSamples - 1 do
@@ -753,9 +755,7 @@ module EffectApStructuredSampling =
                                     let (normPlanePoint, _, _, _) =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
      
                                     (closestPoint, normPlanePoint)
-
-                                printfn "Distance : %f" (Vec.length (closestPoint - normPlanePoint))
-
+                                    
                                 let mrpDir = ((closestPoint |> Vec.normalize) + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
                                 let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
@@ -852,13 +852,7 @@ module EffectApStructuredSampling =
                                                 if o < sampleIdx && o <> r then
                                                     let dist  = Vec.length (samples.[r] - samples.[o])
                                                     samplesWeightScale.[r] <- (computeSampleScale (blendDistance) dist scale) * samplesWeightScale.[r]
-
-
-                                    printfn "%s" (sprintf "Sample     | N | WeightScale ")
-
-                                    for i in 0 .. sampleIdx - 1 do
-                                        printfn "%s" (sprintf "%10s | %1i | %.10f " (names.[i]) (neighborhoodSize.[i]) (samplesWeightScale.[i]))
-
+                                                    
 
 
                                 (samples |> Arr.map (fun s -> t2w * s + P), sampleCount)

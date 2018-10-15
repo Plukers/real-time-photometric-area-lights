@@ -91,6 +91,8 @@ type Action =
     | CHANGE_TANGENT_APPROX_DIST_IRR of Numeric.Action
     | CHANGE_COMBINED_WEIGHT       of Numeric.Action
 
+    | TOGGLE_SKEW_CLIP_PLANE
+
     | TOGGLE_TONEMAPPING
     | CHANGE_TONEMAP_SCALE of Numeric.Action
     | RENDER_IMAGES of IMod<Async<unit>>
@@ -132,6 +134,8 @@ type RenderState =
         SRSWeightScaleIrr    : NumericInput
         TangentApproxDistIrr : NumericInput
         CombinedSSWeight     : NumericInput
+
+        skewClipPlane        : bool
 
         toneMap            : bool
         toneMapScale       : NumericInput

@@ -260,9 +260,7 @@ module Light =
                         else
                             v
                     )
-
-            printfn "Vertices: %A" (lc.Vertices.Value)
-
+                    
             lc.SamplePoints.Value <-
                 lc.SamplePoints.Value |> Array.mapi (
                     fun i sp -> 
@@ -346,7 +344,6 @@ module Light =
         let addLightCollectionSg ( lc : LightCollection ) (data : LightSgData) sg =
 
             data.renderLight |> Mod.map (fun rl -> 
-                printfn "RenderLight %A" rl
                 if rl then
 
                     let lightSgList = [

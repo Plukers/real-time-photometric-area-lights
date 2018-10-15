@@ -151,6 +151,12 @@
             transact (fun _ ->
                 rl |> Mod.change renderLight
             )
+
+        let skewClipPlane = false |> Mod.init
+        let setSkewClipPlane s =
+            transact(fun _ ->
+                s |> Mod.change skewClipPlane
+            )
         
         updatePhotometryData "ARCOS3_60712332.ldt"
 
@@ -177,6 +183,7 @@
                 compare = compareMode
                 toneMap = toneMap
                 toneMapScale = toneMapScale
+                skewClipPlane = skewClipPlane
             }
                        
         let gtData = initGTData' (true |> Mod.init) (GTSamplingMode.Light |> Mod.init)
@@ -284,13 +291,19 @@
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
 
-        let translations = [0.0; 1.0; 3.0; 5.0]
+        let translations = [-0.5; 0.0; 1.0; 3.0]
         
         let imageFormat = PixFileFormat.Exr 
 
         let createFileName step height renderModeData mode =
+        
+            let appendSkewClipPlane s = 
+                if renderData.skewClipPlane |> Mod.force then
+                    sprintf "%s_%s" s "SCP"
+                else
+                    s
 
-            let renderModeData = 
+            let renderModeData =                 
                 match renderModeData with
                 | Some rmd -> rmd
                 | None ->
@@ -299,17 +312,20 @@
                     | RenderMode.StructuredSampling -> sprintf "_%s" (EffectApStructuredSampling.Rendering.encodeSettingsForName ssData)
                     | _ -> ""
 
-
-                    
+              
             match step with
             | Some step -> 
                 match height with
-                | Some height -> sprintf "%s%s_%i_h%f"  (mode.ToString()) renderModeData step height
-                | None -> sprintf "%s%s_%i"  (mode.ToString()) renderModeData step
+                | Some height ->
+                    printfn "Create  File Name for height %f %s" height (sprintf "%s%s_%i_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData step height) 
+                    sprintf "%s%s_%i_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData step height
+                | None -> sprintf "%s%s_%i"  (mode.ToString() |> appendSkewClipPlane) renderModeData step
             | None -> 
                 match height with
-                | Some height -> sprintf "%s%s_h%f"  (mode.ToString()) renderModeData height
-                | None -> sprintf "%s%s"  (mode.ToString()) renderModeData
+                | Some height ->
+                    printfn "Create  File Name for height %f %s" height (sprintf "%s%s_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData height) 
+                    sprintf "%s%s_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData height
+                | None -> sprintf "%s%s"  (mode.ToString() |> appendSkewClipPlane) renderModeData
 
 
 
@@ -351,6 +367,7 @@
                 usePhotometry = setUsePhotometry
                 setDiffuseExitance = setDiffuseExitance
                 setRenderLight = setRenderLight
+                setSkewClipPlane = setSkewClipPlane
 
                 gtAPI = {
                             overwriteEstimate = fun overwrite -> updateGroundTruth overwrite
@@ -368,7 +385,7 @@
 
         let generateSaveImage step height path = 
             fun (_ : unit) ->            
-                let heightPath = Path.combine [path; ( sprintf "h%i" (int height))]
+                let heightPath = Path.combine [path; ( sprintf "h%i" (height * 10.0 |> int))]
                 if not (System.IO.Directory.Exists heightPath) then
                     System.IO.Directory.CreateDirectory heightPath |> ignore
                 app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [heightPath; renderData.mode |> Mod.force |> createFileName (Some step) None None], imageFormat);
@@ -677,6 +694,8 @@
             | CHANGE_SRS_WEIGHT_SCALE_IRR srss -> { s with SRSWeightScaleIrr = Numeric.update s.SRSWeightScaleIrr srss}
             | CHANGE_TANGENT_APPROX_DIST_IRR tad -> { s with TangentApproxDistIrr = Numeric.update s.TangentApproxDistIrr tad }
             | CHANGE_COMBINED_WEIGHT t -> { s with CombinedSSWeight = Numeric.update s.CombinedSSWeight t }
+
+            | TOGGLE_SKEW_CLIP_PLANE -> { s with skewClipPlane = (not s.skewClipPlane) }
 
             | TOGGLE_TONEMAPPING -> { s with toneMap = (not s.toneMap) }
             | CHANGE_TONEMAP_SCALE tms -> { s with toneMapScale = Numeric.update s.toneMapScale tms}
@@ -1004,6 +1023,19 @@
                                                 }
                                             )
 
+                                            Incremental.div (AttributeMap.ofList []) (
+                                                alist {
+                                                    let! mode = m.renderMode
+
+                                                    if mode = RenderMode.DelaunayIrradianceSampling then
+                                                        yield div [ clazz "ui divider"] []                                        
+
+                                                        yield toggleBox m.sampleMRP TOGGLE_SKEW_CLIP_PLANE       
+                                                        yield text "Skew Clip Plane"                                                    
+                                                        yield br[]   
+                                                                                                
+                                                }
+                                            )
                                                                                                     
 
                                             Incremental.div (AttributeMap.ofList []) (
@@ -1071,54 +1103,54 @@
                                                                 yield br[] 
                                                             ]
 
-                                                        let! blendSamples = m.blendSamples
+                                                        //let! blendSamples = m.blendSamples
 
-                                                        yield p[] [
-                                                            yield toggleBox m.blendSamples TOGGLE_BLEND_SAMPLES      
-                                                            yield text "Blend Samples"                                                    
-                                                            yield br[]  
+                                                        //yield p[] [
+                                                        //    yield toggleBox m.blendSamples TOGGLE_BLEND_SAMPLES      
+                                                        //    yield text "Blend Samples"                                                    
+                                                        //    yield br[]  
 
                                                             
 
-                                                            if blendSamples  then
-                                                                yield toggleBox m.blendEasing TOGGLE_BLEND_EASING      
-                                                                yield text "Eased Blending"                                                    
-                                                                yield br[]  
+                                                        //    if blendSamples  then
+                                                        //        yield toggleBox m.blendEasing TOGGLE_BLEND_EASING      
+                                                        //        yield text "Eased Blending"                                                    
+                                                        //        yield br[]  
 
-                                                                yield text "Blend Distance"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.blendDistance |> UI.map CHANGE_BLEND_DIST ]
+                                                        //        yield text "Blend Distance"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.blendDistance |> UI.map CHANGE_BLEND_DIST ]
                                                                 
-                                                        ]
+                                                        //]
                                                         
-                                                        if mode = RenderMode.StructuredSampling || c = RenderMode.StructuredSampling then
-                                                            yield p [] [   
-                                                                yield p [style "font-weight: bold;"] [ 
-                                                                    text ("Structured Sampling")
-                                                                ]
+                                                        //if mode = RenderMode.StructuredSampling || c = RenderMode.StructuredSampling then
+                                                        //    yield p [] [   
+                                                        //        yield p [style "font-weight: bold;"] [ 
+                                                        //            text ("Structured Sampling")
+                                                        //        ]
                                                                 
-                                                                yield text "Scale factor"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScale |> UI.map CHANGE_SRS_WEIGHT_SCALE ]
-                                                                yield br[] 
+                                                        //        yield text "Scale factor"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScale |> UI.map CHANGE_SRS_WEIGHT_SCALE ]
+                                                        //        yield br[] 
 
-                                                                yield text "Tangent Approx Dist"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDist |> UI.map CHANGE_TANGENT_APPROX_DIST ]
-                                                                yield br[] 
-                                                            ]
+                                                        //        yield text "Tangent Approx Dist"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDist |> UI.map CHANGE_TANGENT_APPROX_DIST ]
+                                                        //        yield br[] 
+                                                        //    ]
 
-                                                        if mode = RenderMode.StructuredIrrSampling || c = RenderMode.StructuredIrrSampling then
-                                                            yield p [] [   
-                                                                yield p [style "font-weight: bold;"] [ 
-                                                                    text ("Structured Irradiance Sampling")
-                                                                ]
+                                                        //if mode = RenderMode.StructuredIrrSampling || c = RenderMode.StructuredIrrSampling then
+                                                        //    yield p [] [   
+                                                        //        yield p [style "font-weight: bold;"] [ 
+                                                        //            text ("Structured Irradiance Sampling")
+                                                        //        ]
                                                                 
-                                                                yield text "Scale factor"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScaleIrr |> UI.map CHANGE_SRS_WEIGHT_SCALE_IRR ]
-                                                                yield br[] 
+                                                        //        yield text "Scale factor"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScaleIrr |> UI.map CHANGE_SRS_WEIGHT_SCALE_IRR ]
+                                                        //        yield br[] 
 
-                                                                yield text "Tangent Approx Dist"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDistIrr |> UI.map CHANGE_TANGENT_APPROX_DIST_IRR ]
-                                                                yield br[] 
-                                                            ]                                                            
+                                                        //        yield text "Tangent Approx Dist"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDistIrr |> UI.map CHANGE_TANGENT_APPROX_DIST_IRR ]
+                                                        //        yield br[] 
+                                                        //    ]                                                            
                                                         
                                                 }
                                             )
@@ -1222,6 +1254,7 @@
             sampleLight      = true
             blendSamples     = false
             blendEasing      = false
+            skewClipPlane = true
             blendDistance = {
                                 value   = 0.1
                                 min     = 0.0

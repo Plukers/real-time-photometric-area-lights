@@ -1,5 +1,5 @@
 for h = heights
-    RunCustomToneMapFun(evaluation, h);
+    RunCustomToneMapFun(evaluation, h * 10);
     fclose('all');
 end
 
