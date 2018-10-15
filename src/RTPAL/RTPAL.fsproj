@@ -2314,6 +2314,7 @@
     <Compile Include="EffectApVoronoiIrradianceIntegration.fs" />
     <Compile Include="EffectApDelaunayDataHandling.fs" />
     <Compile Include="EffectApDelaunayDataMutation.fs" />
+    <Compile Include="EffectApDelaunayGenInitTriangulation.fs" />
     <Compile Include="EffectApDelaunayIrradianceIntegration.fs" />
     <Compile Include="EffectCompare.fs" />
     <Compile Include="EffectOutline.fs" />
