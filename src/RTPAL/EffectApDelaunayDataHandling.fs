@@ -520,9 +520,6 @@ module EffectApDelaunayDataHandling =
 
         let private getMockupFaceArray () =
             Arr<N<MAX_FACES_HALF>, V4i>([|
-                                        yield V4i(-1)
-                                        yield V4i(-1)
-                                        yield V4i(-1)
                                         yield V4i(V3i(0, 1, 2) |> genIntFromV3i, V3i(00, 11, 22) |> genIntFromV3i, V3i(4, 5, 6) |> genIntFromV3i, V3i(44, 55, 66) |> genIntFromV3i) 
                                         yield V4i(V3i(8, 9, 10) |> genIntFromV3i, V3i(88, 99, 100) |> genIntFromV3i, V3i(12, 13, 14) |> genIntFromV3i, V3i(122, 133, 144) |> genIntFromV3i) 
                                     |])
@@ -532,42 +529,42 @@ module EffectApDelaunayDataHandling =
             let faces = getMockupFaceArray ()
 
             Assert.Multiple( fun _ ->
-                0 |> readFaceVertexId faces 6 |> should equal 0
-                1 |> readFaceVertexId faces 7 |> should equal 5
-                2 |> readFaceVertexId faces 8 |> should equal 10
-                1 |> readFaceVertexId faces 9 |> should equal 13
+                0 |> readFaceVertexId faces 0 |> should equal 0
+                1 |> readFaceVertexId faces 1 |> should equal 5
+                2 |> readFaceVertexId faces 2 |> should equal 10
+                1 |> readFaceVertexId faces 3 |> should equal 13
             )
 
         [<Test>]
         let ``Write Face Vertex Ids Combined``() = 
             let faces = getMockupFaceArray ()
 
-            0x00AABBCC |> writeFaceVertexIdsCombined faces 6 
-            0x00AABBCC |> writeFaceVertexIdsCombined faces 7 
-            0x00AABBCC |> writeFaceVertexIdsCombined faces 8 
-            0x00AABBCC |> writeFaceVertexIdsCombined faces 9 
+            0x00AABBCC |> writeFaceVertexIdsCombined faces 0 
+            0x00AABBCC |> writeFaceVertexIdsCombined faces 1 
+            0x00AABBCC |> writeFaceVertexIdsCombined faces 2 
+            0x00AABBCC |> writeFaceVertexIdsCombined faces 3 
 
             Assert.Multiple( fun _ ->
-                0 |> readFaceVertexId faces 6 |> should equal 0xCC
-                1 |> readFaceVertexId faces 7 |> should equal 0xBB
-                2 |> readFaceVertexId faces 8 |> should equal 0xAA
-                1 |> readFaceVertexId faces 9 |> should equal 0xBB
+                0 |> readFaceVertexId faces 0 |> should equal 0xCC
+                1 |> readFaceVertexId faces 1 |> should equal 0xBB
+                2 |> readFaceVertexId faces 2 |> should equal 0xAA
+                1 |> readFaceVertexId faces 3 |> should equal 0xBB
             )
 
         [<Test>]
         let ``Write Face Vertex Ids``() = 
             let faces = getMockupFaceArray ()
 
-            writeFaceVertexIds faces 6 0xCC 0xBB 0xAA
-            writeFaceVertexIds faces 7 0xCC 0xBB 0xAA
-            writeFaceVertexIds faces 8 0xCC 0xBB 0xAA
-            writeFaceVertexIds faces 9 0xCC 0xBB 0xAA
+            writeFaceVertexIds faces 0 0xCC 0xBB 0xAA
+            writeFaceVertexIds faces 1 0xCC 0xBB 0xAA
+            writeFaceVertexIds faces 2 0xCC 0xBB 0xAA
+            writeFaceVertexIds faces 3 0xCC 0xBB 0xAA
 
             Assert.Multiple( fun _ ->
-                0 |> readFaceVertexId faces 6 |> should equal 0xCC
-                1 |> readFaceVertexId faces 7 |> should equal 0xBB
-                2 |> readFaceVertexId faces 8 |> should equal 0xAA
-                1 |> readFaceVertexId faces 9 |> should equal 0xBB
+                0 |> readFaceVertexId faces 0 |> should equal 0xCC
+                1 |> readFaceVertexId faces 1 |> should equal 0xBB
+                2 |> readFaceVertexId faces 2 |> should equal 0xAA
+                1 |> readFaceVertexId faces 3 |> should equal 0xBB
             )
         
         [<Test>]
@@ -575,26 +572,26 @@ module EffectApDelaunayDataHandling =
             let faces = getMockupFaceArray ()
 
             Assert.Multiple( fun _ ->
-                0 |> readFaceEdgeId faces 6 |> should equal 0
-                1 |> readFaceEdgeId faces 7 |> should equal 55
-                2 |> readFaceEdgeId faces 8 |> should equal 100
-                1 |> readFaceEdgeId faces 9 |> should equal 133
+                0 |> readFaceEdgeId faces 0 |> should equal 0
+                1 |> readFaceEdgeId faces 1 |> should equal 55
+                2 |> readFaceEdgeId faces 2 |> should equal 100
+                1 |> readFaceEdgeId faces 3 |> should equal 133
             )
 
         [<Test>]
         let ``Write Face Edge Ids``() = 
             let faces = getMockupFaceArray ()
 
-            writeFaceEdgeIds faces 6 0xCC 0xBB 0xAA
-            writeFaceEdgeIds faces 7 0xCC 0xBB 0xAA
-            writeFaceEdgeIds faces 8 0xCC 0xBB 0xAA
-            writeFaceEdgeIds faces 9 0xCC 0xBB 0xAA
+            writeFaceEdgeIds faces 0 0xCC 0xBB 0xAA
+            writeFaceEdgeIds faces 1 0xCC 0xBB 0xAA
+            writeFaceEdgeIds faces 2 0xCC 0xBB 0xAA
+            writeFaceEdgeIds faces 3 0xCC 0xBB 0xAA
 
             Assert.Multiple( fun _ ->
-                0 |> readFaceEdgeId faces 6 |> should equal 0xCC
-                1 |> readFaceEdgeId faces 7 |> should equal 0xBB
-                2 |> readFaceEdgeId faces 8 |> should equal 0xAA
-                1 |> readFaceEdgeId faces 9 |> should equal 0xBB
+                0 |> readFaceEdgeId faces 0 |> should equal 0xCC
+                1 |> readFaceEdgeId faces 1 |> should equal 0xBB
+                2 |> readFaceEdgeId faces 2 |> should equal 0xAA
+                1 |> readFaceEdgeId faces 3 |> should equal 0xBB
             )
         
         [<Test>]
@@ -613,9 +610,9 @@ module EffectApDelaunayDataHandling =
             let faces = getMockupFaceArray ()
 
             Assert.Multiple( fun _ ->
-                verticesAreFromFace faces 6 (V3i(0, 1, 2) |> genIntFromV3i) |> should equal true
-                verticesAreFromFace faces 6 (V3i(1, 2, 0) |> genIntFromV3i) |> should equal true
-                verticesAreFromFace faces 6 (V3i(1, 2, 3) |> genIntFromV3i) |> should equal false
+                verticesAreFromFace faces 0 (V3i(0, 1, 2) |> genIntFromV3i) |> should equal true
+                verticesAreFromFace faces 0 (V3i(1, 2, 0) |> genIntFromV3i) |> should equal true
+                verticesAreFromFace faces 0 (V3i(1, 2, 3) |> genIntFromV3i) |> should equal false
             )
 
         [<Test>]
