@@ -25,22 +25,23 @@ for a = 1:size(approximations,1)
         stepSolidAngleImg = stepSolidAngle{step};
         ssaStep = stepSolidAngleImg(:);
         plot(ssaStep, seStep,'.','markersize',0.5);
-        hold on
+        
+        grid on
+        %title(approximations(a));
+        %legend(stepLegend,'location','northwest');
+        %legendmarkeradjust(20);
+
+        e = e(:);
+        p = polyfit(ssaStep,seStep,3);
+        x1 = linspace(0,max(max(solidAngle)));
+        y1 = polyval(p,x1);
+        plot(x1,y1,'LineWidth', 3);
+
+        saveas(h,strcat(savePath, approximations{a},'_',step,'_solid_angle.png'))
+        close(h);
+        
     end
-    grid on
-    title(approximations(a));
-    legend(stepLegend,'location','northwest');
-    legendmarkeradjust(20);
-    
-    e = e(:);
-    p = polyfit(s,e,3);
-    x1 = linspace(0,max(max(solidAngle)));
-    y1 = polyval(p,x1);
-    plot(x1,y1,'LineWidth', 3);
-    hold off;
-    
-    saveas(h,strcat(savePath, approximations{a},'_solid_angle.png'))
-    close(h);
+
 end
 
 for a = 1:size(approximations,1)

@@ -27,7 +27,6 @@ module Utils =
             sg
                 // |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
                 |> Sg.viewTrafo (view |> Mod.map (fun v ->
-                                                    printfn "Trafo %A" v
                                                     CameraView.viewTrafo v
                                                     ))
                 |> Sg.projTrafo projTrafo
@@ -74,9 +73,7 @@ module Utils =
             let rnd = System.Random(061815)
 
             let mutable samplePoints = samplePoints
-
-            printfn "Computing %A new sample points. Current num of sample points: %A" num (samplePoints.Length)
-
+            
             for i in 0 .. num - 1 do
 
                 let mutable maxDistance = 0.0
@@ -101,12 +98,9 @@ module Utils =
 
 
                 let currentPercent = (int)((((float) i)/((float) (num - 1))) * 100.0)
-                printfn "%A%%" currentPercent
 
                 samplePoints <- nextSample :: samplePoints
-
-            printfn "Finished generating sample soints. New num of sample points: %A" (samplePoints.Length)
-
+                
             samplePoints
 
         (*
@@ -117,9 +111,7 @@ module Utils =
             let rnd = System.Random(081815)
 
             let mutable samplePoints = samplePoints
-
-            printfn "AAComputing %A new sample points. Current num of sample points: %A" num (samplePoints.Length)
-
+            
             let mutable radius = 2.0
             let scaleFactor = 0.96
 
@@ -154,8 +146,6 @@ module Utils =
                 else
                     failedCount <- failedCount + 1
                     
-            printfn "Finished generating sample points. New num of sample points: %A" (samplePoints.Length)
-
             samplePoints
 
         module Triangle = 

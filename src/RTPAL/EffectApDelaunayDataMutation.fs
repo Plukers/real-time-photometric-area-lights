@@ -43,14 +43,14 @@ module EffectApDelaunayDataMutation =
                     writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (3 |> readEdgeId edges eId) 
                     writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
 
-            | 3 ->
-                if 2 |> compareIndices edges neId OPPOSITE_0 eId then
-                    writeOppositeEdgeIds edges neId OPPOSITE_0 (0 |> readEdgeId edges eId) (eId)
-                    writeVertexId edges neId OPPOSITE_0 (1 |> readVertexId edges eId)
+            | 2 ->
+                if 0 |> compareIndices edges neId OPPOSITE_0 eId then
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (1 |> readEdgeId edges eId) 
+                    writeVertexId edges neId OPPOSITE_0 ( 1 |> readVertexId edges eId)
                 else
-                    writeOppositeEdgeIds edges neId OPPOSITE_1 (0 |> readEdgeId edges eId) (eId)
-                    writeVertexId edges neId OPPOSITE_1 (1 |> readVertexId edges eId)
-                
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (1 |> readEdgeId edges eId)    
+                    writeVertexId edges neId OPPOSITE_1 ( 1 |> readVertexId edges eId)
+
             | 1 ->
                 if 0 |> compareIndices edges neId OPPOSITE_0 eId then
                     writeOppositeEdgeIds edges neId OPPOSITE_0 (2 |> readEdgeId edges eId) (eId) 
@@ -59,14 +59,14 @@ module EffectApDelaunayDataMutation =
                     writeOppositeEdgeIds edges neId OPPOSITE_1 (2 |> readEdgeId edges eId) (eId)  
                     writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
 
-            | 2 ->
-                if 0 |> compareIndices edges neId OPPOSITE_0 eId then
-                    writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (1 |> readEdgeId edges eId) 
-                    writeVertexId edges neId OPPOSITE_0 ( 1 |> readVertexId edges eId)
+            | 3 ->
+                if 2 |> compareIndices edges neId OPPOSITE_0 eId then
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (0 |> readEdgeId edges eId) (eId)
+                    writeVertexId edges neId OPPOSITE_0 (1 |> readVertexId edges eId)
                 else
-                    writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (1 |> readEdgeId edges eId)    
-                    writeVertexId edges neId OPPOSITE_1 ( 1 |> readVertexId edges eId)
-                    
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (0 |> readEdgeId edges eId) (eId)
+                    writeVertexId edges neId OPPOSITE_1 (1 |> readVertexId edges eId)
+                
             | _ -> ()
 
             // if inside and not marked -> mark it

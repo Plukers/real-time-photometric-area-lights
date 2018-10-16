@@ -151,8 +151,14 @@
             transact (fun _ ->
                 rl |> Mod.change renderLight
             )
+
+        let skewClipPlane = false |> Mod.init
+        let setSkewClipPlane s =
+            transact(fun _ ->
+                s |> Mod.change skewClipPlane
+            )
         
-        updatePhotometryData "ARC3_60712332_(STD).ldt"
+        updatePhotometryData "ARCOS3_60712332.ldt"
 
         let lightData : Render.Light.Sg.LightSgData = 
             {
@@ -177,6 +183,7 @@
                 compare = compareMode
                 toneMap = toneMap
                 toneMapScale = toneMapScale
+                skewClipPlane = skewClipPlane
             }
                        
         let gtData = initGTData' (true |> Mod.init) (GTSamplingMode.Light |> Mod.init)
@@ -283,12 +290,20 @@
         
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
+
+        let translations = [-0.5; 0.0; 1.0; 3.0]
         
         let imageFormat = PixFileFormat.Exr 
 
-        let createFileName step renderModeData mode =
+        let createFileName step height renderModeData mode =
+        
+            let appendSkewClipPlane s = 
+                if renderData.skewClipPlane |> Mod.force then
+                    sprintf "%s_%s" s "SCP"
+                else
+                    s
 
-            let renderModeData = 
+            let renderModeData =                 
                 match renderModeData with
                 | Some rmd -> rmd
                 | None ->
@@ -297,23 +312,44 @@
                     | RenderMode.StructuredSampling -> sprintf "_%s" (EffectApStructuredSampling.Rendering.encodeSettingsForName ssData)
                     | _ -> ""
 
-                    
+              
             match step with
-            | Some step -> sprintf "%s%s_%i"  (mode.ToString()) renderModeData step
-            | None -> sprintf "%s%s"  (mode.ToString()) renderModeData
+            | Some step -> 
+                match height with
+                | Some height ->
+                    printfn "Create  File Name for height %f %s" height (sprintf "%s%s_%i_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData step height) 
+                    sprintf "%s%s_%i_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData step height
+                | None -> sprintf "%s%s_%i"  (mode.ToString() |> appendSkewClipPlane) renderModeData step
+            | None -> 
+                match height with
+                | Some height ->
+                    printfn "Create  File Name for height %f %s" height (sprintf "%s%s_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData height) 
+                    sprintf "%s%s_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData height
+                | None -> sprintf "%s%s"  (mode.ToString() |> appendSkewClipPlane) renderModeData
 
-        let doRotationIteration action =
 
-            let mutable rotation = Trafo3d.Identity
-            let rotationStep = Trafo3d.Rotation(V3d(0.0, angle, 0.0));
+
+        let doIteration action =
         
-            for r in 0 .. numOfRotationSteps - 1 do 
-                action r
-                
-                transformLight renderData.lights activeTrafoLightId (rotationStep)
-                rotation <- rotation * rotationStep
-            
-            transformLight renderData.lights activeTrafoLightId (rotation.Inverse)
+            for h in translations do
+
+                let t = Trafo3d.Translation(V3d(0.0, 0.0, h))
+                transformLight renderData.lights activeTrafoLightId (t)
+
+                let mutable rotation = Trafo3d.Identity
+                let rotationStep = Trafo3d.Rotation(V3d(0.0, angle, 0.0));
+
+                for r in 0 .. numOfRotationSteps - 1 do                 
+                    action r h
+
+                    transformLight renderData.lights activeTrafoLightId (rotationStep)
+                    rotation <- rotation * rotationStep
+
+                transformLight renderData.lights activeTrafoLightId (rotation.Inverse)
+
+
+                transformLight renderData.lights activeTrafoLightId (t.Inverse)
+
             
          
         let resultPath =  Path.combine [__SOURCE_DIRECTORY__;"..";"..";"results"]
@@ -331,6 +367,7 @@
                 usePhotometry = setUsePhotometry
                 setDiffuseExitance = setDiffuseExitance
                 setRenderLight = setRenderLight
+                setSkewClipPlane = setSkewClipPlane
 
                 gtAPI = {
                             overwriteEstimate = fun overwrite -> updateGroundTruth overwrite
@@ -346,12 +383,15 @@
                         }
             }
 
-        let generateSaveImage step path = 
-            fun (_ : unit) ->
-                app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [path;  renderData.mode |> Mod.force |> createFileName (Some step) None], imageFormat);
+        let generateSaveImage step height path = 
+            fun (_ : unit) ->            
+                let heightPath = Path.combine [path; ( sprintf "h%i" (height * 10.0 |> int))]
+                if not (System.IO.Directory.Exists heightPath) then
+                    System.IO.Directory.CreateDirectory heightPath |> ignore
+                app.Runtime.Download(scColor |> Mod.force).SaveAsImage(Path.combine [heightPath; renderData.mode |> Mod.force |> createFileName (Some step) None None], imageFormat);
 
-        let executeTask step path api (task : TaskAPI -> unit) = 
-            task { api with saveImage = generateSaveImage step path }
+        let executeTask step height path api (task : TaskAPI -> unit) = 
+            task { api with saveImage = generateSaveImage step height path }
 
         let renderOfflineTask forPhotometry (offlineTasks : Map<string, (TaskAPI -> unit)>) (task : string) = 
             async {
@@ -368,10 +408,10 @@
                     
                         updatePhotometryData f
 
-                        doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step dataPath API |> ignore)
+                        doIteration (fun step height -> offlineTasks |> Map.find task |> executeTask step height dataPath API |> ignore)
 
                 else
-                    doRotationIteration (fun step -> offlineTasks |> Map.find task |> executeTask step resultPath API |> ignore)
+                    doIteration (fun step height -> offlineTasks |> Map.find task |> executeTask step height resultPath API |> ignore)
             }
 
         let renderOfflineEvaluationTasks (offlineTasks : Map<string, (TaskAPI -> unit)>) (tasks : string list) = 
@@ -383,7 +423,7 @@
 
                 let API = { API with evalAPI = {
                                                     updateEffectList = (fun _ ->
-                                                                             renderMode |> Mod.force |> createFileName None None |> approxList.Add |> ignore
+                                                                             renderMode |> Mod.force |> createFileName None None None |> approxList.Add |> ignore
                                                                         )
                                                 }}
                 
@@ -402,7 +442,7 @@
                     updatePhotometryData f
 
                     for t in tasks do
-                        doRotationIteration (fun step -> offlineTasks |> Map.find t |> executeTask step dataPath API |> ignore)      
+                        doIteration (fun step height -> offlineTasks |> Map.find t |> executeTask step height dataPath API |> ignore)      
                         
 
                 let approxList =
@@ -423,13 +463,14 @@
                 let tonemapOfflineRender  = m.tonemapOfflineRender  |> Mod.force
 
                 let postprocess = evaluateOfflineRender || tonemapOfflineRender
-
+                
                 if postprocess then 
                     let mutable scripts = ""
                     if evaluateOfflineRender then scripts <- String.concat "" [scripts; "RunEvaluation;"]
                     if tonemapOfflineRender then scripts <- String.concat "" [scripts; "RunCustomToneMap;"]
 
-                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';%sexit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation scripts (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
+
+                    let command = sprintf "/c matlab.exe -r \"evaluation='%s';heights=%A';%sexit;\" -sd \"%s\" -nodesktop -nosplash"  evaluation translations scripts (Path.combine [__SOURCE_DIRECTORY__;"..";".."])
                     System.Diagnostics.Process.Start("cmd", command) |> ignore
 
             }
@@ -444,13 +485,15 @@
                 writeMetaData resultPath "PhotometryData.txt" photometryList
             }
 
+        let (taskMap, tasks) = offlineRenderTasks
+
         let createImageTask = 
             m.offlineRenderMode |> Mod.map (fun mode ->
                 match mode with
-                | OfflineRenderMode.AbstractData    -> renderOfflineTask false offlineRenderTasks "AbstractData" 
-                | OfflineRenderMode.GroundTruth     -> renderOfflineTask true  offlineRenderTasks "GroundTruth" 
+                | OfflineRenderMode.AbstractData    -> renderOfflineTask false taskMap "AbstractData" 
+                | OfflineRenderMode.GroundTruth     -> renderOfflineTask true  taskMap "GroundTruth" 
                 | OfflineRenderMode.PhotometryList  -> createPhotometryList
-                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks ([ "StructuredLuminanceSamplingRandom" ])
+                | _ (* Approximations *)            -> renderOfflineEvaluationTasks taskMap (tasks)
                     
             )
             
@@ -486,6 +529,20 @@
         let projTrafo =
             Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y)
             |> Frustum.projTrafo |> Mod.init
+
+        //let view =
+        //    CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO
+        //    |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
+        //let projTrafo = 
+        //    { 
+        //        left = -20.0
+        //        right = 20.0
+        //        bottom = -20.0
+        //        top = 20.0
+        //        near = 0.1
+        //        far = 20.1
+        //    } 
+        //    |> Frustum.orthoTrafo |> Mod.init
         
         let lightData : Render.Light.Sg.LightSgData = 
             {
@@ -638,6 +695,8 @@
             | CHANGE_TANGENT_APPROX_DIST_IRR tad -> { s with TangentApproxDistIrr = Numeric.update s.TangentApproxDistIrr tad }
             | CHANGE_COMBINED_WEIGHT t -> { s with CombinedSSWeight = Numeric.update s.CombinedSSWeight t }
 
+            | TOGGLE_SKEW_CLIP_PLANE -> { s with skewClipPlane = (not s.skewClipPlane) }
+
             | TOGGLE_TONEMAPPING -> { s with toneMap = (not s.toneMap) }
             | CHANGE_TONEMAP_SCALE tms -> { s with toneMapScale = Numeric.update s.toneMapScale tms}
 
@@ -662,7 +721,7 @@
         
         let viewFunc (m : MRenderState) =
             
-            let (win, renderFeedback, offlineRenderTask) = setupRendering app (V2i(1600, 900)) m
+            let (win, renderFeedback, offlineRenderTask) = setupRendering app (V2i(1920, 1080)) m
             
             let openGameWindowAction : System.Action = 
                 new System.Action( fun () -> 
@@ -964,6 +1023,19 @@
                                                 }
                                             )
 
+                                            Incremental.div (AttributeMap.ofList []) (
+                                                alist {
+                                                    let! mode = m.renderMode
+
+                                                    if mode = RenderMode.DelaunayIrradianceSampling then
+                                                        yield div [ clazz "ui divider"] []                                        
+
+                                                        yield toggleBox m.sampleMRP TOGGLE_SKEW_CLIP_PLANE       
+                                                        yield text "Skew Clip Plane"                                                    
+                                                        yield br[]   
+                                                                                                
+                                                }
+                                            )
                                                                                                     
 
                                             Incremental.div (AttributeMap.ofList []) (
@@ -1031,54 +1103,54 @@
                                                                 yield br[] 
                                                             ]
 
-                                                        let! blendSamples = m.blendSamples
+                                                        //let! blendSamples = m.blendSamples
 
-                                                        yield p[] [
-                                                            yield toggleBox m.blendSamples TOGGLE_BLEND_SAMPLES      
-                                                            yield text "Blend Samples"                                                    
-                                                            yield br[]  
+                                                        //yield p[] [
+                                                        //    yield toggleBox m.blendSamples TOGGLE_BLEND_SAMPLES      
+                                                        //    yield text "Blend Samples"                                                    
+                                                        //    yield br[]  
 
                                                             
 
-                                                            if blendSamples  then
-                                                                yield toggleBox m.blendEasing TOGGLE_BLEND_EASING      
-                                                                yield text "Eased Blending"                                                    
-                                                                yield br[]  
+                                                        //    if blendSamples  then
+                                                        //        yield toggleBox m.blendEasing TOGGLE_BLEND_EASING      
+                                                        //        yield text "Eased Blending"                                                    
+                                                        //        yield br[]  
 
-                                                                yield text "Blend Distance"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.blendDistance |> UI.map CHANGE_BLEND_DIST ]
+                                                        //        yield text "Blend Distance"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.blendDistance |> UI.map CHANGE_BLEND_DIST ]
                                                                 
-                                                        ]
+                                                        //]
                                                         
-                                                        if mode = RenderMode.StructuredSampling || c = RenderMode.StructuredSampling then
-                                                            yield p [] [   
-                                                                yield p [style "font-weight: bold;"] [ 
-                                                                    text ("Structured Sampling")
-                                                                ]
+                                                        //if mode = RenderMode.StructuredSampling || c = RenderMode.StructuredSampling then
+                                                        //    yield p [] [   
+                                                        //        yield p [style "font-weight: bold;"] [ 
+                                                        //            text ("Structured Sampling")
+                                                        //        ]
                                                                 
-                                                                yield text "Scale factor"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScale |> UI.map CHANGE_SRS_WEIGHT_SCALE ]
-                                                                yield br[] 
+                                                        //        yield text "Scale factor"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScale |> UI.map CHANGE_SRS_WEIGHT_SCALE ]
+                                                        //        yield br[] 
 
-                                                                yield text "Tangent Approx Dist"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDist |> UI.map CHANGE_TANGENT_APPROX_DIST ]
-                                                                yield br[] 
-                                                            ]
+                                                        //        yield text "Tangent Approx Dist"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDist |> UI.map CHANGE_TANGENT_APPROX_DIST ]
+                                                        //        yield br[] 
+                                                        //    ]
 
-                                                        if mode = RenderMode.StructuredIrrSampling || c = RenderMode.StructuredIrrSampling then
-                                                            yield p [] [   
-                                                                yield p [style "font-weight: bold;"] [ 
-                                                                    text ("Structured Irradiance Sampling")
-                                                                ]
+                                                        //if mode = RenderMode.StructuredIrrSampling || c = RenderMode.StructuredIrrSampling then
+                                                        //    yield p [] [   
+                                                        //        yield p [style "font-weight: bold;"] [ 
+                                                        //            text ("Structured Irradiance Sampling")
+                                                        //        ]
                                                                 
-                                                                yield text "Scale factor"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScaleIrr |> UI.map CHANGE_SRS_WEIGHT_SCALE_IRR ]
-                                                                yield br[] 
+                                                        //        yield text "Scale factor"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.SRSWeightScaleIrr |> UI.map CHANGE_SRS_WEIGHT_SCALE_IRR ]
+                                                        //        yield br[] 
 
-                                                                yield text "Tangent Approx Dist"
-                                                                yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDistIrr |> UI.map CHANGE_TANGENT_APPROX_DIST_IRR ]
-                                                                yield br[] 
-                                                            ]                                                            
+                                                        //        yield text "Tangent Approx Dist"
+                                                        //        yield div [clazz "ui input"] [ Numeric.view' [InputBox] m.TangentApproxDistIrr |> UI.map CHANGE_TANGENT_APPROX_DIST_IRR ]
+                                                        //        yield br[] 
+                                                        //    ]                                                            
                                                         
                                                 }
                                             )
@@ -1137,7 +1209,7 @@
             transformLight lc lightId t |> ignore
         | None -> ()
         
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"IYON_M_60714889_(STD_LEO).LDT"]
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"SLOTLIGHT_42184612.LDT"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         
         
@@ -1182,6 +1254,7 @@
             sampleLight      = true
             blendSamples     = false
             blendEasing      = false
+            skewClipPlane = true
             blendDistance = {
                                 value   = 0.1
                                 min     = 0.0

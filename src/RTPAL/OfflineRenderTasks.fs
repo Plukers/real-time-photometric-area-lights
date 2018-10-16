@@ -43,6 +43,8 @@ module OfflineRenderTasks =
             // Use photometry or diffuse emitter
             usePhotometry : bool -> unit
 
+            setSkewClipPlane : bool -> unit
+
             setDiffuseExitance : float -> unit
 
             setRenderLight : bool -> unit
@@ -53,7 +55,7 @@ module OfflineRenderTasks =
         }
 
     
-    let offlineRenderTasks : Map<string, (TaskAPI -> unit)> = 
+    let offlineRenderTasks : (Map<string, (TaskAPI -> unit)> * string list) = 
         let taskMap = Map.empty
 
         let taskMap = taskMap |> Map.add 
@@ -75,7 +77,7 @@ module OfflineRenderTasks =
                                 api.setRenderMode RenderMode.GroundTruth
                         
                                 api.gtAPI.overwriteEstimate true
-                                for _ in 1 .. (50000 / Config.Light.NUM_SAMPLES) do
+                                for _ in 1 .. (25000 / Config.Light.NUM_SAMPLES) do
                                     api.render ()
                                     api.gtAPI.overwriteEstimate false
                             
@@ -113,6 +115,31 @@ module OfflineRenderTasks =
                             "Delaunay"
                             (fun (api : TaskAPI) ->
                                 api.setRenderMode RenderMode.DelaunayIrradianceSampling
+
+                                api.setSkewClipPlane true
+                                api.render ()
+                                api.saveImage () 
+                                api.evalAPI.updateEffectList ()
+
+                                api.setSkewClipPlane false
+                                api.render ()
+                                api.saveImage () 
+                                api.evalAPI.updateEffectList ()
+                            )
+
+        let taskMap = taskMap |> Map.add 
+                            "DelaunayWithLight"
+                            (fun (api : TaskAPI) ->
+                                api.setRenderLight true
+
+                                api.setRenderMode RenderMode.DelaunayIrradianceSampling
+
+                                api.setSkewClipPlane true
+                                api.render ()
+                                api.saveImage () 
+                                api.evalAPI.updateEffectList ()
+
+                                api.setSkewClipPlane false
                                 api.render ()
                                 api.saveImage () 
                                 api.evalAPI.updateEffectList ()
@@ -131,13 +158,39 @@ module OfflineRenderTasks =
                             )
 
         let taskMap = taskMap |> Map.add 
+                            "StructuredSamplingDrobot"
+                            (fun (api : TaskAPI) ->
+                                api.setRenderMode RenderMode.StructuredSampling
+
+                                api.ssAPI.setSamples true true false false false false
+                                api.render ()
+                                api.saveImage () 
+                                api.evalAPI.updateEffectList ()
+                            )
+
+        let taskMap = taskMap |> Map.add 
                             "StructuredSamplingRandom"
                             (fun (api : TaskAPI) ->
                                 api.setRenderMode RenderMode.StructuredSampling
 
                                 api.ssAPI.setSamples false false false false false true
                                 
-                                for n in [16; 64; 128; 380] do
+                                for n in [5; 16; 24;] do
+                                    api.ssAPI.setRandomSampleCount n                                
+                                    api.render ()
+                                    api.saveImage () 
+                                    api.evalAPI.updateEffectList ()
+                            
+                            )
+
+        let taskMap = taskMap |> Map.add 
+                            "StructuredSamplingSmall"
+                            (fun (api : TaskAPI) ->
+                                api.setRenderMode RenderMode.StructuredSampling
+
+                                api.ssAPI.setSamples false false false false false true
+                                
+                                for n in [5] do
                                     api.ssAPI.setRandomSampleCount n                                
                                     api.render ()
                                     api.saveImage () 
@@ -169,7 +222,7 @@ module OfflineRenderTasks =
 
                                 api.ssAPI.setSamples false false false false false true
 
-                                for n in [16; 32; 64; 128; 256] do
+                                for n in [16; 24; 32; 40; 48; 56; 64; 128; 256] do
                                     api.ssAPI.setRandomSampleCount n                                
                                     api.render ()
                                     api.saveImage () 
@@ -206,6 +259,21 @@ module OfflineRenderTasks =
 
                             )
 
+        let taskMap = taskMap |> Map.add 
+                            "Custom"
+                            (fun (api : TaskAPI) ->
 
-        taskMap
+                                api.setRenderMode RenderMode.GroundTruth
+                        
+                                api.gtAPI.overwriteEstimate true
+                                for _ in 1 .. (20000 / Config.Light.NUM_SAMPLES) do
+                                    api.render ()
+                                    api.gtAPI.overwriteEstimate false
+                            
+                                api.saveImage ()
+                            )
+
+
+        // (taskMap, [ "Delaunay"; "StructuredSamplingDrobot"; "StructuredSamplingRandom" ])
+        (taskMap, [ "DelaunayWithLight"])
 
