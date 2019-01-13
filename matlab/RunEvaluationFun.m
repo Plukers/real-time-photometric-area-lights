@@ -208,7 +208,7 @@ end
         ssimindex = ssimindex + 1;
         
         ResultFile = fopen(strcat(evalPath, '/data.csv'), 'w');
-        fprintf(ResultFile, 'Approximation;MSE; SSIM; MaxError; CorrelationFF; CorrelationSA\n');
+        fprintf(ResultFile, 'Approximation;MSE;NMSE; SSIM; MaxError; MinError; CorrelationFF; CorrelationSA\n');
         
         %% Load Ground Truth
         
@@ -265,6 +265,7 @@ end
             errorPerSolidAngle(:, a + 1) = eimg(:);
             
             msError = immse(GroundTruth, Approx); %% USE    
+            nmsError = msError / mean(GroundTruth(:));
 
             ssimError = ssim(Approx, GroundTruth);
             
@@ -281,8 +282,8 @@ end
             corrFF = corr2(eimg, FormFactor); %% USE
             corrSA = corr2(eimg, SolidAngle); %% USE
             errorImg = ones(size(eimg)) - (eimg ./ maxError); %% USE
-            
-            fprintf(ResultFile, strcat(Approximations{a}, ';', num2str(msError), ';', num2str(ssimError), ';', num2str(maxError), ';', num2str(corrFF), ';', num2str(corrSA), '\n'));
+
+            fprintf(ResultFile, strcat(Approximations{a}, ';', num2str(msError), ';', num2str(nmsError), ';', num2str(ssimError), ';', num2str(maxError), ';', num2str(minError), ';', num2str(corrFF), ';', num2str(corrSA), '\n'));
 
             % disp(sprintf('Writing errorImg to: %s', strcat(evalPath, '/', Approximations{a}, '_error.png')));
 

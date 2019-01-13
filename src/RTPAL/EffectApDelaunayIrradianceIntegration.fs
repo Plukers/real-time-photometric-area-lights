@@ -130,7 +130,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                             // linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d)
                             let mutable clipNormal = V3d.OOI
-                            if uniform.skewClipPlane then
+                            if uniform.skewClipPlane && abs(Vec.dot (uniform.LForwards.[addr]) clipNormal) < (1.0 - 1e-8) then
                                 let heightCut = 0.1
                                 let translate = V2d(-uniform.LForwards.[addr].Y, uniform.LForwards.[addr].X)
 

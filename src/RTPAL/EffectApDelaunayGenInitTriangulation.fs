@@ -213,6 +213,23 @@ module EffectApDelaunayGenInitTriangulation =
         open FsUnit
 
         [<Test>]
+        let ``Examplary test``() =
+
+        
+            let EV = [||]
+            let EE = [||]
+            let EM = [||]
+            let FV = [||]
+            let FE = [||]
+
+            let EV, EE, EM, FV, FE = initInside 4 |> appendTriangulationCaseData EV EE EM FV FE
+
+            let (EDGES, META) = transformEdgeCollectionToCompactCollection EV EE EM 1
+            let FACES = transformFaceollectionToCompactCollection FV FE 1
+
+            true |> should equal true
+
+        [<Test>]
         let ``Init Quad Triangulation Inside``() = 
 
             let (EV, EE, EM, FV, FE) =  4 |> initInside

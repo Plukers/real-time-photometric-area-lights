@@ -121,10 +121,10 @@ module OfflineRenderTasks =
                                 api.saveImage () 
                                 api.evalAPI.updateEffectList ()
 
-                                api.setSkewClipPlane false
-                                api.render ()
-                                api.saveImage () 
-                                api.evalAPI.updateEffectList ()
+                                //api.setSkewClipPlane false
+                                //api.render ()
+                                //api.saveImage () 
+                                //api.evalAPI.updateEffectList ()
                             )
 
         let taskMap = taskMap |> Map.add 
@@ -158,7 +158,7 @@ module OfflineRenderTasks =
                             )
 
         let taskMap = taskMap |> Map.add 
-                            "StructuredSamplingDrobot"
+                            "StructuredSamplingLDR"
                             (fun (api : TaskAPI) ->
                                 api.setRenderMode RenderMode.StructuredSampling
 
@@ -175,7 +175,7 @@ module OfflineRenderTasks =
 
                                 api.ssAPI.setSamples false false false false false true
                                 
-                                for n in [5; 16; 24;] do
+                                for n in [5; 16; 24] do
                                     api.ssAPI.setRandomSampleCount n                                
                                     api.render ()
                                     api.saveImage () 
@@ -274,6 +274,6 @@ module OfflineRenderTasks =
                             )
 
 
-        // (taskMap, [ "Delaunay"; "StructuredSamplingDrobot"; "StructuredSamplingRandom" ])
-        (taskMap, [ "DelaunayWithLight"])
+        (taskMap, [ "Delaunay"; "StructuredSamplingLDR"; "StructuredSamplingRandom" ])
+        //(taskMap, [ "DelaunayWithLight"])
 

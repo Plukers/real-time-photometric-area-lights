@@ -291,7 +291,7 @@
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
 
-        let translations = [-0.5; 0.0; 1.0; 3.0]
+        let translations = [0.1; 1.1; 3.1; 5.1]
         
         let imageFormat = PixFileFormat.Exr 
 
