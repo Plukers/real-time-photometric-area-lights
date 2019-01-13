@@ -238,9 +238,10 @@ end
         
         globalMinError = Inf;
         globalMaxError = -Inf;
+
+        
         
         for a = 1:size(Approximations,1)
-        
             createApproxFilePath = @(iter)  fullfile(DataPath, light, HeightDirectory, strcat(Approximations{a}, '_', int2str(iter), '.exr'));
             Approx = (exrread(createApproxFilePath(0)));
             ApproxTone = CustomToneMap(Approx, toneMapScale);
@@ -281,21 +282,12 @@ end
             
             corrFF = corr2(eimg, FormFactor); %% USE
             corrSA = corr2(eimg, SolidAngle); %% USE
-            errorImg = ones(size(eimg)) - (eimg ./ maxError); %% USE
 
             fprintf(ResultFile, strcat(Approximations{a}, ';', num2str(msError), ';', num2str(nmsError), ';', num2str(ssimError), ';', num2str(maxError), ';', num2str(minError), ';', num2str(corrFF), ';', num2str(corrSA), '\n'));
 
             % disp(sprintf('Writing errorImg to: %s', strcat(evalPath, '/', Approximations{a}, '_error.png')));
 
-            for step = 1:NumSteps
 
-                imgWidth = size(errorImg, 2) / NumSteps;
-                
-                stepErrorImg = errorImg(1:end, (step * imgWidth - imgWidth + 1):(step * imgWidth));
-                imwrite(stepErrorImg, strcat(evalPath, '/', Approximations{a}, '_error_', num2str(step - 1), '.png'));
-            end
-
-            imwrite(errorImg, strcat(evalPath, '/', Approximations{a}, '_error.png'));
             
             errorReportEntry(eri) = {num2str(msError)};
             eri = eri + 1;
@@ -306,16 +298,66 @@ end
         end
         
         fclose(ResultFile);
+
+        %% Generate error images
+
+        for a = 1:size(Approximations,1)
+
+            createApproxFilePath = @(iter)  fullfile(DataPath, light, HeightDirectory, strcat(Approximations{a}, '_', int2str(iter), '.exr'));
+            Approx = (exrread(createApproxFilePath(0)));
+            for j = 1:(NumSteps - 1)
+                A = exrread(createApproxFilePath(j));
+                Approx = cat(2, Approx, A);
+            end
+            Approx = double(Approx(:,:,1));
+            
+        
+            %% Compute Error
+            ediff = Approx - GroundTruth;
+
+            % compute color error image
+            brightColor = [255.0, 153.0, 56.0] ./ 255.0;
+            darkColor = [4.0, 141.0, 178.0] ./ 255.0;
+            
+            nEdiff = ((ediff - globalMinError * 2)/(globalMaxError * 2 - globalMinError * 2)) * 2.0 - 1.0;
+            absnEdiff = abs(nEdiff);
+
+            errorImgR = ones(size(nEdiff, 1), size(nEdiff, 2));
+            errorImgR(nEdiff >= 0.0) = nEdiff(nEdiff >= 0.0) * brightColor(1) + (1.0 - nEdiff(nEdiff >= 0.0));
+            errorImgR(nEdiff <= 0.0) = absnEdiff(nEdiff <= 0.0) + (1.0 - absnEdiff(nEdiff <= 0.0))  * darkColor(1);
+
+            errorImgG = ones(size(nEdiff, 1), size(nEdiff, 2));
+            errorImgG(nEdiff >= 0.0) = nEdiff(nEdiff >= 0.0) * brightColor(2) + (1.0 - nEdiff(nEdiff >= 0.0));
+            errorImgG(nEdiff <= 0.0) = absnEdiff(nEdiff <= 0.0) + (1.0 - absnEdiff(nEdiff <= 0.0)) * darkColor(2);
+
+            errorImgB = ones(size(nEdiff, 1), size(nEdiff, 2));
+            errorImgB(nEdiff >= 0.0) = nEdiff(nEdiff >= 0.0) * brightColor(3) + (1.0 - nEdiff(nEdiff >= 0.0));
+            errorImgB(nEdiff <= 0.0) = absnEdiff(nEdiff <= 0.0) + (1.0 - absnEdiff(nEdiff <= 0.0))  * darkColor(3);
+
+            %errorImg = ones(size(eimg)) - (eimg ./ maxError); %% USE
+            errorImg = cat(3, errorImgR, errorImgG, errorImgB);
+
+            for step = 1:NumSteps
+
+                imgWidth = size(errorImg, 2) / NumSteps;
+                
+                stepErrorImg = errorImg(1:end, (step * imgWidth - imgWidth + 1):(step * imgWidth), :);
+                imwrite(stepErrorImg, strcat(evalPath, '/', Approximations{a}, '_error_', num2str(step - 1), '.png'));
+            end
+
+            imwrite(errorImg, strcat(evalPath, '/', Approximations{a}, '_error.png'));
+
+        end
         
         %% Generate Plots
         
-        PlotPath = strcat(evalPath, '/Plots/');
-        if exist(PlotPath, 'dir')
-            cmd_rmdir(PlotPath);
-        end
-        mkdir(PlotPath);
+        %PlotPath = strcat(evalPath, '/Plots/');
+        %if exist(PlotPath, 'dir')
+        %    cmd_rmdir(PlotPath);
+        %end
+        %mkdir(PlotPath);
         
-       BuildApproximationGraphsForLight( errorImage, errorSign, PlotPath, globalMaxError, globalMinError);
+       %BuildApproximationGraphsForLight( errorImage, errorSign, PlotPath, globalMaxError, globalMinError);
         
        % BuildCompareGraphForLight(errorImage, PlotPath);
         
