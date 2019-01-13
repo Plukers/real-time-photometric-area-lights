@@ -294,12 +294,60 @@ end
 
             ssimReportEntry(ssimindex) = {num2str(ssimError)};
             ssimindex = ssimindex + 1;
+            
+            
+            
+            
+            %% Compute Error images
+            ediff = Approx - GroundTruth;
+            sediff = sign(ediff);
+            absEdiff = abs(ediff);
+
+            % compute color error image
+            brightColor = [255.0, 153.0, 56.0] ./ 255.0;
+            darkColor = [4.0, 141.0, 178.0] ./ 255.0;
+            
+            p_ediff = zeros(size(ediff, 1), size(ediff, 2));
+            p_ediff(sediff > 0) = absEdiff(sediff > 0) / maxError;
+            
+            n_ediff = zeros(size(ediff, 1), size(ediff, 2));
+            n_ediff(sediff < 0) = absEdiff(sediff < 0) / abs(minError);            
+
+            errorImgR = ones(size(ediff, 1), size(ediff, 2));
+            errorImgR(sediff > 0) = p_ediff(sediff > 0) * brightColor(1) + (1.0 - p_ediff(sediff > 0));
+            errorImgR(sediff < 0) = n_ediff(sediff < 0) * darkColor(1) + (1.0 - n_ediff(sediff < 0));
+
+            errorImgG = ones(size(ediff, 1), size(ediff, 2));
+            errorImgG(sediff > 0) = p_ediff(sediff > 0) * brightColor(2) + (1.0 - p_ediff(sediff > 0));
+            errorImgG(sediff < 0) = n_ediff(sediff < 0) * darkColor(2) + (1.0 - n_ediff(sediff < 0));
+
+            errorImgB = ones(size(ediff, 1), size(ediff, 2));
+            errorImgB(sediff > 0) = p_ediff(sediff > 0) * brightColor(3) + (1.0 - p_ediff(sediff > 0));
+            errorImgB(sediff < 0) = n_ediff(sediff < 0) * darkColor(3) + (1.0 - n_ediff(sediff < 0));
+
+            errorImg = cat(3, errorImgR, errorImgG, errorImgB);
+
+            for step = 1:NumSteps
+
+                imgWidth = size(errorImg, 2) / NumSteps;
+                
+                stepErrorImg = errorImg(1:end, (step * imgWidth - imgWidth + 1):(step * imgWidth), :);
+                imwrite(stepErrorImg, strcat(evalPath, '/', Approximations{a}, '_error_', num2str(step - 1), '.png'));
+            end
+
+            imwrite(errorImg, strcat(evalPath, '/', Approximations{a}, '_error.png'));
         
         end
         
         fclose(ResultFile);
 
-        %% Generate error images
+        %% Generate comparable error images
+
+        comparePath = fullfile(evalPath, 'comparable_error_images');
+        if exist(comparePath, 'dir')
+            cmd_rmdir(comparePath);
+        end
+        mkdir(comparePath);
 
         for a = 1:size(Approximations,1)
 
@@ -314,27 +362,31 @@ end
         
             %% Compute Error
             ediff = Approx - GroundTruth;
+            sediff = sign(ediff);
+            absEdiff = abs(ediff);
 
             % compute color error image
             brightColor = [255.0, 153.0, 56.0] ./ 255.0;
             darkColor = [4.0, 141.0, 178.0] ./ 255.0;
             
-            nEdiff = ((ediff - globalMinError * 2)/(globalMaxError * 2 - globalMinError * 2)) * 2.0 - 1.0;
-            absnEdiff = abs(nEdiff);
+            p_ediff = zeros(size(ediff, 1), size(ediff, 2));
+            p_ediff(sediff > 0) = absEdiff(sediff > 0) / globalMaxError;
+            
+            n_ediff = zeros(size(ediff, 1), size(ediff, 2));
+            n_ediff(sediff < 0) = absEdiff(sediff < 0) / abs(globalMinError);            
 
-            errorImgR = ones(size(nEdiff, 1), size(nEdiff, 2));
-            errorImgR(nEdiff >= 0.0) = nEdiff(nEdiff >= 0.0) * brightColor(1) + (1.0 - nEdiff(nEdiff >= 0.0));
-            errorImgR(nEdiff <= 0.0) = absnEdiff(nEdiff <= 0.0) + (1.0 - absnEdiff(nEdiff <= 0.0))  * darkColor(1);
+            errorImgR = ones(size(ediff, 1), size(ediff, 2));
+            errorImgR(sediff > 0) = p_ediff(sediff > 0) * brightColor(1) + (1.0 - p_ediff(sediff > 0));
+            errorImgR(sediff < 0) = n_ediff(sediff < 0) * darkColor(1) + (1.0 - n_ediff(sediff < 0));
 
-            errorImgG = ones(size(nEdiff, 1), size(nEdiff, 2));
-            errorImgG(nEdiff >= 0.0) = nEdiff(nEdiff >= 0.0) * brightColor(2) + (1.0 - nEdiff(nEdiff >= 0.0));
-            errorImgG(nEdiff <= 0.0) = absnEdiff(nEdiff <= 0.0) + (1.0 - absnEdiff(nEdiff <= 0.0)) * darkColor(2);
+            errorImgG = ones(size(ediff, 1), size(ediff, 2));
+            errorImgG(sediff > 0) = p_ediff(sediff > 0) * brightColor(2) + (1.0 - p_ediff(sediff > 0));
+            errorImgG(sediff < 0) = n_ediff(sediff < 0) * darkColor(2) + (1.0 - n_ediff(sediff < 0));
 
-            errorImgB = ones(size(nEdiff, 1), size(nEdiff, 2));
-            errorImgB(nEdiff >= 0.0) = nEdiff(nEdiff >= 0.0) * brightColor(3) + (1.0 - nEdiff(nEdiff >= 0.0));
-            errorImgB(nEdiff <= 0.0) = absnEdiff(nEdiff <= 0.0) + (1.0 - absnEdiff(nEdiff <= 0.0))  * darkColor(3);
+            errorImgB = ones(size(ediff, 1), size(ediff, 2));
+            errorImgB(sediff > 0) = p_ediff(sediff > 0) * brightColor(3) + (1.0 - p_ediff(sediff > 0));
+            errorImgB(sediff < 0) = n_ediff(sediff < 0) * darkColor(3) + (1.0 - n_ediff(sediff < 0));
 
-            %errorImg = ones(size(eimg)) - (eimg ./ maxError); %% USE
             errorImg = cat(3, errorImgR, errorImgG, errorImgB);
 
             for step = 1:NumSteps
@@ -342,10 +394,10 @@ end
                 imgWidth = size(errorImg, 2) / NumSteps;
                 
                 stepErrorImg = errorImg(1:end, (step * imgWidth - imgWidth + 1):(step * imgWidth), :);
-                imwrite(stepErrorImg, strcat(evalPath, '/', Approximations{a}, '_error_', num2str(step - 1), '.png'));
+                imwrite(stepErrorImg, strcat(comparePath, '/', Approximations{a}, '_error_', num2str(step - 1), '.png'));
             end
 
-            imwrite(errorImg, strcat(evalPath, '/', Approximations{a}, '_error.png'));
+            imwrite(errorImg, strcat(comparePath, '/', Approximations{a}, '_error.png'));
 
         end
         
