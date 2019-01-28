@@ -1236,7 +1236,7 @@
             offlineCamera = OfflineCamera.Evaluation
             gtSamplingMode = GTSamplingMode.Light
             solidAngleCompMethod = SolidAngleCompMethod.Square
-            compare = RenderMode.StructuredIrrSampling 
+            compare = RenderMode.DelaunayIrradianceSampling 
             error = 0.0
             brightError = 0.0
             darkError = 0.0

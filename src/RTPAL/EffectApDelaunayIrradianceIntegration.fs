@@ -259,6 +259,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                                             let (meta, sp) = flipEdge delEdgeData delMetaData delFaceData stack SP eId
 
+
                                             SP <- sp
                                             delMetaData <- meta
 
