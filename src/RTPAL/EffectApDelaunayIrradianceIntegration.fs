@@ -22,9 +22,11 @@ module EffectApDelaunayIrradianceIntegration =
             let (EDGES, META, FACES) = genInitTriangulation 4
 
         [<ReflectedDefinition>][<Inline>]
-        let getInitEdgeData (edgeArray : Arr<N<MAX_EDGES_HALF>, V4i>) caseOffset = 
+        let getInitEdgeData caseOffset = 
+            let edgeArray = Arr<N<MAX_EDGES_HALF>, V4i>() 
             for i in 0 .. MAX_EDGES_HALF - 1 do
                 edgeArray.[i] <- ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
+            edgeArray
 
         [<ReflectedDefinition>][<Inline>]
         let getInitEdgeData' caseOffset =
@@ -37,9 +39,11 @@ module EffectApDelaunayIrradianceIntegration =
         let getInitMetaData caseOffset = ALL.META.[caseOffset]
 
         [<ReflectedDefinition>][<Inline>]
-        let getInitFaceData (faceArray : Arr<N<MAX_FACES_HALF>, V4i>) caseOffset = 
+        let getInitFaceData caseOffset = 
+            let faceArray = Arr<N<MAX_FACES_HALF>, V4i>()
             for i in 0 .. MAX_FACES_HALF - 1 do
                 faceArray.[i] <- ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
+            faceArray
 
         [<ReflectedDefinition>][<Inline>]
         let getInitFaceData' caseOffset = 
@@ -211,12 +215,15 @@ module EffectApDelaunayIrradianceIntegration =
                                     ////////////////////////////////////////
                                     // load inital data
                                     
+                                    //let delEdgeData = QUAD_DATA.getInitEdgeData caseOffset
+                                    let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>() 
+                                    for i in 0 .. MAX_EDGES_HALF - 1 do
+                                        delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
 
-                                    let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
+                                    //let delFaceData = QUAD_DATA.getInitFaceData caseOffset
                                     let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
-
-                                    QUAD_DATA.getInitEdgeData delEdgeData caseOffset
-                                    QUAD_DATA.getInitFaceData delFaceData caseOffset
+                                    for i in 0 .. MAX_FACES_HALF - 1 do
+                                        delFaceData.[i] <- QUAD_DATA.ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
                                     
                                     let mutable delMetaData = QUAD_DATA.getInitMetaData caseOffset
 
@@ -257,7 +264,82 @@ module EffectApDelaunayIrradianceIntegration =
                                         if notLD then
                                             // flip edge
 
-                                            let (meta, sp) = flipEdge delEdgeData delMetaData delFaceData stack SP eId
+                                            //let (meta, sp) = flipEdge delEdgeData delMetaData delFaceData stack SP eId
+
+                                            let edges = delEdgeData
+                                            let meta = delMetaData
+                                            let faces = delFaceData
+
+                                            let mutable sp = SP
+                                            let mutable meta = meta
+
+                                            // adapt neighbour edges
+                                            for ne in 0 .. 3 do
+
+                                                let neId = ne |> readEdgeId edges eId
+
+                                                // TODO optimize this with a for loop as soon as it is guaranteed to work
+                                                match ne with
+                                                | 0 -> 
+                                                    if 2 |> compareIndices edges neId OPPOSITE_0 eId then
+                                                        writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (3 |> readEdgeId edges eId) 
+                                                        writeVertexId edges neId OPPOSITE_0 (3 |> readVertexId edges eId)
+                                                    else
+                                                        writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (3 |> readEdgeId edges eId) 
+                                                        writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
+
+                                                | 2 ->
+                                                    if 0 |> compareIndices edges neId OPPOSITE_0 eId then
+                                                        writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (1 |> readEdgeId edges eId) 
+                                                        writeVertexId edges neId OPPOSITE_0 ( 1 |> readVertexId edges eId)
+                                                    else
+                                                        writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (1 |> readEdgeId edges eId)    
+                                                        writeVertexId edges neId OPPOSITE_1 ( 1 |> readVertexId edges eId)
+
+                                                | 1 ->
+                                                    if 0 |> compareIndices edges neId OPPOSITE_0 eId then
+                                                        writeOppositeEdgeIds edges neId OPPOSITE_0 (2 |> readEdgeId edges eId) (eId) 
+                                                        writeVertexId edges neId OPPOSITE_0 (3 |> readVertexId edges eId)
+                                                    else
+                                                        writeOppositeEdgeIds edges neId OPPOSITE_1 (2 |> readEdgeId edges eId) (eId)  
+                                                        writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
+
+                                                | 3 ->
+                                                    if 2 |> compareIndices edges neId OPPOSITE_0 eId then
+                                                        writeOppositeEdgeIds edges neId OPPOSITE_0 (0 |> readEdgeId edges eId) (eId)
+                                                        writeVertexId edges neId OPPOSITE_0 (1 |> readVertexId edges eId)
+                                                    else
+                                                        writeOppositeEdgeIds edges neId OPPOSITE_1 (0 |> readEdgeId edges eId) (eId)
+                                                        writeVertexId edges neId OPPOSITE_1 (1 |> readVertexId edges eId)
+                
+                                                | _ -> ()
+
+                                                // if inside and not marked -> mark it
+                                                if edgeIsInside meta neId && not (edgeIsMarked meta neId) then
+                                                    meta <- markEdge meta neId
+
+                                                    sp <- sp + 1
+                                                    stack.[sp] <- neId
+                    
+
+                                            // get face vertices of unflipped edge
+                                            let f0vertices = eId |> getFaceVerticesOfEdge edges OPPOSITE_0
+                                            let f1vertices = eId |> getFaceVerticesOfEdge edges OPPOSITE_1
+
+                                            // flip edge and unmark edge
+                                            eId |> leftShiftVerticesAndEdgesByOne edges
+                                            meta <- eId |> unmarkEdge meta
+
+                                            // update faces
+                                            for f in 0 .. MAX_FACES - 1 do
+
+                                                if f0vertices |> verticesAreFromFace faces f then
+                                                    eId |> getFaceVerticesOfEdge edges OPPOSITE_0 |> writeFaceVertexIdsCombined faces f
+                                                    writeFaceEdgeIds faces f (0 |> readEdgeId edges eId) (1 |> readEdgeId edges eId) eId
+
+                                                if f1vertices |> verticesAreFromFace faces f then
+                                                    eId |> getFaceVerticesOfEdge edges OPPOSITE_1 |> writeFaceVertexIdsCombined faces f
+                                                    writeFaceEdgeIds faces f (2 |> readEdgeId edges eId) (3 |> readEdgeId edges eId) eId
 
 
                                             SP <- sp

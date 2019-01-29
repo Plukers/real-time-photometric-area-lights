@@ -1,34 +1,33 @@
  0: unpacking native dependencies for assimp
- 0:   using cache dir: C:\Users\prost.VRVIS\AppData\Roaming\Aardvark\cache
+ 0:   using cache dir: C:\Users\Lukas\AppData\Roaming\Aardvark\cache
  0: Failed to unpack native assimp dependencies. Did you forget Aardvark.Init()? Make sure Aardvark.SceneGraph.IO.dll is in your output directory.
  0: [cache hit ] RTPAL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] FSharp.Core, Version=4.4.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
  0: [cache hit ] Suave, Version=2.2.1.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.Base.Incremental, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.Base.FSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Base, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] DevILSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Base.Telemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.Base.TypeProviders, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Base.Rendering, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] FShade.Core, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] FShade.Imperative, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.Base.Incremental, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.Base.FSharp, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] FsPickler, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.Base.TypeProviders, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] FShade.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] FShade.Imperative, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Base.Essentials, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.UI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.Service, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] FShade.SpirV, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] FShade.GLSL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Rendering.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.Base.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.Base.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] FShade.GLSL, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.UI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.Service, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] FsPickler.Json, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed
- 0: [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Aardvark.UI.Primitives, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Aardvark.UI.Primitives, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Compiler.DomainTypes, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Data.Photometry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Base.IO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
@@ -36,11 +35,12 @@
  0: [cache hit ] Aardvark.Application.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Cef.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Xilium.CefGlue.WindowsForms, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: [cache hit ] Xilium.CefGlue, Version=64.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] Xilium.CefGlue, Version=66.0.1.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.Cef.WinForms.Process, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] CefGlue.UnpackNativeDependencies, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] Aardvark.SceneGraph.IO, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0: [cache hit ] AssimpNet, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0: [cache hit ] FsUnit.NUnit, Version=3.1.0.0, Culture=neutral, PublicKeyToken=null
  0: initializing aardvark ........................................................................
  0:   System Information:
  0:     OSVersion: Microsoft Windows NT 6.2.9200.0
@@ -48,127 +48,190 @@
  0:     Environment.Version: 4.0.30319.42000
  0:   Unpacking native dependencies ..............................................................
  0:     Unpacking native dependencies for Aardvark.Rendering.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     Unpacking native dependencies for Aardvark.Service, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     Unpacking native dependencies for Aardvark.Service, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     Unpacking native dependencies for DevILSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     Unpacking native dependencies for Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     Unpacking native dependencies for GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     Unpacking native dependencies for AssimpNet, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   Unpacking native dependencies ...................................................... 0.125 s
+ 0:   Unpacking native dependencies ...................................................... 0.043 s
  0:   Loading plugins ............................................................................
- 0:     [LoadPlugins] Using plugin cache file name: C:\Users\prost.VRVIS\AppData\Roaming\Aardvark\cache\RTPAL_plugins.bin
- 0:     [ReadCacheFile] loaded cache file: C:\Users\prost.VRVIS\AppData\Roaming\Aardvark\cache\RTPAL_plugins.bin
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Application.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Application.WinForms.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Application.WinForms.GL.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Base.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Base.Essentials.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Base.FSharp.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Base.Incremental.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Base.IO.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Base.Rendering.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Base.Runtime.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Base.Telemetry.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Base.TypeProviders.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Cef.WinForms.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Cef.WinForms.Process.exe
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Compiler.DomainTypes.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Data.Photometry.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.GPGPU.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Rendering.GL.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Rendering.Text.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Rendering.Vulkan.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.SceneGraph.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.SceneGraph.IO.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.Service.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.UI.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Aardvark.UI.Primitives.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Assimp64.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\AssimpNet.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\CefGlue.UnpackNativeDependencies.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\CommonMark.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\DevIL.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\DevILSharp.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\FShade.Core.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\FShade.Debug.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\FShade.GLSL.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\FShade.Imperative.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\FShade.SpirV.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\FSharp.Compiler.Service.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\FSharp.Core.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\FsPickler.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\FsPickler.Json.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\GLSLangNative.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\GLSLangSharp.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\glvm.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\ICSharpCode.SharpZipLib.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\ILU.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\ILUT.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\LibTessDotNet.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Microsoft.DiaSymReader.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Microsoft.DiaSymReader.PortablePdb.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Newtonsoft.Json.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\OpenTK.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\OpenTK.GLControl.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\RTPAL.exe
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Suave.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Collections.Immutable.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Data.Common.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Diagnostics.Process.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Globalization.Extensions.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.IO.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Linq.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Net.Security.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Reactive.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Reflection.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Reflection.Metadata.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Runtime.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Runtime.Extensions.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Runtime.InteropServices.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Security.Claims.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Security.Cryptography.Algorithms.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Security.Cryptography.Encoding.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Security.Cryptography.Primitives.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.Security.Cryptography.X509Certificates.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\System.ValueTuple.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\turbojpeg.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Unofficial.Typography.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\vkvm.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Xilium.CefGlue.dll
- 0:     [GetPluginAssemblyPaths] cache found for: C:\Users\prost.VRVIS\Projects\RTPAL\bin\Debug\Xilium.CefGlue.WindowsForms.dll
- 0:   Loading plugins .................................................................... 0.081 s
+ 0:     [LoadPlugins] Using plugin cache file name: C:\Users\Lukas\AppData\Roaming\Aardvark\cache\RTPAL_plugins.bin
+ 0:     [ReadCacheFile] loaded cache file: C:\Users\Lukas\AppData\Roaming\Aardvark\cache\RTPAL_plugins.bin
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Application.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Application.WinForms.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Application.WinForms.GL.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Base.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Base.Essentials.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Base.FSharp.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Base.Incremental.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Base.IO.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Base.Rendering.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Base.Runtime.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Base.Telemetry.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Base.TypeProviders.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Cef.WinForms.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Cef.WinForms.Process.exe
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Compiler.DomainTypes.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Data.Photometry.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.GPGPU.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Rendering.GL.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Rendering.Text.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Rendering.Vulkan.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.SceneGraph.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.SceneGraph.IO.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.Service.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.UI.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Aardvark.UI.Primitives.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Assimp64.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\AssimpNet.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\CefGlue.UnpackNativeDependencies.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\CommonMark.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\DevIL.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\DevILSharp.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FShade.Core.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FShade.Debug.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FShade.GLSL.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FShade.Imperative.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FShade.SpirV.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FSharp.Compiler.Service.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FSharp.Core.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FsPickler.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FsPickler.Json.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\FsUnit.NUnit.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\GLSLangNative.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\GLSLangSharp.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\glvm.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\ICSharpCode.SharpZipLib.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\ILU.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\ILUT.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\LibTessDotNet.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Microsoft.DiaSymReader.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Microsoft.DiaSymReader.PortablePdb.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Mono.Cecil.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Newtonsoft.Json.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\nunit.engine.api.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\nunit.engine.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\nunit.framework.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\NUnit3.TestAdapter.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\OpenTK.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\OpenTK.GLControl.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\RTPAL.exe
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Suave.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Collections.Immutable.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Data.Common.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Diagnostics.StackTrace.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Diagnostics.Tracing.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Globalization.Extensions.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.IO.Compression.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Net.Http.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Net.Sockets.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Reactive.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Reflection.Metadata.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Runtime.Serialization.Primitives.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Security.Cryptography.Algorithms.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Security.SecureString.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Threading.Overlapped.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.ValueTuple.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\System.Xml.XPath.XDocument.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\turbojpeg.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Unofficial.Typography.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\vkvm.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Xilium.CefGlue.dll
+ 0:     [GetPluginAssemblyPaths] cache found for: D:\Informatik\projects\real-time-photometric-area-lights\bin\Debug\Xilium.CefGlue.WindowsForms.dll
+ 0:   Loading plugins .................................................................... 0.018 s
  0:   [cache hit ] RTPAL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] FSharp.Core, Version=4.4.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
  0:   [cache hit ] Suave, Version=2.2.1.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Base, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   initializing PixImageDevil ......................................................... 0.032 s
+ 0:   [cache hit ] DevILSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Base.Telemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Base.Rendering, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Base.Incremental, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   initializing ModModule .....................................................................
+ 0:     initializing mod system .......................................................... 0.000 s
+ 0:   initializing ModModule ............................................................. 0.000 s
+ 0:   [cache hit ] Aardvark.Base.FSharp, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   initializing NewAg .........................................................................
+ 0:     [cache hit ] RTPAL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FSharp.Core, Version=4.4.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+ 0:     [cache hit ] Suave, Version=2.2.1.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] DevILSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Telemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Rendering, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Incremental, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.FSharp, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FsPickler, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.TypeProviders, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.Imperative, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Essentials, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Rendering.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.GLSL, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.UI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Service, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FsPickler.Json, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed
+ 0:     [cache hit ] Aardvark.UI.Primitives, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Compiler.DomainTypes, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Data.Photometry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.IO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Application.WinForms.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Application.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Cef.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Xilium.CefGlue.WindowsForms, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Xilium.CefGlue, Version=66.0.1.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Cef.WinForms.Process, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] CefGlue.UnpackNativeDependencies, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.SceneGraph.IO, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] AssimpNet, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FsUnit.NUnit, Version=3.1.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   initializing NewAg ................................................................. 0.013 s
+ 0:   initializing Ag .................................................................... 0.000 s
+ 0:   [cache hit ] FsPickler, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Base.TypeProviders, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] FShade.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] FShade.Imperative, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Base.Essentials, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Rendering.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Base.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] FShade.GLSL, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   initializing SceneGraphCompletenessCheck ...................................................
  0:     [cache hit ] RTPAL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] FSharp.Core, Version=4.4.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
  0:     [cache hit ] Suave, Version=2.2.1.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.Incremental, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.FSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] DevILSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.Telemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.TypeProviders, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.Rendering, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.Core, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.Imperative, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Incremental, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.FSharp, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] FsPickler, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.TypeProviders, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.Imperative, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.Essentials, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.UI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Service, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.SpirV, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.GLSL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Rendering.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.GLSL, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.UI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Service, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] FsPickler.Json, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed
- 0:     [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.UI.Primitives, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.UI.Primitives, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Compiler.DomainTypes, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Data.Photometry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.IO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
@@ -176,41 +239,39 @@
  0:     [cache hit ] Aardvark.Application.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Cef.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Xilium.CefGlue.WindowsForms, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Xilium.CefGlue, Version=64.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Xilium.CefGlue, Version=66.0.1.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Cef.WinForms.Process, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] CefGlue.UnpackNativeDependencies, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.SceneGraph.IO, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] AssimpNet, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FsUnit.NUnit, Version=3.1.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] RTPAL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] FSharp.Core, Version=4.4.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
  0:     [cache hit ] Suave, Version=2.2.1.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     WARNING: no semantic "GlobalBoundingBox" for type RenderObjectNode
- 0:     WARNING: no semantic "GlobalBoundingBox" for type IndirectRenderNode
- 0:     [cache hit ] Aardvark.Base.Incremental, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.FSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] DevILSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.Telemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.TypeProviders, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.Rendering, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.Core, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.Imperative, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Incremental, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.FSharp, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] FsPickler, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.TypeProviders, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.Imperative, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.Essentials, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.UI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Service, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.SpirV, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.GLSL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Rendering.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.GLSL, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.UI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Service, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] FsPickler.Json, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed
- 0:     [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.UI.Primitives, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.UI.Primitives, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Compiler.DomainTypes, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Data.Photometry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.IO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
@@ -218,41 +279,39 @@
  0:     [cache hit ] Aardvark.Application.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Cef.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Xilium.CefGlue.WindowsForms, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Xilium.CefGlue, Version=64.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Xilium.CefGlue, Version=66.0.1.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Cef.WinForms.Process, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] CefGlue.UnpackNativeDependencies, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.SceneGraph.IO, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] AssimpNet, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FsUnit.NUnit, Version=3.1.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] RTPAL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] FSharp.Core, Version=4.4.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
  0:     [cache hit ] Suave, Version=2.2.1.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     WARNING: no semantic "LocalBoundingBox" for type RenderObjectNode
- 0:     WARNING: no semantic "LocalBoundingBox" for type IndirectRenderNode
- 0:     [cache hit ] Aardvark.Base.Incremental, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.FSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] DevILSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.Telemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.TypeProviders, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.Rendering, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.Core, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.Imperative, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Incremental, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.FSharp, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] FsPickler, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.TypeProviders, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.Imperative, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.Essentials, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.UI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Service, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.SpirV, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.GLSL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Rendering.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Base.Runtime, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FShade.GLSL, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.UI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Service, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] FsPickler.Json, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed
- 0:     [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.UI.Primitives, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Aardvark.UI.Primitives, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Compiler.DomainTypes, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Data.Photometry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Base.IO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
@@ -260,83 +319,22 @@
  0:     [cache hit ] Aardvark.Application.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Cef.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Xilium.CefGlue.WindowsForms, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Xilium.CefGlue, Version=64.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] Xilium.CefGlue, Version=66.0.1.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.Cef.WinForms.Process, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] CefGlue.UnpackNativeDependencies, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] Aardvark.SceneGraph.IO, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:     [cache hit ] AssimpNet, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   initializing SceneGraphCompletenessCheck ........................................... 0.271 s
- 0:   [cache hit ] Aardvark.Base.Incremental, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   initializing ModModule .....................................................................
- 0:     initializing mod system .......................................................... 0.000 s
- 0:   initializing ModModule ............................................................. 0.000 s
- 0:   [cache hit ] Aardvark.Base.FSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   initializing NewAg .........................................................................
- 0:     [cache hit ] RTPAL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FSharp.Core, Version=4.4.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
- 0:     [cache hit ] Suave, Version=2.2.1.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.SceneGraph, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.Incremental, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.FSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] DevILSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.Telemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.TypeProviders, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.Rendering, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.Core, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.Imperative, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FsPickler, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.Essentials, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.UI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Service, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.SpirV, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FShade.GLSL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Rendering.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] FsPickler.Json, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed
- 0:     [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.UI.Primitives, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Compiler.DomainTypes, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Data.Photometry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Base.IO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Application.WinForms.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Application.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Cef.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Xilium.CefGlue.WindowsForms, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Xilium.CefGlue, Version=64.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.Cef.WinForms.Process, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] CefGlue.UnpackNativeDependencies, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] Aardvark.SceneGraph.IO, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:     [cache hit ] AssimpNet, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   initializing NewAg ................................................................. 0.067 s
- 0:   initializing Ag .................................................................... 0.000 s
- 0:   [cache hit ] Aardvark.Base, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   initializing PixImageDevil ......................................................... 0.109 s
- 0:   [cache hit ] DevILSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.Base.Telemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.Base.TypeProviders, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.Base.Rendering, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] FShade.Core, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] FShade.Imperative, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] FsPickler, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.Base.Essentials, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.UI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.Service, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:     [cache hit ] FsUnit.NUnit, Version=3.1.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   initializing SceneGraphCompletenessCheck ........................................... 0.083 s
+ 0:   [cache hit ] Aardvark.UI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.Service, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Aardvark.Rendering.Vulkan, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] FShade.SpirV, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] FShade.GLSL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] GLSLangSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.Rendering.GL, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.Base.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.GPGPU, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] FsPickler.Json, Version=5.2.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed
- 0:   [cache hit ] Aardvark.Application, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Aardvark.UI.Primitives, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Aardvark.UI.Primitives, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Aardvark.Compiler.DomainTypes, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Aardvark.Data.Photometry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Aardvark.Base.IO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
@@ -344,25 +342,27 @@
  0:   [cache hit ] Aardvark.Application.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Aardvark.Cef.WinForms, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Xilium.CefGlue.WindowsForms, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0:   [cache hit ] Xilium.CefGlue, Version=64.0.0.0, Culture=neutral, PublicKeyToken=null
+ 0:   [cache hit ] Xilium.CefGlue, Version=66.0.1.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Aardvark.Cef.WinForms.Process, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] CefGlue.UnpackNativeDependencies, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] Aardvark.SceneGraph.IO, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
  0:   [cache hit ] AssimpNet, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
- 0: initializing aardvark ................................................................ 0.806 s
+ 0:   [cache hit ] FsUnit.NUnit, Version=3.1.0.0, Culture=neutral, PublicKeyToken=null
+ 0: initializing aardvark ................................................................ 0.217 s
  0: [GL] setting up debug callback ....................................................... 0.000 s
- 0: [GL] debug message control ........................................................... 0.001 s
+ 0: [GL] debug message control ........................................................... 0.000 s
  0: initializing OpenGL runtime ..................................................................
  0:   vendor:   "NVIDIA Corporation"
- 0:   renderer: "GeForce GTX 680/PCIe/SSE2"
+ 0:   renderer: "GeForce GTX 1080/PCIe/SSE2"
  0:   version:  OpenGL 4.3.0 / GLSL 4.3
- 0: initializing OpenGL runtime .......................................................... 0.320 s
+ 0: initializing OpenGL runtime .......................................................... 0.228 s
  0: texture created
  0: result created
  0: texture created
  0: result created
  0: texture created
  0: result created
+ 0: WARNING: [Media:] superfluous use of Sg.noEvents, returning input as is
  0: [GL] RenderObjects: +1/-0
  0: using optimized native program
  0: [GL] RenderObjects: +1/-0
@@ -385,61 +385,6 @@
  0: result created
  0: [GL] RenderObjects: +1/-0
  0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
  0: [GL] RenderObjects: +1/-0
  0: using optimized native program
  0: [GL] RenderObjects: +1/-0
@@ -478,7 +423,7 @@
  0: result created
  0: texture created
  0: result created
- 0: [GL] RenderObjects: +2/-0
+ 0: [GL] RenderObjects: +3/-0
  0: using optimized native program
  0: [GL] RenderObjects: +1/-0
  0: using optimized native program
@@ -487,66 +432,31 @@
  0: result created
  0: texture created
  0: result created
- 0: [GL] RenderObjects: +2/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +2/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +2/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +2/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +2/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +2/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: [GL] RenderObjects: +2/-0
- 0: using optimized native program
- 0: [GL] RenderObjects: +1/-0
- 0: texture created
- 0: result created
- 0: texture created
- 0: result created
  0: [GL] RenderObjects: +1/-0
  0: using optimized native program
  0: [GL] RenderObjects: +1/-0
  0: using optimized native program
  0: [GL] RenderObjects: +1/-0
+ 0: Aardvark.Service serves aardvark.js
+ 0: Aardvark.Service serves rgbcolor.js
+ 0: Aardvark.Service serves docking.js
+ 0: Aardvark.Service serves semantic.js
+ 0: Aardvark.Service serves jquery-3-3-1.js
+ 0: Aardvark.Service serves touchstick.js
+ 0: Aardvark.Service serves aardfs.js
+ 0: Aardvark.Service serves aardvark.css
+ 0: Aardvark.Service serves docking.css
+ 0: Aardvark.Service serves semantic.css
+ 0: Aardvark.Service serves aardfs.css
+ 0: Aardvark.Service serves index.html
+ 0: Aardvark.Service serves stats.html
+ 0: Aardvark.Service serves aardvark-light.svg
+ 0: Aardvark.Service serves aardvark.svg
+ 0: Aardvark.Service serves brandicons.woff2
+ 0: Aardvark.Service serves outlineicons.woff2
+ 0: Aardvark.Service serves icons.woff2
+ 0: Aardvark.UI serves template.html
+ 0: Aardvark.UI serves favicon.ico
  0: [GL] setting up debug callback ....................................................... 0.000 s
  0: [GL] debug message control ........................................................... 0.000 s
  0: using optimized native program

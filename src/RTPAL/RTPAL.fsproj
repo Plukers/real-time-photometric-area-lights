@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\..\packages\NUnit\build\NUnit.props" Condition="Exists('..\..\packages\NUnit\build\NUnit.props')" Label="Paket" />
+  <Import Project="..\..\packages\Microsoft.Net.Compilers\build\Microsoft.Net.Compilers.props" Condition="Exists('..\..\packages\Microsoft.Net.Compilers\build\Microsoft.Net.Compilers.props')" Label="Paket" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -142,6 +143,53 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup> -->
+  <ItemGroup>
+    <Reference Include="mscorlib" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Scripts\GenerateVoronoi.fsx" />
+    <None Include="Scripts\ConfigGenerator.fsx" />
+    <None Include="Scripts\GenerateBlueNoise.fsx" />
+    <None Include="Scripts\GenerateSampleArray.fsx" />
+    <Compile Include="BlueNoiseSamples.fs" />
+    <Compile Include="PoissonSampleCollection.fs" />
+    <Compile Include="Config.fs" />
+    <Compile Include="PhotometricLight.fs" />
+    <Compile Include="EffectUtils.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="Light.fs" />
+    <Compile Include="BRDF_GGX.fs" />
+    <Compile Include="RenderState.fs" />
+    <Compile Include="RenderInterop.fs" />
+    <Compile Include="EffectGT.fs" />
+    <Compile Include="EffectApPoint.fs" />
+    <Compile Include="EffectApMRP.fs" />
+    <Compile Include="EffectApBaumFF.fs" />
+    <Compile Include="EffectApStructuredSampling.fs" />
+    <Compile Include="EffectApPoissonSampling.fs" />
+    <Compile Include="EffectApVoronoiIrradianceIntegration.fs" />
+    <Compile Include="EffectApDelaunayDataHandling.fs" />
+    <Compile Include="EffectApDelaunayDataMutation.fs" />
+    <Compile Include="EffectApDelaunayGenInitTriangulation.fs" />
+    <Compile Include="EffectApDelaunayIrradianceIntegration.fs" />
+    <Compile Include="EffectCompare.fs" />
+    <Compile Include="EffectOutline.fs" />
+    <Compile Include="EffectToneMapping.fs" />
+    <Compile Include="EffectSolidAngle.fs" />
+    <Compile Include="EffectFormFactor.fs" />
+    <Compile Include="MRPApproxDebug.fs" />
+    <Compile Include="Rendering.fs" />
+    <Compile Include="OfflineRenderTasks.fs" />
+    <Compile Include="RenderApp.fs" />
+    <Compile Include="Program.fs" />
+    <None Include="paket.references" />
+    <Content Include="App.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
@@ -969,51 +1017,4 @@
   </Choose>
   <Import Project="..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\Aardvark.Compiler.DomainTypes.MSBuild.targets" Condition="Exists('..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\Aardvark.Compiler.DomainTypes.MSBuild.targets')" Label="Paket" />
   <Import Project="..\..\packages\NETStandard.Library\build\$(__paket__NETStandard_Library_targets).targets" Condition="Exists('..\..\packages\NETStandard.Library\build\$(__paket__NETStandard_Library_targets).targets')" Label="Paket" />
-  <ItemGroup>
-    <None Include="Scripts\GenerateVoronoi.fsx" />
-    <None Include="Scripts\ConfigGenerator.fsx" />
-    <None Include="Scripts\GenerateBlueNoise.fsx" />
-    <None Include="Scripts\GenerateSampleArray.fsx" />
-    <Compile Include="BlueNoiseSamples.fs" />
-    <Compile Include="PoissonSampleCollection.fs" />
-    <Compile Include="Config.fs" />
-    <Compile Include="PhotometricLight.fs" />
-    <Compile Include="EffectUtils.fs" />
-    <Compile Include="Utils.fs" />
-    <Compile Include="Light.fs" />
-    <Compile Include="BRDF_GGX.fs" />
-    <Compile Include="RenderState.fs" />
-    <Compile Include="RenderInterop.fs" />
-    <Compile Include="EffectGT.fs" />
-    <Compile Include="EffectApPoint.fs" />
-    <Compile Include="EffectApMRP.fs" />
-    <Compile Include="EffectApBaumFF.fs" />
-    <Compile Include="EffectApStructuredSampling.fs" />
-    <Compile Include="EffectApPoissonSampling.fs" />
-    <Compile Include="EffectApVoronoiIrradianceIntegration.fs" />
-    <Compile Include="EffectApDelaunayDataHandling.fs" />
-    <Compile Include="EffectApDelaunayDataMutation.fs" />
-    <Compile Include="EffectApDelaunayGenInitTriangulation.fs" />
-    <Compile Include="EffectApDelaunayIrradianceIntegration.fs" />
-    <Compile Include="EffectCompare.fs" />
-    <Compile Include="EffectOutline.fs" />
-    <Compile Include="EffectToneMapping.fs" />
-    <Compile Include="EffectSolidAngle.fs" />
-    <Compile Include="EffectFormFactor.fs" />
-    <Compile Include="MRPApproxDebug.fs" />
-    <Compile Include="Rendering.fs" />
-    <Compile Include="OfflineRenderTasks.fs" />
-    <Compile Include="RenderApp.fs" />
-    <Compile Include="Program.fs" />
-    <None Include="paket.references" />
-    <Content Include="App.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="mscorlib" />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Numerics" />
-  </ItemGroup>
 </Project>

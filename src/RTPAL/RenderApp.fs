@@ -28,6 +28,7 @@
     
     open Aardvark.Rendering.GL
     open Aardvark.UI.Chromium
+    open Aardvark.UI.Operators
     
 
     open Utils
@@ -88,8 +89,9 @@
                         top = 20.0
                         near = 0.1
                         far = 20.1
+                        isOrtho = true
                     } 
-                    |> Frustum.orthoTrafo
+                    |> Frustum.projTrafo
                 | _ ->
                     Frustum.perspective 60.0 0.1 100.0 ((float)(v.X) / (float)(v.Y))
                     |> Frustum.projTrafo
