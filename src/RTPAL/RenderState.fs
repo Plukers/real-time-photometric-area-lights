@@ -19,9 +19,10 @@ type RenderMode =
     | StructuredPoissonSampling = 6
     | VoronoiIrradianceSampling = 7
     | DelaunayIrradianceSampling = 8
-    | SolidAngle = 9
-    | FormFactor = 10
-    | Compare = 11
+    | DelaunayNoFlipIrradianceSampling = 9
+    | SolidAngle = 10
+    | FormFactor = 11
+    | Compare = 12
 
 type OfflineRenderMode =
     | AbstractData = 0

@@ -85,7 +85,7 @@ module EffectApDelaunayIrradianceIntegration =
 
         V2d(irr * weight, weight)
 
-    let delaunyIrrIntegration useSecondSpecialPoint (v : Vertex) = 
+    let delaunyIrrIntegration applyFlipping (v : Vertex) = 
         fragment {
 
             ////////////////////////////////////////////////////////
@@ -212,13 +212,236 @@ module EffectApDelaunayIrradianceIntegration =
                                         vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
                                         funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
 
-                                    ////////////////////////////////////////
-                                    // load inital data
+                                    //let delFaceData = QUAD_DATA.getInitFaceData caseOffset
+                                    let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
+                                    for i in 0 .. MAX_FACES_HALF - 1 do
+                                        delFaceData.[i] <- QUAD_DATA.ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
                                     
-                                    //let delEdgeData = QUAD_DATA.getInitEdgeData caseOffset
-                                    let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>() 
-                                    for i in 0 .. MAX_EDGES_HALF - 1 do
-                                        delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
+                                    let mutable delMetaData = QUAD_DATA.getInitMetaData caseOffset
+
+                                    if applyFlipping then
+                                        ////////////////////////////////////////
+                                        // load inital data
+                                    
+                                        //let delEdgeData = QUAD_DATA.getInitEdgeData caseOffset
+                                        let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>() 
+                                        for i in 0 .. MAX_EDGES_HALF - 1 do
+                                            delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
+
+
+
+
+                                        ////////////////////////////////////////
+                                        // execute edge flip algorithm
+
+                                        let stack = Arr<N<MAX_EDGES>, int>()
+                                        let mutable SP = -1
+                                    
+                                        for i in 0 .. MAX_EDGES - 1 do
+                                            if edgeIsInside delMetaData i then
+                                                SP <- SP + 1
+                                                stack.[SP] <- i
+                                                delMetaData <- markEdge delMetaData i
+                                    
+
+                                        ////////////////////////////////////////
+                                        // transform to a Delaunay triangulation
+                                        while SP >= 0 do
+
+                                            // get edge Id
+                                            let eId = stack.[SP]
+                                            SP <- SP - 1
+
+                                            // unmark edge
+                                            delMetaData <- unmarkEdge delMetaData eId
+                                        
+                                            // test if edge is locally delaunay
+                                                // true if flip, false otherwise
+                                
+                                            let a = vertices.[ readVertexId delEdgeData eId 0].XYZ |> Vec.normalize
+                                            let b = vertices.[ readVertexId delEdgeData eId 1].XYZ |> Vec.normalize
+                                            let c = vertices.[ readVertexId delEdgeData eId 2].XYZ |> Vec.normalize
+                                            let d = vertices.[ readVertexId delEdgeData eId 3].XYZ |> Vec.normalize
+                                                        
+
+                                            let notLD = 
+                                                if a - c |> Vec.length < 1e-6 || b - c |> Vec.length < 1e-6 || d - c |> Vec.length < 1e-6 then
+                                                    false
+                                                else
+                                                    (Vec.dot (a - c) ((Vec.cross (b - c) (d - c)))) < 0.0   
+                                        
+                                            if notLD then
+                                                // flip edge
+
+                                                let (meta, sp) = flipEdge delEdgeData delMetaData delFaceData stack SP eId
+
+                                                SP <- sp
+                                                delMetaData <- meta
+
+                                    ////////////////////////////////////////////////////////
+                                    // integrate
+                                    
+                                    let mutable patchIllumination = 0.0
+                                    let mutable weightSum = 0.0
+
+                                    for f in 0 .. MAX_FACES - 1 do
+                                        
+                                        if not (faceIsEmpty delFaceData f) then
+                                            let area = computeSphericalExcess (vertices.[readFaceVertexId delFaceData f 0] |> Vec.normalize) (vertices.[readFaceVertexId delFaceData f 1] |> Vec.normalize) (vertices.[readFaceVertexId delFaceData f 2] |> Vec.normalize)
+
+                                            patchIllumination <- patchIllumination + area * (funVal.[readFaceVertexId delFaceData f 0].X + funVal.[readFaceVertexId delFaceData f 1].X + funVal.[readFaceVertexId delFaceData f 2].X) / 3.0
+                                            weightSum <- weightSum + area * (funVal.[readFaceVertexId delFaceData f 0].Y + funVal.[readFaceVertexId delFaceData f 1].Y + funVal.[readFaceVertexId delFaceData f 2].Y) / 3.0
+
+
+                                    let L =
+                                        if weightSum > 0.0 then
+                                            patchIllumination / weightSum
+                                        else 
+                                            0.0
+
+                                    
+                                    for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                            if l < clippedVc then
+                                                // Project polygon light onto sphere
+                                                clippedVa.[l] <- Vec.normalize clippedVa.[l]
+                                                
+                                    let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
+                                        
+                                    illumination <- illumination + L * brdf * I //* scale // * i.Z  
+                                    
+
+                            ////////////////////////////////////////////////////////
+                        
+
+            return V4d(illumination.XYZ, v.c.W)
+        }
+
+    let delaunyIrrDebug applyFlipping (v : Vertex) = 
+        fragment {
+
+            ////////////////////////////////////////////////////////
+
+            let P = v.wp.XYZ
+
+            let t2w = v.n |> Vec.normalize |> basisFrisvad 
+            let w2t = t2w |> Mat.transpose
+
+            let brdf = v.c / PI 
+
+            let mutable illumination = V4d.Zero * (uniform.dT * 1e-256 * 0.0)
+            let mutable flipCount = 0
+            ////////////////////////////////////////////////////////
+
+            for addr in 0 .. (Config.Light.NUM_LIGHTS - 1) do 
+                match uniform.Lights.[addr] with
+                    | -1 -> ()
+                    |  _ ->    
+                        
+                        let vAddr = addr * Config.Light.VERT_PER_LIGHT
+                        let iAddr = addr * Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT
+
+                        ////////////////////////////////////////////////////////
+
+                        let l2w = M33dFromCols  (V3d.Cross((uniform.LUps.[addr]), (uniform.LForwards.[addr]))) uniform.LUps.[addr] uniform.LForwards.[addr]
+                            
+                        let w2l = l2w |> Mat.transpose
+
+                        let t2l = w2l * t2w
+
+                        let l2t = l2w * w2t
+
+                        ////////////////////////////////////////////////////////
+
+                        for iIdx in iAddr .. Config.Light.MAX_PATCH_IDX_BUFFER_SIZE_PER_LIGHT .. (iAddr + uniform.LNumPatchIndices.[addr] - 1) do
+                            
+                            //let vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
+                            
+                            //for vtc in 0 .. uniform.LBaseComponents.[addr] - 1 do
+                            //    let vtcAddr = uniform.LPatchIndices.[iIdx + vtc] + vAddr
+                            //    vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
+
+                            ////////////////////////////////////////////////////////
+
+
+                            // linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d)
+                            let mutable clipNormal = V3d.OOI
+                            if uniform.skewClipPlane && abs(Vec.dot (uniform.LForwards.[addr]) clipNormal) < (1.0 - 1e-8) then
+                                let heightCut = 0.1
+                                let translate = V2d(-uniform.LForwards.[addr].Y, uniform.LForwards.[addr].X)
+
+                                let planeP0 = linePlaneIntersection (V3d(translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
+                                let planeP1 = linePlaneIntersection (V3d(-translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
+
+                                clipNormal <- Vec.cross planeP0 planeP1 |> Vec.normalize
+
+                                if clipNormal.Z < 0.0 then
+                                    clipNormal <- -clipNormal
+
+                            ////////////////////////////////////////////////////////
+
+                            //let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
+                            //let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
+                            let (clippedVa, clippedVc) = clipPatchTSwN(clipNormal, uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
+                            
+
+                            if clippedVc <> 0 then
+
+                                let eps = 1e-9
+                                let epm = 1e-5
+                                let epb = 1e-3
+
+                                let lightPlaneN = w2t * uniform.LForwards.[addr] |> Vec.normalize   
+
+                                // find closest point limited to upper hemisphere
+                                let t = (- clippedVa.[0]) |> Vec.dot lightPlaneN
+                                let mutable closestPoint = t * (-lightPlaneN)
+                                                    
+                                if (Vec.dot closestPoint V3d.OOI) < 0.0 then
+                                    let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
+                                    closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
+                                    
+                                let insideLightPlane = (Vec.length closestPoint) < eps
+                                
+                                if not insideLightPlane then
+
+                                    let behindLight = Vec.dot (uniform.LForwards.[addr]) (t2w *(clippedVa.[0] |> Vec.normalize)) > 0.0
+                                    
+                                    let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc behindLight closestPoint
+
+                                    ////////////////////////////////////////
+                                    // create triangulation
+
+                                    let mutable caseOffset = CASE_INSIDE_OFFSET
+                                    let mutable v1Idx = 0
+
+                                    if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
+                                        caseOffset <- CASE_CORNER_OFFSET
+                                        v1Idx <- clampP0Id
+                                    elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
+                                        caseOffset <- CASE_EDGE_OFFSET
+                                        v1Idx <- clampP1ID
+                                    else
+                                        ()
+
+                                     
+                                    // XYZ -> Spherical coords; 
+                                    let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V3d>() 
+                                     
+                                    // X -> luminance, Y -> Weight
+                                    let funVal = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V2d>() 
+
+
+                                    let mutable vc = clippedVc
+                                    let mutable offset = 0
+                                    if caseOffset <> CASE_CORNER_OFFSET then 
+                                        vertices.[0] <- closestPointClamped |> Vec.normalize
+                                        funVal.[0]   <- sampleIrr t2w addr closestPointClamped
+                                        vc <- vc + 1 
+                                        offset <- 1
+
+                                    for i in 0 .. clippedVc - 1 do 
+                                        vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
+                                        funVal.[i + offset]   <- sampleIrr t2w  addr clippedVa.[(v1Idx + i) % clippedVc]
 
                                     //let delFaceData = QUAD_DATA.getInitFaceData caseOffset
                                     let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
@@ -227,127 +450,67 @@ module EffectApDelaunayIrradianceIntegration =
                                     
                                     let mutable delMetaData = QUAD_DATA.getInitMetaData caseOffset
 
-
-                                    ////////////////////////////////////////
-                                    // execute edge flip algorithm
-
-                                    let stack = Arr<N<MAX_EDGES>, int>()
-                                    let mutable SP = -1
+                                    if applyFlipping then
+                                        ////////////////////////////////////////
+                                        // load inital data
                                     
-                                    for i in 0 .. MAX_EDGES - 1 do
-                                        if edgeIsInside delMetaData i then
-                                            SP <- SP + 1
-                                            stack.[SP] <- i
-                                            delMetaData <- markEdge delMetaData i
+                                        //let delEdgeData = QUAD_DATA.getInitEdgeData caseOffset
+                                        let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>() 
+                                        for i in 0 .. MAX_EDGES_HALF - 1 do
+                                            delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
+
+
+
+
+                                        ////////////////////////////////////////
+                                        // execute edge flip algorithm
+
+                                        let stack = Arr<N<MAX_EDGES>, int>()
+                                        let mutable SP = -1
+                                    
+                                        for i in 0 .. MAX_EDGES - 1 do
+                                            if edgeIsInside delMetaData i then
+                                                SP <- SP + 1
+                                                stack.[SP] <- i
+                                                delMetaData <- markEdge delMetaData i
                                     
 
-                                    ////////////////////////////////////////
-                                    // transform to a Delaunay triangulation
-                                    while SP >= 0 do
+                                        ////////////////////////////////////////
+                                        // transform to a Delaunay triangulation
+                                        while SP >= 0 do
 
-                                        // get edge Id
-                                        let eId = stack.[SP]
-                                        SP <- SP - 1
+                                            // get edge Id
+                                            let eId = stack.[SP]
+                                            SP <- SP - 1
 
-                                        // unmark edge
-                                        delMetaData <- unmarkEdge delMetaData eId
+                                            // unmark edge
+                                            delMetaData <- unmarkEdge delMetaData eId
                                         
-                                        // test if edge is locally delaunay
-                                            // true if flip, false otherwise
+                                            // test if edge is locally delaunay
+                                                // true if flip, false otherwise
                                 
-                                        let a = vertices.[ readVertexId delEdgeData eId 0].XYZ |> Vec.normalize
-                                        let b = vertices.[ readVertexId delEdgeData eId 1].XYZ |> Vec.normalize
-                                        let c = vertices.[ readVertexId delEdgeData eId 2].XYZ |> Vec.normalize
-                                        let d = vertices.[ readVertexId delEdgeData eId 3].XYZ |> Vec.normalize
-                                        let notLD = (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0   
+                                            let a = vertices.[ readVertexId delEdgeData eId 0].XYZ |> Vec.normalize
+                                            let b = vertices.[ readVertexId delEdgeData eId 1].XYZ |> Vec.normalize
+                                            let c = vertices.[ readVertexId delEdgeData eId 2].XYZ |> Vec.normalize
+                                            let d = vertices.[ readVertexId delEdgeData eId 3].XYZ |> Vec.normalize
+                                                        
+
+                                            let notLD = 
+                                                if a - c |> Vec.length < 1e-6 || b - c |> Vec.length < 1e-6 || d - c |> Vec.length < 1e-6 then
+                                                    false
+                                                else
+                                                    (Vec.dot (a - c) ((Vec.cross (b - c) (d - c)))) < 0.0   
                                         
-                                        if notLD then
-                                            // flip edge
+                                            if notLD then
+                                                // flip edge
 
-                                            //let (meta, sp) = flipEdge delEdgeData delMetaData delFaceData stack SP eId
+                                                let (meta, sp) = flipEdge delEdgeData delMetaData delFaceData stack SP eId
 
-                                            let edges = delEdgeData
-                                            let meta = delMetaData
-                                            let faces = delFaceData
-
-                                            let mutable sp = SP
-                                            let mutable meta = meta
-
-                                            // adapt neighbour edges
-                                            for ne in 0 .. 3 do
-
-                                                let neId = ne |> readEdgeId edges eId
-
-                                                // TODO optimize this with a for loop as soon as it is guaranteed to work
-                                                match ne with
-                                                | 0 -> 
-                                                    if 2 |> compareIndices edges neId OPPOSITE_0 eId then
-                                                        writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (3 |> readEdgeId edges eId) 
-                                                        writeVertexId edges neId OPPOSITE_0 (3 |> readVertexId edges eId)
-                                                    else
-                                                        writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (3 |> readEdgeId edges eId) 
-                                                        writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
-
-                                                | 2 ->
-                                                    if 0 |> compareIndices edges neId OPPOSITE_0 eId then
-                                                        writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (1 |> readEdgeId edges eId) 
-                                                        writeVertexId edges neId OPPOSITE_0 ( 1 |> readVertexId edges eId)
-                                                    else
-                                                        writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (1 |> readEdgeId edges eId)    
-                                                        writeVertexId edges neId OPPOSITE_1 ( 1 |> readVertexId edges eId)
-
-                                                | 1 ->
-                                                    if 0 |> compareIndices edges neId OPPOSITE_0 eId then
-                                                        writeOppositeEdgeIds edges neId OPPOSITE_0 (2 |> readEdgeId edges eId) (eId) 
-                                                        writeVertexId edges neId OPPOSITE_0 (3 |> readVertexId edges eId)
-                                                    else
-                                                        writeOppositeEdgeIds edges neId OPPOSITE_1 (2 |> readEdgeId edges eId) (eId)  
-                                                        writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
-
-                                                | 3 ->
-                                                    if 2 |> compareIndices edges neId OPPOSITE_0 eId then
-                                                        writeOppositeEdgeIds edges neId OPPOSITE_0 (0 |> readEdgeId edges eId) (eId)
-                                                        writeVertexId edges neId OPPOSITE_0 (1 |> readVertexId edges eId)
-                                                    else
-                                                        writeOppositeEdgeIds edges neId OPPOSITE_1 (0 |> readEdgeId edges eId) (eId)
-                                                        writeVertexId edges neId OPPOSITE_1 (1 |> readVertexId edges eId)
-                
-                                                | _ -> ()
-
-                                                // if inside and not marked -> mark it
-                                                if edgeIsInside meta neId && not (edgeIsMarked meta neId) then
-                                                    meta <- markEdge meta neId
-
-                                                    sp <- sp + 1
-                                                    stack.[sp] <- neId
-                    
-
-                                            // get face vertices of unflipped edge
-                                            let f0vertices = eId |> getFaceVerticesOfEdge edges OPPOSITE_0
-                                            let f1vertices = eId |> getFaceVerticesOfEdge edges OPPOSITE_1
-
-                                            // flip edge and unmark edge
-                                            eId |> leftShiftVerticesAndEdgesByOne edges
-                                            meta <- eId |> unmarkEdge meta
-
-                                            // update faces
-                                            for f in 0 .. MAX_FACES - 1 do
-
-                                                if f0vertices |> verticesAreFromFace faces f then
-                                                    eId |> getFaceVerticesOfEdge edges OPPOSITE_0 |> writeFaceVertexIdsCombined faces f
-                                                    writeFaceEdgeIds faces f (0 |> readEdgeId edges eId) (1 |> readEdgeId edges eId) eId
-
-                                                if f1vertices |> verticesAreFromFace faces f then
-                                                    eId |> getFaceVerticesOfEdge edges OPPOSITE_1 |> writeFaceVertexIdsCombined faces f
-                                                    writeFaceEdgeIds faces f (2 |> readEdgeId edges eId) (3 |> readEdgeId edges eId) eId
-
-
-                                            SP <- sp
-                                            delMetaData <- meta
+                                                SP <- sp
+                                                delMetaData <- meta
 
                                     ////////////////////////////////////////////////////////
                                     // integrate
-
                                     
                                     let mutable patchIllumination = 0.0
                                     let mutable weightSum = 0.0
@@ -727,7 +890,7 @@ module EffectApDelaunayIrradianceIntegration =
         open Aardvark.Base.Incremental
 
 
-        let delIrrIntApproxRenderTask (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+        let internal setupScene (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) applyFlip = 
     
             (*
             let sceneSg = 
@@ -740,7 +903,7 @@ module EffectApDelaunayIrradianceIntegration =
             
             sceneSg
                 |> setupFbEffects [ 
-                        delaunyIrrIntegration false |> toEffect
+                        delaunyIrrIntegration applyFlip |> toEffect
                     ]
                 |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Light.Sg.setLightCollectionUniforms data.lights
@@ -749,14 +912,19 @@ module EffectApDelaunayIrradianceIntegration =
                 |> setUniformDT data.dt
                 |> setUniformUsePhotometry data.lightData.usePhotometry
                 |> setUniformSkewClipPlane data.skewClipPlane
-                |> setUniformDiffuseExitance data.lightData.diffuseExitance                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
+                |> setUniformDiffuseExitance data.lightData.diffuseExitance                
+                |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Sg.compile data.runtime signature
 
 
 
-        let delIrrIntApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
-            delIrrIntApproxRenderTask data signature sceneSg
+        let internal setupApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) applyFlip = 
+            setupScene data signature sceneSg applyFlip
             |> RenderTask.renderToColor data.viewportSize
 
+            
+        let delIrrIntNoFlipApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+            false |> setupApproxFb data signature sceneSg
 
-        
+        let delIrrIntApproxFb (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) = 
+            true |> setupApproxFb data signature sceneSg

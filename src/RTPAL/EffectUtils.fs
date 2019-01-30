@@ -891,7 +891,7 @@ module EffectUtils =
     [<ReflectedDefinition>]
     let computeSphericalExcess (va : V3d) (vb : V3d) (vc : V3d) =
 
-        //if (va - vb) |> Vec.lengthSquared < 1e-5 || (va - vc) |> Vec.lengthSquared < 1e-5 || (vb - vc) |> Vec.lengthSquared < 1e-5 then 
+        //if (va - vb) |> Vec.lengthSquared < 1e-8 || (va - vc) |> Vec.lengthSquared < 1e-8 || (vb - vc) |> Vec.lengthSquared < 1e-8 then 
         //    0.0
         //else
         let crossVaVc = Vec.cross va vc |> Vec.normalize

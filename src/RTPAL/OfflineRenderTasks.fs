@@ -54,226 +54,143 @@ module OfflineRenderTasks =
             evalAPI : EvaluationAPI
         }
 
+
+
+        
+    let abstractTask =
+        (fun (api : TaskAPI) ->
+            api.setRenderMode RenderMode.FormFactor
+            api.render ()
+            api.saveImage ()
+
+            api.setRenderMode RenderMode.SolidAngle
+            api.render ()
+            api.saveImage ()
+        )
+
+    let groundTruthTask =
+        (fun (api : TaskAPI) ->
+
+            api.setRenderMode RenderMode.GroundTruth
+                        
+            api.gtAPI.overwriteEstimate true
+            for _ in 1 .. (25000 / Config.Light.NUM_SAMPLES) do
+                api.render ()
+                api.gtAPI.overwriteEstimate false
+                            
+            api.saveImage ()
+        )
+
     
-    let offlineRenderTasks : (Map<string, (TaskAPI -> unit)> * string list) = 
+    let offlineRenderTasks : ((TaskAPI -> unit) list) = 
+
         let taskMap = Map.empty
 
-        let taskMap = taskMap |> Map.add 
-                            "AbstractData"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.FormFactor
-                                api.render ()
-                                api.saveImage ()
+        let addTask (name : string) (task : TaskAPI -> unit) taskMap =
+            (name, taskMap |> Map.add name task)                         
+        
+        
+        let (delaunay, taskMap) =   
+            taskMap 
+            |> addTask  "Delaunay"
+                        (fun (api : TaskAPI) ->
+                            api.setRenderMode RenderMode.DelaunayIrradianceSampling
 
-                                api.setRenderMode RenderMode.SolidAngle
-                                api.render ()
-                                api.saveImage ()
-                            )
+                            api.setSkewClipPlane true
 
-        let taskMap = taskMap |> Map.add 
-                            "GroundTruth"
-                            (fun (api : TaskAPI) ->
+                            api.render ()
+                            api.saveImage () 
+                            api.evalAPI.updateEffectList ()
 
-                                api.setRenderMode RenderMode.GroundTruth
-                        
-                                api.gtAPI.overwriteEstimate true
-                                for _ in 1 .. (25000 / Config.Light.NUM_SAMPLES) do
-                                    api.render ()
-                                    api.gtAPI.overwriteEstimate false
-                            
-                                api.saveImage ()
-                            )
-                            
-        let taskMap = taskMap |> Map.add 
-                            "CenterPoint"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.CenterPointApprox
-                                api.render ()
-                                api.saveImage () 
-                                api.evalAPI.updateEffectList ()
-                            )
+                            api.setRenderMode RenderMode.DelaunayNoFlipIrradianceSampling
 
-        let taskMap = taskMap |> Map.add 
-                            "BaumFormFactor"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.BaumFFApprox
-                                api.render ()
-                                api.saveImage () 
-                                api.evalAPI.updateEffectList ()
-                            )
+                            api.render ()
+                            api.saveImage () 
+                            api.evalAPI.updateEffectList ()
+                        )
 
-        let taskMap = taskMap |> Map.add 
-                            "MRP"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.MRPApprox
-                                api.render ()
-                                api.saveImage () 
-                                api.evalAPI.updateEffectList ()
-                            )
+        let (delaunayWithLight, taskMap) =  
+            taskMap 
+            |> addTask  "DelaunayWithLight"
+                        (fun (api : TaskAPI) ->
+                            api.setRenderLight true
 
-        let taskMap = taskMap |> Map.add 
-                            "Delaunay"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.DelaunayIrradianceSampling
+                            api.setRenderMode RenderMode.DelaunayIrradianceSampling
 
-                                api.setSkewClipPlane true
+                            api.setSkewClipPlane true
+                            api.render ()
+                            api.saveImage () 
+                            api.evalAPI.updateEffectList ()
+
+                            api.setSkewClipPlane false
+                            api.render ()
+                            api.saveImage () 
+                            api.evalAPI.updateEffectList ()
+                        )
+
+        let (structuredSampling, taskMap) = 
+            taskMap 
+            |> addTask  "StructuredSampling"
+                        (fun (api : TaskAPI) ->
+                            api.setRenderMode RenderMode.StructuredSampling
+
+                            for mask in 1 .. 31 do
+                                api.ssAPI.setSampleBitmask mask
                                 api.render ()
                                 api.saveImage () 
                                 api.evalAPI.updateEffectList ()
+                        )
 
-                                //api.setSkewClipPlane false
-                                //api.render ()
-                                //api.saveImage () 
-                                //api.evalAPI.updateEffectList ()
-                            )
+        let (structuredSamplingRandom, taskMap) =   
+            taskMap 
+            |> addTask  "StructuredSamplingRandom"
+                        (fun (api : TaskAPI) ->
+                            api.setRenderMode RenderMode.StructuredSampling
 
-        let taskMap = taskMap |> Map.add 
-                            "DelaunayWithLight"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderLight true
-
-                                api.setRenderMode RenderMode.DelaunayIrradianceSampling
-
-                                api.setSkewClipPlane true
-                                api.render ()
-                                api.saveImage () 
-                                api.evalAPI.updateEffectList ()
-
-                                api.setSkewClipPlane false
-                                api.render ()
-                                api.saveImage () 
-                                api.evalAPI.updateEffectList ()
-                            )
-
-        let taskMap = taskMap |> Map.add 
-                            "StructuredSampling"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.StructuredSampling
-
-                                for mask in 1 .. 31 do
-                                    api.ssAPI.setSampleBitmask mask
-                                    api.render ()
-                                    api.saveImage () 
-                                    api.evalAPI.updateEffectList ()
-                            )
-
-        let taskMap = taskMap |> Map.add 
-                            "StructuredSamplingLDR"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.StructuredSampling
-
-                                api.ssAPI.setSamples true true false false false false
-                                api.render ()
-                                api.saveImage () 
-                                api.evalAPI.updateEffectList ()
-                            )
-
-        let taskMap = taskMap |> Map.add 
-                            "StructuredSamplingRandom"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.StructuredSampling
-
-                                api.ssAPI.setSamples false false false false false true
+                            api.ssAPI.setSamples false false false false false true
                                 
-                                for n in [5; 16; 24] do
-                                    api.ssAPI.setRandomSampleCount n                                
-                                    api.render ()
-                                    api.saveImage () 
-                                    api.evalAPI.updateEffectList ()
+                            for n in [30; 60] do
+                                api.ssAPI.setRandomSampleCount n                                
+                                api.render ()
+                                api.saveImage () 
+                                api.evalAPI.updateEffectList ()                            
+                        )
+
+        let (compare, taskMap) =    
+            taskMap 
+            |> addTask  "Compare"
+                        (fun (api : TaskAPI) ->
                             
-                            )
+                            api.setRenderLight true
+                            api.setDiffuseExitance 5.0            
 
-        let taskMap = taskMap |> Map.add 
-                            "StructuredSamplingSmall"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.StructuredSampling
-
-                                api.ssAPI.setSamples false false false false false true
-                                
-                                for n in [5] do
-                                    api.ssAPI.setRandomSampleCount n                                
-                                    api.render ()
-                                    api.saveImage () 
-                                    api.evalAPI.updateEffectList ()
-                            
-                            )
-
-        let taskMap = taskMap |> Map.add 
-                            "StructuredLuminanceSampling"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderMode RenderMode.StructuredIrrSampling
-
-                                for mask in 1 ..  7 do //31 do
-                                    api.ssAPI.setSampleBitmask mask
-                                    api.render ()
-                                    api.saveImage () 
-                                    api.evalAPI.updateEffectList ()
-                            )
-
-        let taskMap = taskMap |> Map.add 
-                            "StructuredLuminanceSamplingRandom"
-                            (fun (api : TaskAPI) ->
-                                api.setRenderLight true   
-                                api.usePhotometry true
-                                
-                                api.setRenderMode RenderMode.StructuredSampling
-
-                                api.ssAPI.sampleLight true
-
-                                api.ssAPI.setSamples false false false false false true
-
-                                for n in [16; 24; 32; 40; 48; 56; 64; 128; 256] do
-                                    api.ssAPI.setRandomSampleCount n                                
-                                    api.render ()
-                                    api.saveImage () 
-                                    api.evalAPI.updateEffectList ()
-                            )
-
-        let taskMap = taskMap |> Map.add 
-                            "Compare"
-                            (fun (api : TaskAPI) ->
-                            
-                                api.setRenderLight true
-                                api.setDiffuseExitance 5.0            
-
-                                api.usePhotometry true
+                            api.usePhotometry true
                                     
-                                api.setRenderMode RenderMode.StructuredSampling
+                            api.setRenderMode RenderMode.StructuredSampling
 
-                                api.ssAPI.setSamples true true false false false false
-                                api.ssAPI.sampleLight true
+                            api.ssAPI.setSamples true true false false false false
+                            api.ssAPI.sampleLight true
                                 
+                            api.render ()
+                            api.saveImage () 
+                            api.evalAPI.updateEffectList ()
+
+                            api.setRenderMode RenderMode.GroundTruth
+                        
+                            api.gtAPI.overwriteEstimate true
+                            for _ in 1 .. (20000 / Config.Light.NUM_SAMPLES) do
                                 api.render ()
-                                api.saveImage () 
-                                api.evalAPI.updateEffectList ()
-
-                                api.setRenderMode RenderMode.GroundTruth
-                        
-                                api.gtAPI.overwriteEstimate true
-                                for _ in 1 .. (20000 / Config.Light.NUM_SAMPLES) do
-                                    api.render ()
-                                    api.gtAPI.overwriteEstimate false
+                                api.gtAPI.overwriteEstimate false
                             
-                                api.saveImage ()
-                                api.evalAPI.updateEffectList ()                                
+                            api.saveImage ()
+                            api.evalAPI.updateEffectList ()                                
 
-                            )
+                        )
+             
+        let tasks = [ delaunay; structuredSamplingRandom ]
 
-        let taskMap = taskMap |> Map.add 
-                            "Custom"
-                            (fun (api : TaskAPI) ->
-
-                                api.setRenderMode RenderMode.GroundTruth
-                        
-                                api.gtAPI.overwriteEstimate true
-                                for _ in 1 .. (20000 / Config.Light.NUM_SAMPLES) do
-                                    api.render ()
-                                    api.gtAPI.overwriteEstimate false
-                            
-                                api.saveImage ()
-                            )
-
-
-        (taskMap, [ "Delaunay"; "StructuredSamplingLDR"; "StructuredSamplingRandom" ])
-        //(taskMap, [ "DelaunayWithLight"])
+        taskMap
+        |> Map.filter (fun key _ -> tasks |> List.contains key) 
+        |> Map.toList
+        |> List.map snd
 

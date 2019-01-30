@@ -160,7 +160,7 @@
                 s |> Mod.change skewClipPlane
             )
         
-        updatePhotometryData "ARCOS3_60712332.ldt"
+        updatePhotometryData "PERLUCE_42182932.ldt"
 
         let lightData : Render.Light.Sg.LightSgData = 
             {
@@ -293,18 +293,12 @@
         let numOfRotationSteps = 5
         let angle = (System.Math.PI / 2.0) / float(numOfRotationSteps - 1)
 
-        let translations = [0.1; 1.1; 3.1; 5.1]
+        let translations = [0.1; 1.1; 3.1]
         
         let imageFormat = PixFileFormat.Exr 
 
         let createFileName step height renderModeData mode =
         
-            let appendSkewClipPlane s = 
-                if renderData.skewClipPlane |> Mod.force then
-                    sprintf "%s_%s" s "SCP"
-                else
-                    s
-
             let renderModeData =                 
                 match renderModeData with
                 | Some rmd -> rmd
@@ -319,15 +313,15 @@
             | Some step -> 
                 match height with
                 | Some height ->
-                    printfn "Create  File Name for height %f %s" height (sprintf "%s%s_%i_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData step height) 
-                    sprintf "%s%s_%i_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData step height
-                | None -> sprintf "%s%s_%i"  (mode.ToString() |> appendSkewClipPlane) renderModeData step
+                    printfn "Create  File Name for height %f %s" height (sprintf "%s%s_%i_h%f"  (mode.ToString()) renderModeData step height) 
+                    sprintf "%s%s_%i_h%f"  (mode.ToString()) renderModeData step height
+                | None -> sprintf "%s%s_%i"  (mode.ToString()) renderModeData step
             | None -> 
                 match height with
                 | Some height ->
-                    printfn "Create  File Name for height %f %s" height (sprintf "%s%s_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData height) 
-                    sprintf "%s%s_h%f"  (mode.ToString() |> appendSkewClipPlane) renderModeData height
-                | None -> sprintf "%s%s"  (mode.ToString() |> appendSkewClipPlane) renderModeData
+                    printfn "Create  File Name for height %f %s" height (sprintf "%s%s_h%f"  (mode.ToString()) renderModeData height) 
+                    sprintf "%s%s_h%f"  (mode.ToString()) renderModeData height
+                | None -> sprintf "%s%s"  (mode.ToString()) renderModeData
 
 
 
@@ -395,7 +389,7 @@
         let executeTask step height path api (task : TaskAPI -> unit) = 
             task { api with saveImage = generateSaveImage step height path }
 
-        let renderOfflineTask forPhotometry (offlineTasks : Map<string, (TaskAPI -> unit)>) (task : string) = 
+        let renderOfflineTask forPhotometry (task : (TaskAPI -> unit)) = 
             async {
                 if (m.offlineCamera |> Mod.force) <> OfflineCamera.Evaluation then
                     setToneMap true
@@ -410,13 +404,13 @@
                     
                         updatePhotometryData f
 
-                        doIteration (fun step height -> offlineTasks |> Map.find task |> executeTask step height dataPath API |> ignore)
+                        doIteration (fun step height -> task |> executeTask step height dataPath API |> ignore)
 
                 else
-                    doIteration (fun step height -> offlineTasks |> Map.find task |> executeTask step height resultPath API |> ignore)
+                    doIteration (fun step height -> task |> executeTask step height resultPath API |> ignore)
             }
 
-        let renderOfflineEvaluationTasks (offlineTasks : Map<string, (TaskAPI -> unit)>) (tasks : string list) = 
+        let renderOfflineEvaluationTasks (tasks : (TaskAPI -> unit) list) = 
             async {
 
                 let evaluation = (sprintf "%s_%s" "Evaluation" (System.DateTime.Now.ToString("dd-M-yyyy--HH-mm")))
@@ -444,7 +438,7 @@
                     updatePhotometryData f
 
                     for t in tasks do
-                        doIteration (fun step height -> offlineTasks |> Map.find t |> executeTask step height dataPath API |> ignore)      
+                        doIteration (fun step height -> t |> executeTask step height dataPath API |> ignore)      
                         
 
                 let approxList =
@@ -487,15 +481,13 @@
                 writeMetaData resultPath "PhotometryData.txt" photometryList
             }
 
-        let (taskMap, tasks) = offlineRenderTasks
-
         let createImageTask = 
             m.offlineRenderMode |> Mod.map (fun mode ->
                 match mode with
-                | OfflineRenderMode.AbstractData    -> renderOfflineTask false taskMap "AbstractData" 
-                | OfflineRenderMode.GroundTruth     -> renderOfflineTask true  taskMap "GroundTruth" 
+                | OfflineRenderMode.AbstractData    -> renderOfflineTask false abstractTask
+                | OfflineRenderMode.GroundTruth     -> renderOfflineTask true groundTruthTask 
                 | OfflineRenderMode.PhotometryList  -> createPhotometryList
-                | _ (* Approximations *)            -> renderOfflineEvaluationTasks taskMap (tasks)
+                | _ (* Approximations *)            -> renderOfflineEvaluationTasks offlineRenderTasks
                     
             )
             
@@ -1029,7 +1021,7 @@
                                                 alist {
                                                     let! mode = m.renderMode
 
-                                                    if mode = RenderMode.DelaunayIrradianceSampling then
+                                                    if mode = RenderMode.DelaunayIrradianceSampling || mode = RenderMode.DelaunayNoFlipIrradianceSampling then
                                                         yield div [ clazz "ui divider"] []                                        
 
                                                         yield toggleBox m.sampleMRP TOGGLE_SKEW_CLIP_PLANE       
@@ -1211,7 +1203,7 @@
             transformLight lc lightId t |> ignore
         | None -> ()
         
-        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"SLOTLIGHT_42184612.LDT"]
+        let photometryPath = Path.combine [__SOURCE_DIRECTORY__;"..";"..";"photometry";"PERLUCE_42182932.LDT"]
         let lightData = LightMeasurementData.FromFile(photometryPath)
         
         
