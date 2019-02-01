@@ -590,7 +590,7 @@ module EffectUtils =
             line is given counterclockwise
     *)
     [<ReflectedDefinition>][<Inline>] 
-    let delaunayClampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCountStartIdx : int) (polygonVertexCount : int) (polygonClockwiseOrder : bool) (p : V3d) = 
+    let delaunayClampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCountStartIdx : int) (polygonVertexCount : int) (p : V3d) = 
 
         if polygonVertexCount = 0 then
             (p, Config.Delaunay.CASE_INSIDE_OFFSET, 0)
@@ -609,8 +609,9 @@ module EffectUtils =
                 let v0 = polygonVertices.[i]
                 let v1 = polygonVertices.[(i + 1) % polygonVertexCount]
 
-                let dotPlane = Vec.cross (v0 |> Vec.normalize) (v1 |> Vec.normalize) |> Vec.normalize |> Vec.dot p
-                if (not polygonClockwiseOrder && dotPlane >= -1e-9) || (polygonClockwiseOrder && dotPlane <= -1e-9) then
+                let planeN = Vec.cross v0 v1 |> Vec.normalize
+                let dotPlane = Vec.dot (p |> Vec.normalize) planeN
+                if dotPlane > -1e-8 then
                     
                     inside <- false
 

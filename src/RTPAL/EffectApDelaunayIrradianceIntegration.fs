@@ -320,7 +320,7 @@ module EffectApDelaunayIrradianceIntegration =
             return V4d(illumination.XYZ, v.c.W)
         }
         
-    let delaunyIrrDebug applyFlipping (v : Vertex) = 
+    let delaunyIrrDebug (v : Vertex) = 
         fragment {
 
             ////////////////////////////////////////////////////////
@@ -388,7 +388,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                                 //let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
                                 //let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
-                                let mutable (clippedVa, clippedVc) = clipPatchTSwN ( if dotOut > 0.0 then uniform.LVertices else uniform.LVerticesInverse) uniform.LBaseComponents.[addr] clipNormal P w2t
+                                let (clippedVa, clippedVc) = clipPatchTSwN ( if dotOut > 0.0 then uniform.LVertices else uniform.LVerticesInverse) uniform.LBaseComponents.[addr] clipNormal P w2t
                            
 
                                 if clippedVc <> 0 then
@@ -453,19 +453,9 @@ module EffectApDelaunayIrradianceIntegration =
                                         delMetaData <- unmarkEdge delMetaData eId
                                         
                                         // test if edge is locally delaunay
-                                            // true if flip, false otherwise
-                                
-                                        let a = vertices.[ readVertexId delEdgeData eId 0].XYZ
-                                        let b = vertices.[ readVertexId delEdgeData eId 1].XYZ
-                                        let c = vertices.[ readVertexId delEdgeData eId 2].XYZ
-                                        let d = vertices.[ readVertexId delEdgeData eId 3].XYZ
-                                                        
-
-                                        let notLD = (Vec.dot (a - c) ((Vec.cross (b - c) (d - c)))) < 0.0 
-                                            //if a - c |> Vec.length < 1e-6 || b - c |> Vec.length < 1e-6 || d - c |> Vec.length < 1e-6 then
-                                            //    false
-                                            //else
-                                            //    (Vec.dot (a - c) ((Vec.cross (b - c) (d - c)))) < 0.0   
+                                        // true if flip, false otherwise
+                                        let c = vertices.[ readVertexId delEdgeData eId 2].XYZ  
+                                        let notLD = (Vec.dot ((vertices.[ readVertexId delEdgeData eId 0].XYZ) - c) ((Vec.cross ((vertices.[ readVertexId delEdgeData eId 1].XYZ) - c) ((vertices.[ readVertexId delEdgeData eId 3].XYZ) - c)))) < 0.0 
                                         
                                         if notLD then
                                             // flip edge
@@ -480,7 +470,7 @@ module EffectApDelaunayIrradianceIntegration =
                                     ////////////////////////////////////////////////////////
                                     // integrate
                                     
-                                    let mutable patchIllumination = computeIlluminationCheap delEdgeData vertices offset
+                                    let patchIllumination = computeIlluminationCheap delEdgeData vertices caseOffset
                                                                             
                                     illumination <- illumination + patchIllumination * brdf 
                                     
@@ -595,18 +585,21 @@ module EffectApDelaunayIrradianceIntegration =
                 adaptive {
                     let! lights = lc.Lights
                     let! patchIndices = lc.PatchIndices
-                    let! vertices = lc.Vertices
                     let! baseComponents = lc.BaseComponents
+                    let! areas = lc.Areas
+                    let! vertices = lc.Vertices
+                    let! verticesInverse = lc.VerticesInverse
+                    let! centers = lc.Centers
                     let! forwards = lc.Forwards
                     let! ups = lc.Ups
 
-                    return (lights, patchIndices, vertices, baseComponents, forwards, ups)
+                    return (lights, patchIndices,  Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>(vertices),  Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>(verticesInverse), baseComponents, centers, forwards, ups, areas)
 
                 }
 
             lc |> Mod.map (fun lc ->
 
-                let (lights, lPatchIndices, lVertices, lBaseComponents, lForwards, lUps) = lc
+                let (lights, lPatchIndices, lVertices, lVerticesInverse, lBaseComponents, lCenters, lForwards, lUps, lAreas) = lc
                 
                 ////////////////////////////////////////////////////////
                 // SHADER START
@@ -633,30 +626,16 @@ module EffectApDelaunayIrradianceIntegration =
                             
                 let w2l = l2w |> Mat.transpose
 
-                let t2l = w2l * t2w
-
-                let l2t = l2w * w2t
-
                 ////////////////////////////////////////////////////////
 
-                let iIdx = 0
+                let dotOut = Vec.dot (lForwards.[addr]) ((P - lCenters.[addr])  |> Vec.normalize) |> clamp -1.0 1.0
 
-                //let vt = Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>() 
-                            
-                //for vtc in 0 .. lBaseComponents.[addr] - 1 do
-                //    let vtcAddr = lPatchIndices.[iIdx + vtc] + vAddr
-                //    vt.[vtc] <- w2t * (lVertices.[vtcAddr] - P)
-
-                ////////////////////////////////////////////////////////
-
-                // let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, lBaseComponents.[addr])
-                let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
+                
+                let (clippedVa, clippedVc) = clipPatchTSwN ( if dotOut > 0.0 then lVertices else lVerticesInverse) lBaseComponents.[addr] V3d.OOI P w2t
 
                 if clippedVc <> 0 then
 
                     let eps = 1e-9
-                    let epm = 1e-5
-                    let epb = 1e-3
 
                     let lightPlaneN = w2t * lForwards.[addr] |> Vec.normalize   
 
@@ -672,156 +651,86 @@ module EffectApDelaunayIrradianceIntegration =
                                 
                     if not insideLightPlane then
 
-                        let behindLight = Vec.dot (lForwards.[addr]) (t2w *(clippedVa.[0] |> Vec.normalize)) > 0.0
-                                                                                
-                        let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc behindLight closestPoint
+                        // vertices: XYZ -> Spherical coords; W -> FunValue
+                        let (vertices, caseOffset, offset) = fillVertexArray clippedVa clippedVc t2w lForwards.[addr] lUps.[addr] lAreas.[addr] closestPoint
 
-                                                                        
-                        // let (closestPoint, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-
-                        let (caseOffset, v1Idx) =
-                            if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
-                                (CASE_CORNER_OFFSET, clampP0Id)
-                            elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
-                                (CASE_EDGE_OFFSET, clampP1ID)
-                            else (*CLAMP_POLYGON_RESULT =  CLAMP_POLYGON_RESULT_NONE *) 
-                                (CASE_INSIDE_OFFSET, 0)
-                                     
-                        // XYZ -> Spherical coords; 
-                        let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V3d>() 
-                                     
-                        // XYZ -> Spherical coords; 
-                        let verticesNormalized = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V3d>() 
-
-
-                        let mutable vc = clippedVc
-                        let mutable offset = 0
-                        if caseOffset <> CASE_CORNER_OFFSET then 
-                            vertices.[0] <- closestPointClamped
-                            verticesNormalized.[0] <- closestPointClamped |> Vec.normalize
-                            vc <- vc + 1 
-                            offset <- 1
-
-                        // is the point in front of the light or behind?
-                        // if behind, iterate the light vertices backwards for counter clockwise order
-                        if not behindLight then 
-                                    
-                            for i in 0 .. clippedVc - 1 do 
-                                vertices.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
-                                verticesNormalized.[i + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
-                                            
-                        else
-                            let mutable j = 0
-                            for i in clippedVc - 1 .. -1 .. 0 do 
-                                vertices.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc]
-                                verticesNormalized.[j + offset] <- clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize
-                                                
-                                j <- j + 1
-
+                        for i in 0 .. vertices.Length - 1 do
+                            vertices.[i] <- V4d(vertices.[i].XYZ, 1.0)
 
                         ////////////////////////////////////////
                         // load inital data
-                        (*
-                        let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
-                        let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
-
-                        caseOffset |> QUAD_DATA.getInitEdgeData delEdgeData
-                        caseOffset |> QUAD_DATA.getInitFaceData delFaceData
-                        *)
-
-                        let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>()
-                        for i in 0 .. MAX_EDGES_HALF - 1 do
-                            delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
-
-                        
-                        let delFaceData = Arr<N<MAX_FACES_HALF>, V4i>()
-                        for i in 0 .. MAX_FACES_HALF - 1 do
-                            delFaceData.[i] <- QUAD_DATA.ALL.FACES.[MAX_FACES_HALF * caseOffset + i]
-  
-                        let mutable delMetaData = QUAD_DATA.ALL.META.[caseOffset]
-
-                        //let mutable delNextFreeEdgeAddr = caseOffset |> QUAD_DATA.getInitFreeEdgeAddr
-                        //let mutable delNextFreeFaceAddr = caseOffset |> QUAD_DATA.getInitFreeFaceAddr
+                        //let delEdgeData = QUAD_DATA.getInitEdgeData caseOffset
+                        let mutable delEdgeData = QUAD_DATA.initEdgeDataSlice CASE_CORNER_OFFSET 
+                        if caseOffset = CASE_EDGE_OFFSET then
+                            delEdgeData <- QUAD_DATA.initEdgeDataSlice CASE_EDGE_OFFSET 
+                        else if caseOffset = CASE_INSIDE_OFFSET then
+                            delEdgeData <- QUAD_DATA.initEdgeDataSlice CASE_INSIDE_OFFSET 
+                            
+                                    
+                        let mutable delMetaData = QUAD_DATA.getInitMetaData caseOffset
 
 
 
                         ////////////////////////////////////////
                         // execute edge flip algorithm
 
-                        let mutable stack = Arr<N<MAX_EDGES>, int>()
-                        let mutable SP = 0
+                        let stack = Arr<N<MAX_EDGES>, int>()
+                        let mutable SP = -1
                                     
                         for i in 0 .. MAX_EDGES - 1 do
-                            if i |> edgeIsInside delMetaData then
+                            if edgeIsInside delMetaData i then
                                 SP <- SP + 1
-                                stack.[SP - 1] <- i
-                                delMetaData <- i |> markEdge delMetaData
-                                    
-                        SP <- SP - 1
+                                stack.[SP] <- i
+                                delMetaData <- markEdge delMetaData i
 
                         ////////////////////////////////////////
                         // transform to a Delaunay triangulation
                                                                         
                         while SP >= 0 do
-
                             // get edge Id
                             let eId = stack.[SP]
                             SP <- SP - 1
 
                             // unmark edge
-                            delMetaData <- eId |> unmarkEdge delMetaData
+                            delMetaData <- unmarkEdge delMetaData eId
                                         
                             // test if edge is locally delaunay
-                                // true if flip, false otherwise
-
-                            let a' = 0 |> readVertexId delEdgeData eId
-                            let b' = 1 |> readVertexId delEdgeData eId
-                            let c' = 2 |> readVertexId delEdgeData eId
-                            let d' = 3 |> readVertexId delEdgeData eId
-                                
-                            let a = vertices.[a'].XYZ |> Vec.normalize
-                            let b = vertices.[b'].XYZ |> Vec.normalize
-                            let c = vertices.[c'].XYZ |> Vec.normalize
-                            let d = vertices.[d'].XYZ |> Vec.normalize
-                            let notLD = (Vec.dot (a - c) (Vec.cross (b - c) (d - c))) < 0.0   
+                            // true if flip, false otherwise
+                            let c = vertices.[ readVertexId delEdgeData eId 2].XYZ  
+                            let notLD = (Vec.dot ((vertices.[ readVertexId delEdgeData eId 0].XYZ) - c) ((Vec.cross ((vertices.[ readVertexId delEdgeData eId 1].XYZ) - c) ((vertices.[ readVertexId delEdgeData eId 3].XYZ) - c)))) < 0.0 
                                         
                             if notLD then
                                 // flip edge
-
-                                let (meta, sp) = eId |>  flipEdge delEdgeData delMetaData delFaceData stack SP 
+                                let (meta, sp) = cheapFlipEdge delEdgeData delMetaData stack SP eId
 
                                 SP <- sp
                                 delMetaData <- meta
 
                         ////////////////////////////////////////////////////////
 
-                        let mutable areaSum = 0.0
-                        
-                        for f in 0 .. MAX_FACES - 1 do
+                        let patchIllumination = computeIlluminationCheap delEdgeData vertices caseOffset
 
-                             if not (faceIsEmpty delFaceData f) then
-
-                                let area = computeSphericalExcess (vertices.[0 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[1 |> readFaceVertexId delFaceData f] |> Vec.normalize) (vertices.[2 |> readFaceVertexId delFaceData f] |> Vec.normalize)
+                        printfn "PatchIllumination: %f" patchIllumination
                                 
-                                areaSum <- areaSum + area 
-                                
-                        let getTrafo pos = Trafo3d.Translation pos |> Mod.init
+                        let getTrafo pos = Trafo3d.Translation pos |> Mod.constant
                         
                         let mutable sg = Sg.empty
 
+                        // center
                         sg <- Sg.group' [sg; pointSg 0.12 (C4b(255, 255, 255, 100)) (Trafo3d.Identity |> Mod.init)]
 
-                        for i in 0 .. vc - 1 do 
-                            match i with
-                            | 0 ->  sg <- Sg.group' [sg; pointSg 0.002 C4b.Blue (getTrafo (verticesNormalized.[i] * 0.14))]
-                            // | v when v = (vc - 1) -> sg <- Sg.group' [sg; pointSg 0.002 C4b.Green (getTrafo (verticesNormalized.[i] * 0.14))]
-                            | _ -> sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (verticesNormalized.[i] * 0.14))]
+                        // closet
+                        sg <- Sg.group' [sg; pointSg 0.002 C4b.Blue (getTrafo (vertices.[0].XYZ * 0.14))]
+
+                        for v in vertices |> List.ofSeq |> List.tail do 
+                            if not <| V4d.ApproxEqual(v, (V4d(0)), 1e-8) then
+                                sg <- Sg.group' [sg; pointSg 0.001 C4b.Red (getTrafo (v.XYZ * 0.14))]
                             
             
                         for i in 0 .. MAX_EDGES - 1 do         
                             if (0 |> readVertexId delEdgeData i) <> NONE && (2 |> readVertexId delEdgeData i) <> NONE then 
-                                let edgeStart = verticesNormalized.[0 |> readVertexId delEdgeData i]
-                                let edgeEnd   = verticesNormalized.[2 |> readVertexId delEdgeData i] 
+                                let edgeStart = vertices.[0 |> readVertexId delEdgeData i].XYZ
+                                let edgeEnd   = vertices.[2 |> readVertexId delEdgeData i].XYZ
                                 
 
                                 sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red (Trafo3d.Scale 0.14 |> Mod.init)]
@@ -851,17 +760,20 @@ module EffectApDelaunayIrradianceIntegration =
         let internal setupScene (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) applyFlip = 
    
             
-            //let sceneSg = 
-            //    [
-            //        sceneSg
-            //        Debug.delaunyScene data.lights |> Sg.dynamic
-            //    ]
-            //    |> Sg.group
+            let sceneSg = 
+                [
+                    sceneSg
+                    Debug.delaunyScene data.lights |> Sg.dynamic
+                ]
+                |> Sg.group
             
            
             sceneSg
                 |> setupFbEffects [ 
-                        delaunyIrrDebug applyFlip |> toEffect
+                        if applyFlip then
+                            yield delaunyIrrIntegration true |> toEffect
+                        else
+                            yield delaunyIrrDebug |> toEffect
                     ]
                 |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
                 |> Light.Sg.setLightCollectionUniforms data.lights

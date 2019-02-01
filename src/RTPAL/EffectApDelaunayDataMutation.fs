@@ -367,10 +367,7 @@ module EffectApDelaunayDataMutation =
             let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
             patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
         else if caseOffset = CASE_EDGE_OFFSET then
-
-            let face0 = IDHash' (readVertexId edges 1 0) (readVertexId edges 1 1) (readVertexId edges 1 2)
-            let face1 = IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)
-
+        
             let face3 = IDHash' (readVertexId edges 2 0) (readVertexId edges 2 1) (readVertexId edges 2 2)
 
             let area = computeSphericalExcess (vertices.[(readVertexId edges 1 0)].XYZ) (vertices.[(readVertexId edges 1 1)].XYZ) (vertices.[(readVertexId edges 1 2)].XYZ)
@@ -379,7 +376,7 @@ module EffectApDelaunayDataMutation =
             let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
             patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
 
-            if face0 <> face3 && face1 <> face3 then
+            if (IDHash' (readVertexId edges 1 0) (readVertexId edges 1 1) (readVertexId edges 1 2)) <> face3 && (IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)) <> face3 then
                 // face 3
                 let area = computeSphericalExcess (vertices.[(readVertexId edges 2 0)].XYZ) (vertices.[(readVertexId edges 2 1)].XYZ) (vertices.[(readVertexId edges 2 2)].XYZ)
                 patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 0)].W + vertices.[(readVertexId edges 2 1)].W + vertices.[(readVertexId edges 2 2)].W)
@@ -389,14 +386,9 @@ module EffectApDelaunayDataMutation =
                 patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
 
         else                        
-            let face0 = IDHash' (readVertexId edges 0 0) (readVertexId edges 0 1) (readVertexId edges 0 2)
-            let face1 = IDHash' (readVertexId edges 0 2) (readVertexId edges 0 3) (readVertexId edges 0 0)
 
             let face2 = IDHash' (readVertexId edges 1 0) (readVertexId edges 1 1) (readVertexId edges 1 2)
-            let face3 = IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)
-
             let face4 = IDHash' (readVertexId edges 2 0) (readVertexId edges 2 1) (readVertexId edges 2 2)
-            let face5 = IDHash' (readVertexId edges 2 2) (readVertexId edges 2 3) (readVertexId edges 2 0)
 
             let area = computeSphericalExcess (vertices.[(readVertexId edges 0 0)].XYZ) (vertices.[(readVertexId edges 0 1)].XYZ) (vertices.[(readVertexId edges 0 2)].XYZ)
             patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 0 0)].W + vertices.[(readVertexId edges 0 1)].W + vertices.[(readVertexId edges 0 2)].W)
@@ -404,7 +396,7 @@ module EffectApDelaunayDataMutation =
             let area = computeSphericalExcess (vertices.[(readVertexId edges 0 2)].XYZ) (vertices.[(readVertexId edges 0 3)].XYZ) (vertices.[(readVertexId edges 0 0)].XYZ)
             patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 0 2)].W + vertices.[(readVertexId edges 0 3)].W + vertices.[(readVertexId edges 0 0)].W)
 
-            if face0 <> face2 && face1 <> face2 then
+            if (IDHash' (readVertexId edges 0 0) (readVertexId edges 0 1) (readVertexId edges 0 2)) <> face2 && (IDHash' (readVertexId edges 0 2) (readVertexId edges 0 3) (readVertexId edges 0 0)) <> face2 then
                 // face 2
                 let area = computeSphericalExcess (vertices.[(readVertexId edges 1 0)].XYZ) (vertices.[(readVertexId edges 1 1)].XYZ) (vertices.[(readVertexId edges 1 2)].XYZ)
                 patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 0)].W + vertices.[(readVertexId edges 1 1)].W + vertices.[(readVertexId edges 1 2)].W)
@@ -413,7 +405,7 @@ module EffectApDelaunayDataMutation =
                 let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
                 patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
 
-            if face2 <> face4 && face3 <> face4 then
+            if face2 <> face4 && (IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)) <> face4 then
                 // face 4
                 let area = computeSphericalExcess (vertices.[(readVertexId edges 2 0)].XYZ) (vertices.[(readVertexId edges 2 1)].XYZ) (vertices.[(readVertexId edges 2 2)].XYZ)
                 patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 0)].W + vertices.[(readVertexId edges 2 1)].W + vertices.[(readVertexId edges 2 2)].W)
@@ -436,7 +428,7 @@ module EffectApDelaunayDataMutation =
     let fillVertexArray (clippedVa : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) clippedVc (t2w : M33d) forward up area closestPoint =
 
                                     
-        let (closestPointClamped, caseOffset, v1Idx) = delaunayClampPointToPolygonP1 clippedVa 0 clippedVc false closestPoint
+        let (closestPointClamped, caseOffset, v1Idx) = delaunayClampPointToPolygonP1 clippedVa 0 clippedVc closestPoint
 
         // XYZ -> Spherical coords; W -> FunValue
         let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V4d>() 
