@@ -28,6 +28,10 @@ module EffectApDelaunayIrradianceIntegration =
                 edgeArray.[i] <- ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
             edgeArray
 
+        let initEdgeDataSlice caseOffset = Arr<N<MAX_EDGES_HALF>, V4i>(ALL.EDGES.[MAX_EDGES_HALF * caseOffset .. MAX_EDGES_HALF * caseOffset + MAX_EDGES_HALF - 1])
+            
+
+
         [<ReflectedDefinition>][<Inline>]
         let getInitEdgeData' caseOffset =
             let edgeArray = Arr<N<MAX_EDGES_HALF>, V4i>()
@@ -361,47 +365,46 @@ module EffectApDelaunayIrradianceIntegration =
                             //    vt.[vtc] <- w2t * (uniform.LVertices.[vtcAddr] - P)
 
                             ////////////////////////////////////////////////////////
-
-
-                            // linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d)
-                            let mutable clipNormal = V3d.OOI
-                            if uniform.skewClipPlane && abs(Vec.dot (uniform.LForwards.[addr]) clipNormal) < (1.0 - 1e-8) then
-                                let heightCut = 0.1
-                                let translate = V2d(-uniform.LForwards.[addr].Y, uniform.LForwards.[addr].X)
-
-                                let planeP0 = linePlaneIntersection (V3d(translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
-                                let planeP1 = linePlaneIntersection (V3d(-translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
-
-                                clipNormal <- Vec.cross planeP0 planeP1 |> Vec.normalize
-
-                                if clipNormal.Z < 0.0 then
-                                    clipNormal <- -clipNormal
-
-                            ////////////////////////////////////////////////////////
-
-                            //let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
-                            //let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
-                            let (clippedVa, clippedVc) = clipPatchTSwN uniform.LVertices uniform.LBaseComponents.[addr] clipNormal P w2t
+                            let dotOut = Vec.dot (uniform.LForwards.[addr]) ((P - uniform.LCenters.[addr])  |> Vec.normalize) |> clamp -1.0 1.0
                             
+                            if abs dotOut > 1e-3 then
+                                // no super small dotouts
 
-                            if clippedVc <> 0 then
+                                // linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d)
+                                let mutable clipNormal = V3d.OOI
+                                if uniform.skewClipPlane && abs(Vec.dot (uniform.LForwards.[addr]) clipNormal) < (1.0 - 1e-8) then
+                                    let heightCut = 0.1
+                                    let translate = V2d(-uniform.LForwards.[addr].Y, uniform.LForwards.[addr].X)
 
-                                let eps = 1e-9
+                                    let planeP0 = linePlaneIntersection (V3d(translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
+                                    let planeP1 = linePlaneIntersection (V3d(-translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
 
-                                let lightPlaneN = w2t * uniform.LForwards.[addr] |> Vec.normalize   
+                                    clipNormal <- Vec.cross planeP0 planeP1 |> Vec.normalize
 
-                                // find closest point limited to upper hemisphere
-                                let t = (- clippedVa.[0]) |> Vec.dot lightPlaneN
-                                let mutable closestPoint = t * (-lightPlaneN)
+                                    if clipNormal.Z < 0.0 then
+                                        clipNormal <- -clipNormal
+
+                                ////////////////////////////////////////////////////////
+
+                                //let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
+                                //let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
+                                let mutable (clippedVa, clippedVc) = clipPatchTSwN ( if dotOut > 0.0 then uniform.LVertices else uniform.LVerticesInverse) uniform.LBaseComponents.[addr] clipNormal P w2t
+                           
+
+                                if clippedVc <> 0 then
+
+                                    let eps = 1e-9
+
+                                    let lightPlaneN = w2t * uniform.LForwards.[addr] |> Vec.normalize   
+
+                                    // find closest point limited to upper hemisphere
+                                    let t = (- clippedVa.[0]) |> Vec.dot lightPlaneN
+                                    let mutable closestPoint = t * (-lightPlaneN)
                                                     
-                                if (Vec.dot closestPoint V3d.OOI) < 0.0 then
-                                    let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
-                                    closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
+                                    if (Vec.dot closestPoint V3d.OOI) < 0.0 then
+                                        let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
+                                        closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
                                     
-                                let insideLightPlane = (Vec.length closestPoint) < eps
-                                
-                                if not insideLightPlane then
-
                                      
                                     // vertices: XYZ -> Spherical coords; W -> FunValue
                                     let (vertices, caseOffset, offset) = fillVertexArray clippedVa clippedVc t2w uniform.LForwards.[addr] uniform.LUps.[addr] uniform.LAreas.[addr] closestPoint
@@ -411,9 +414,14 @@ module EffectApDelaunayIrradianceIntegration =
                                     // load inital data
                                                                                                                
                                     //let delEdgeData = QUAD_DATA.getInitEdgeData caseOffset
-                                    let delEdgeData = Arr<N<MAX_EDGES_HALF>, V4i>() 
-                                    for i in 0 .. MAX_EDGES_HALF - 1 do
-                                        delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
+                                    let mutable delEdgeData = QUAD_DATA.initEdgeDataSlice CASE_CORNER_OFFSET 
+                                    if caseOffset = CASE_EDGE_OFFSET then
+                                        delEdgeData <- QUAD_DATA.initEdgeDataSlice CASE_EDGE_OFFSET 
+                                    else if caseOffset = CASE_INSIDE_OFFSET then
+                                        delEdgeData <- QUAD_DATA.initEdgeDataSlice CASE_INSIDE_OFFSET 
+
+                                    //for i in 0 .. MAX_EDGES_HALF - 1 do
+                                    //    delEdgeData.[i] <- QUAD_DATA.ALL.EDGES.[MAX_EDGES_HALF * caseOffset + i]
 
                                     
                                     let mutable delMetaData = QUAD_DATA.getInitMetaData caseOffset

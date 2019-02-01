@@ -16,9 +16,6 @@ module EffectApDelaunayDataHandling =
 
     [<ReflectedDefinition>][<Inline>]
     let private getIdFromInt pos value =
-        let v : uint32 = uint32 value
-        let s : uint32 = uint32 value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)
-        let r : uint32 = (uint32 value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID)
         int (((uint32 value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID)))
 
     [<ReflectedDefinition>][<Inline>]

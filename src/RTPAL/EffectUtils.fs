@@ -573,6 +573,72 @@ module EffectUtils =
             else
                 (clampedPoint, clampResult, clampResultParam0, clampResultParam1)
 
+
+    (*
+        Clamps a point to a polyogn in 3D
+
+        Returns the clamped point + info regarding the clamping process
+
+        (clamped point, clamp state, p0_id, p1_id)
+
+        clamp state:
+        Config.Delaunay.CASE_INSIDE_OFFSET  => (clamped point, CLAMP_POLYGON_RESULT_NONE, -1, -1)
+
+        Config.Delaunay.CASE_CORNER_OFFSET => (clamped point, CLAMP_POLYGON_RESULT_POINT, clamped to point id, -1)
+
+        Config.Delaunay.CASE_EDGE_OFFSET  => (clamped point, CLAMP_POLYGON_RESULT_LINE, line point 0 id, line point 1 id) 
+            line is given counterclockwise
+    *)
+    [<ReflectedDefinition>][<Inline>] 
+    let delaunayClampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCountStartIdx : int) (polygonVertexCount : int) (polygonClockwiseOrder : bool) (p : V3d) = 
+
+        if polygonVertexCount = 0 then
+            (p, Config.Delaunay.CASE_INSIDE_OFFSET, 0)
+        else
+
+            let mutable clampedPoint = V3d.Zero
+            let mutable clampResult = CLAMP_POLYGON_RESULT_NONE
+            let mutable clampResultParam = -1
+
+            let mutable smallestDist = 1000000.0
+
+            let mutable inside = true
+
+            for i in polygonVertexCountStartIdx .. polygonVertexCount - 1 do
+                
+                let v0 = polygonVertices.[i]
+                let v1 = polygonVertices.[(i + 1) % polygonVertexCount]
+
+                let dotPlane = Vec.cross (v0 |> Vec.normalize) (v1 |> Vec.normalize) |> Vec.normalize |> Vec.dot p
+                if (not polygonClockwiseOrder && dotPlane >= -1e-9) || (polygonClockwiseOrder && dotPlane <= -1e-9) then
+                    
+                    inside <- false
+
+                    let projectedPoint, PROJECT_TO_LINE_RESULT = projetToLineSegment v0 v1 p
+
+                    let dist = Vec.length (projectedPoint  - p)
+                    if dist < smallestDist then
+                        smallestDist <- dist
+
+                        clampedPoint <- projectedPoint
+
+                        match PROJECT_TO_LINE_RESULT with
+                        | PROJECT_TO_LINE_RESULT_A ->
+                            clampResult <- Config.Delaunay.CASE_CORNER_OFFSET
+                            clampResultParam <- i
+                        | PROJECT_TO_LINE_RESULT_B ->
+                            clampResult <- Config.Delaunay.CASE_CORNER_OFFSET
+                            clampResultParam <- (i + 1) % polygonVertexCount
+                        | _ (* PROJECT_TO_LINE_RESULT_LINE *) ->
+                            clampResult <- Config.Delaunay.CASE_EDGE_OFFSET
+                            clampResultParam <- (i + 1) % polygonVertexCount
+
+
+            if inside then
+                (p, Config.Delaunay.CASE_INSIDE_OFFSET, 0)
+            else
+                (clampedPoint, clampResult, clampResultParam)
+
     (*
         Clamps a point to a polyogn in 3D
 

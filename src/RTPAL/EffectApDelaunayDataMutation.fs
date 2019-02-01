@@ -360,97 +360,67 @@ module EffectApDelaunayDataMutation =
         let mutable patchIllumination = 0.0
 
         if caseOffset = CASE_CORNER_OFFSET then
-            let v0 = readVertexId edges 1 0
-            let v1 = readVertexId edges 1 1
-            let v2 = readVertexId edges 1 2
-            let v3 = readVertexId edges 1 3
 
-            let area = computeSphericalExcess (vertices.[v0].XYZ) (vertices.[v1].XYZ) (vertices.[v2].XYZ)
-            patchIllumination <- patchIllumination + area * (vertices.[v0].W + vertices.[v1].W + vertices.[v2].W)
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 1 0)].XYZ) (vertices.[(readVertexId edges 1 1)].XYZ) (vertices.[(readVertexId edges 1 2)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 0)].W + vertices.[(readVertexId edges 1 1)].W + vertices.[(readVertexId edges 1 2)].W)
                     
-            let area = computeSphericalExcess (vertices.[v2].XYZ) (vertices.[v3].XYZ) (vertices.[v0].XYZ)
-            patchIllumination <- patchIllumination + area * (vertices.[v2].W + vertices.[v3].W + vertices.[v0].W)
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
         else if caseOffset = CASE_EDGE_OFFSET then
-                
-            let v10 = readVertexId edges 1 0
-            let v11 = readVertexId edges 1 1
-            let v12 = readVertexId edges 1 2
-            let v13 = readVertexId edges 1 3
 
-            let v20 = readVertexId edges 2 0
-            let v21 = readVertexId edges 2 1
-            let v22 = readVertexId edges 2 2
-            let v23 = readVertexId edges 2 3
+            let face0 = IDHash' (readVertexId edges 1 0) (readVertexId edges 1 1) (readVertexId edges 1 2)
+            let face1 = IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)
 
-            let face0 = IDHash' v10 v11 v12
-            let face1 = IDHash' v12 v13 v10
+            let face3 = IDHash' (readVertexId edges 2 0) (readVertexId edges 2 1) (readVertexId edges 2 2)
 
-            let face3 = IDHash' v20 v21 v22
-            let face4 = IDHash' v22 v23 v20
-
-            let area = computeSphericalExcess (vertices.[v10].XYZ) (vertices.[v11].XYZ) (vertices.[v12].XYZ)
-            patchIllumination <- patchIllumination + area * (vertices.[v10].W + vertices.[v11].W + vertices.[v12].W)
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 1 0)].XYZ) (vertices.[(readVertexId edges 1 1)].XYZ) (vertices.[(readVertexId edges 1 2)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 0)].W + vertices.[(readVertexId edges 1 1)].W + vertices.[(readVertexId edges 1 2)].W)
                     
-            let area = computeSphericalExcess (vertices.[v12].XYZ) (vertices.[v13].XYZ) (vertices.[v10].XYZ)
-            patchIllumination <- patchIllumination + area * (vertices.[v12].W + vertices.[v13].W + vertices.[v10].W)
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
 
             if face0 <> face3 && face1 <> face3 then
                 // face 3
-                let area = computeSphericalExcess (vertices.[v20].XYZ) (vertices.[v21].XYZ) (vertices.[v22].XYZ)
-                patchIllumination <- patchIllumination + area * (vertices.[v20].W + vertices.[v21].W + vertices.[v22].W)
+                let area = computeSphericalExcess (vertices.[(readVertexId edges 2 0)].XYZ) (vertices.[(readVertexId edges 2 1)].XYZ) (vertices.[(readVertexId edges 2 2)].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 0)].W + vertices.[(readVertexId edges 2 1)].W + vertices.[(readVertexId edges 2 2)].W)
             else
                 // face 4
-                let area = computeSphericalExcess (vertices.[v22].XYZ) (vertices.[v23].XYZ) (vertices.[v20].XYZ)
-                patchIllumination <- patchIllumination + area * (vertices.[v22].W + vertices.[v23].W + vertices.[v20].W)
+                let area = computeSphericalExcess (vertices.[(readVertexId edges 2 2)].XYZ) (vertices.[(readVertexId edges 2 3)].XYZ) (vertices.[(readVertexId edges 2 0)].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
 
-        else
-            let v00 = readVertexId edges 0 0
-            let v01 = readVertexId edges 0 1
-            let v02 = readVertexId edges 0 2
-            let v03 = readVertexId edges 0 3
+        else                        
+            let face0 = IDHash' (readVertexId edges 0 0) (readVertexId edges 0 1) (readVertexId edges 0 2)
+            let face1 = IDHash' (readVertexId edges 0 2) (readVertexId edges 0 3) (readVertexId edges 0 0)
 
-            let v10 = readVertexId edges 1 0
-            let v11 = readVertexId edges 1 1
-            let v12 = readVertexId edges 1 2
-            let v13 = readVertexId edges 1 3
+            let face2 = IDHash' (readVertexId edges 1 0) (readVertexId edges 1 1) (readVertexId edges 1 2)
+            let face3 = IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)
 
-            let v20 = readVertexId edges 2 0
-            let v21 = readVertexId edges 2 1
-            let v22 = readVertexId edges 2 2
-            let v23 = readVertexId edges 2 3
-                        
-            let face0 = IDHash' v00 v01 v02
-            let face1 = IDHash' v02 v03 v00
+            let face4 = IDHash' (readVertexId edges 2 0) (readVertexId edges 2 1) (readVertexId edges 2 2)
+            let face5 = IDHash' (readVertexId edges 2 2) (readVertexId edges 2 3) (readVertexId edges 2 0)
 
-            let face2 = IDHash' v10 v11 v12
-            let face3 = IDHash' v12 v13 v10
-
-            let face4 = IDHash' v20 v21 v22
-            let face5 = IDHash' v22 v23 v20
-
-            let area = computeSphericalExcess (vertices.[v00].XYZ) (vertices.[v01].XYZ) (vertices.[v02].XYZ)
-            patchIllumination <- patchIllumination + area * (vertices.[v00].W + vertices.[v01].W + vertices.[v02].W)
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 0 0)].XYZ) (vertices.[(readVertexId edges 0 1)].XYZ) (vertices.[(readVertexId edges 0 2)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 0 0)].W + vertices.[(readVertexId edges 0 1)].W + vertices.[(readVertexId edges 0 2)].W)
                     
-            let area = computeSphericalExcess (vertices.[v02].XYZ) (vertices.[v03].XYZ) (vertices.[v00].XYZ)
-            patchIllumination <- patchIllumination + area * (vertices.[v02].W + vertices.[v03].W + vertices.[v00].W)
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 0 2)].XYZ) (vertices.[(readVertexId edges 0 3)].XYZ) (vertices.[(readVertexId edges 0 0)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 0 2)].W + vertices.[(readVertexId edges 0 3)].W + vertices.[(readVertexId edges 0 0)].W)
 
             if face0 <> face2 && face1 <> face2 then
                 // face 2
-                let area = computeSphericalExcess (vertices.[v10].XYZ) (vertices.[v11].XYZ) (vertices.[v12].XYZ)
-                patchIllumination <- patchIllumination + area * (vertices.[v10].W + vertices.[v11].W + vertices.[v12].W)
+                let area = computeSphericalExcess (vertices.[(readVertexId edges 1 0)].XYZ) (vertices.[(readVertexId edges 1 1)].XYZ) (vertices.[(readVertexId edges 1 2)].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 0)].W + vertices.[(readVertexId edges 1 1)].W + vertices.[(readVertexId edges 1 2)].W)
             else
                 // face 3
-                let area = computeSphericalExcess (vertices.[v12].XYZ) (vertices.[v13].XYZ) (vertices.[v10].XYZ)
-                patchIllumination <- patchIllumination + area * (vertices.[v12].W + vertices.[v13].W + vertices.[v10].W)
+                let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
 
             if face2 <> face4 && face3 <> face4 then
                 // face 4
-                let area = computeSphericalExcess (vertices.[v20].XYZ) (vertices.[v21].XYZ) (vertices.[v22].XYZ)
-                patchIllumination <- patchIllumination + area * (vertices.[v20].W + vertices.[v21].W + vertices.[v22].W)
+                let area = computeSphericalExcess (vertices.[(readVertexId edges 2 0)].XYZ) (vertices.[(readVertexId edges 2 1)].XYZ) (vertices.[(readVertexId edges 2 2)].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 0)].W + vertices.[(readVertexId edges 2 1)].W + vertices.[(readVertexId edges 2 2)].W)
             else
                 // face 5
-                let area = computeSphericalExcess (vertices.[v22].XYZ) (vertices.[v23].XYZ) (vertices.[v20].XYZ)
-                patchIllumination <- patchIllumination + area * (vertices.[v22].W + vertices.[v23].W + vertices.[v20].W)
+                let area = computeSphericalExcess (vertices.[(readVertexId edges 2 2)].XYZ) (vertices.[(readVertexId edges 2 3)].XYZ) (vertices.[(readVertexId edges 2 0)].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
 
         patchIllumination / 3.0
 
@@ -465,26 +435,9 @@ module EffectApDelaunayDataMutation =
     [<ReflectedDefinition>][<Inline>]
     let fillVertexArray (clippedVa : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) clippedVc (t2w : M33d) forward up area closestPoint =
 
-        let behindLight = Vec.dot forward (t2w *(clippedVa.[0] |> Vec.normalize)) > 0.0
                                     
-        let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc behindLight closestPoint
+        let (closestPointClamped, caseOffset, v1Idx) = delaunayClampPointToPolygonP1 clippedVa 0 clippedVc false closestPoint
 
-        ////////////////////////////////////////
-        // create triangulation
-
-        let mutable caseOffset = CASE_INSIDE_OFFSET
-        let mutable v1Idx = 0
-
-        if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
-            caseOffset <- CASE_CORNER_OFFSET
-            v1Idx <- clampP0Id
-        elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
-            caseOffset <- CASE_EDGE_OFFSET
-            v1Idx <- clampP1ID
-        else
-            ()
-
-                                     
         // XYZ -> Spherical coords; W -> FunValue
         let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V4d>() 
                                      
@@ -495,12 +448,8 @@ module EffectApDelaunayDataMutation =
             offset <- 1
             vertices.[0] <- V4d(closestPointClamped |> Vec.normalize, sampleIrr t2w  forward up area closestPointClamped)
 
-        if not behindLight then
-            for i in 0 .. clippedVc - 1 do 
-                vertices.[i + offset] <- V4d(clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize, sampleIrr t2w  forward up area clippedVa.[(v1Idx + i) % clippedVc])
-        else
-            for i in 0 .. clippedVc - 1 do 
-                vertices.[i + offset] <- V4d(clippedVa.[(v1Idx - i) % clippedVc] |> Vec.normalize, sampleIrr t2w  forward up area clippedVa.[(v1Idx - i) % clippedVc])
+        for i in 0 .. clippedVc - 1 do 
+            vertices.[i + offset] <- V4d(clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize, sampleIrr t2w  forward up area clippedVa.[(v1Idx + i) % clippedVc])
 
         (vertices, caseOffset, offset)
 
