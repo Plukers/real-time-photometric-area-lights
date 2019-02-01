@@ -1,0 +1,15 @@
+Aardvark.Base
+Aardvark.Base.Incremental
+Aardvark.Base.FSharp
+
+Aardvark.Base.Rendering
+Aardvark.Application.WinForms.GL
+Aardvark.SceneGraph
+Aardvark.SceneGraph.IO
+Aardvark.Rendering.Text
+
+Aardvark.Compiler.DomainTypes.MSBuild
+
+NUnit
+NUnit3TestAdapter
+FsUnit

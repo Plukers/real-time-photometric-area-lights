@@ -19,6 +19,7 @@ module Light =
         Lights            : ModRef<       int[]> // Size: Config.Light.NUM_LIGHTS    
         BaseComponents    : ModRef<       int[]> // Size: Config.Light.NUM_LIGHTS   
         Vertices          : ModRef<       V3d[]> // Size: Config.Light.VERT_ALL_LIGHT  Modified as defined by the corresponding trafo.
+        VerticesInverse   : ModRef<       V3d[]> // Size: Config.Light.VERT_ALL_LIGHT  Modified as defined by the corresponding trafo.
         NumVertices       : ModRef<       int[]> // Size: Config.Light.NUM_LIGHTS
         RenderIndices     : ModRef<       int[]> // Size: Config.Light.MAX_IDX_BUFFER_SIZE_ALL_LIGHT     Define triangles such that the light can be rendered
         NumRenderIndices  : ModRef<       int[]> // Size: Config.Light.NUM_LIGHTS
@@ -26,6 +27,7 @@ module Light =
         NumPatchIndices   : ModRef<       int[]> // Size: Config.Light.NUM_LIGHTS
         SamplePoints      : ModRef<       V3d[]> // Size: Config.Light.NUM_ALL_SS_LIGHT_SAMPLES
         UVSamplePoints    : ModRef<       V3d[]> // Size: Config.Light.NUM_ALL_SS_LIGHT_SAMPLES           Rectangle uses only the first two values, triangle all three
+        Centers           : ModRef<       V3d[]> // Size: Config.Light.NUM_LIGHTS.     
         Forwards          : ModRef<       V3d[]> // Size: Config.Light.NUM_LIGHTS.     Direction the light is facing, corresponding to normal. Only one normal is needed because a light is a plane.  Modified as defined by the corresponding trafo.
         Ups               : ModRef<       V3d[]> // Size: Config.Light.NUM_LIGHTS.     The up direction of the light, has to be orthonormal to Forward. Modified as defined by the corresponding trafo.
         Areas             : ModRef<    double[]> // Size: Config.Light.NUM_LIGHTS.
@@ -39,6 +41,7 @@ module Light =
         Lights            =                          -1 |> Array.create Config.Light.NUM_LIGHTS                            |> Mod.init
         BaseComponents    =    LIGHT_BASE_TYPE_TRIANGLE |> Array.create Config.Light.NUM_LIGHTS                            |> Mod.init
         Vertices          =                    V3d.Zero |> Array.create Config.Light.VERT_ALL_LIGHT                        |> Mod.init
+        VerticesInverse   =                    V3d.Zero |> Array.create Config.Light.VERT_ALL_LIGHT                        |> Mod.init
         NumVertices       =                           0 |> Array.create Config.Light.NUM_LIGHTS                            |> Mod.init
         RenderIndices     =                           0 |> Array.create Config.Light.MAX_RENDER_IDX_BUFFER_SIZE_ALL_LIGHT  |> Mod.init
         NumRenderIndices  =                           0 |> Array.create Config.Light.NUM_LIGHTS                            |> Mod.init
@@ -46,6 +49,7 @@ module Light =
         NumPatchIndices   =                           0 |> Array.create Config.Light.NUM_LIGHTS                            |> Mod.init
         SamplePoints      =                    V3d.Zero |> Array.create Config.Light.SS_LIGHT_SAMPLES_ALL_LIGHT            |> Mod.init
         UVSamplePoints    =                    V3d.Zero |> Array.create Config.Light.SS_LIGHT_SAMPLES_ALL_LIGHT            |> Mod.init
+        Centers           =                    V3d.Zero |> Array.create Config.Light.NUM_LIGHTS                            |> Mod.init
         Forwards          =                    V3d.Zero |> Array.create Config.Light.NUM_LIGHTS                            |> Mod.init
         Ups               =                    V3d.Zero |> Array.create Config.Light.NUM_LIGHTS                            |> Mod.init  
         Areas             =                         0.0 |> Array.create Config.Light.NUM_LIGHTS                            |> Mod.init
@@ -93,8 +97,12 @@ module Light =
     // The collection needs an empty slot
     let private addVertices (lc : LightCollection) addr (vertices : V3d[]) =
         vertices.CopyTo(lc.Vertices.Value, addr * Config.Light.VERT_PER_LIGHT)
-        lc.NumVertices.Value.[addr] <- vertices.Length
 
+        let invVertices = vertices |> Array.rev
+        invVertices.CopyTo(lc.VerticesInverse.Value, addr * Config.Light.VERT_PER_LIGHT)
+
+        lc.NumVertices.Value.[addr] <- vertices.Length
+        
     // Adds render indices to the light container at the specified address
     // The collection needs an empty slot
     let private addRenderIndices (lc : LightCollection) addr (indices : int[]) =
@@ -178,7 +186,7 @@ module Light =
         | None -> Option.None
 
 
-    let private addOrthoganlQuadrilateralLight (lc : LightCollection) vertices =
+    let private addOrthoganlQuadrilateralLight (lc : LightCollection) (vertices : V3d[]) =
         match lc.NextFreeAddr.Value with
         | Some nfa -> 
             let mutable returnID = Option.None;
@@ -202,6 +210,7 @@ module Light =
                     let vAddr = addr * Config.Light.VERT_PER_LIGHT
                     let iAddr = addr * Config.Light.MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT
 
+                    lc.Centers.Value.[addr]     <- vertices |> Array.fold (fun c v -> c + (1.0 / float vertices.Length) * v) (V3d.Zero)
                     lc.Forwards.Value.[addr]    <- V3d(1, 0, 0)
                     lc.Ups.Value.[addr]         <- V3d(0, 0, 1)
                     lc.Areas.Value.[addr]       <- computeArea lc.Vertices.Value.[vAddr .. (vAddr + Config.Light.VERT_PER_LIGHT - 1)] lc.RenderIndices.Value.[iAddr .. (iAddr + Config.Light.MAX_RENDER_IDX_BUFFER_SIZE_PER_LIGHT - 1)] lc.NumRenderIndices.Value.[addr]
@@ -268,6 +277,24 @@ module Light =
                         else
                             v
                     )
+
+            lc.VerticesInverse.Value <-
+                lc.VerticesInverse.Value |> Array.mapi (
+                    fun i v -> 
+                        if vAddr <= i && i < (vAddr + Config.Light.VERT_PER_LIGHT) then
+                            V3d(vertexTrafo * V4d(v, 1.0))
+                        else
+                            v
+                    )
+
+            lc.Centers.Value <-
+                lc.Centers.Value |> Array.mapi (
+                    fun i sp -> 
+                        if sAddr <= i && i < (sAddr + Config.Light.SS_LIGHT_SAMPLES_PER_LIGHT) then
+                            V3d(vertexTrafo * V4d(sp, 1.0))
+                        else
+                            sp
+                    )
                     
             lc.SamplePoints.Value <-
                 lc.SamplePoints.Value |> Array.mapi (
@@ -302,6 +329,7 @@ module Light =
             member uniform.Lights             : Arr<N<Config.Light.NUM_LIGHTS>,                           int> = uniform?Lights
             member uniform.LBaseComponents    : Arr<N<Config.Light.NUM_LIGHTS>,                           int> = uniform?LBaseComponents
             member uniform.LVertices          : Arr<N<Config.Light.VERT_ALL_LIGHT>,                       V3d> = uniform?LVertices
+            member uniform.LVerticesInverse   : Arr<N<Config.Light.VERT_ALL_LIGHT>,                       V3d> = uniform?LVerticesInverse
             member uniform.LNumVertices       : Arr<N<Config.Light.NUM_LIGHTS>,                           int> = uniform?LNumVertices
             member uniform.LRenderIndices     : Arr<N<Config.Light.MAX_RENDER_IDX_BUFFER_SIZE_ALL_LIGHT>, int> = uniform?LRenderIndices
             member uniform.LNumRenderIndices  : Arr<N<Config.Light.NUM_LIGHTS>,                           int> = uniform?LNumRenderIndices
@@ -309,6 +337,7 @@ module Light =
             member uniform.LNumPatchIndices   : Arr<N<Config.Light.NUM_LIGHTS>,                           int> = uniform?LNumPatchIndices
             member uniform.LSamplePoints      : Arr<N<Config.Light.SS_LIGHT_SAMPLES_ALL_LIGHT>,           V3d> = uniform?LSamplePoints
             member uniform.LUVSamplePoints    : Arr<N<Config.Light.SS_LIGHT_SAMPLES_ALL_LIGHT>,           V3d> = uniform?LUVSamplePoints
+            member uniform.Centers          : Arr<N<Config.Light.NUM_LIGHTS>,                             V3d> = uniform?Centers
             member uniform.LForwards          : Arr<N<Config.Light.NUM_LIGHTS>,                           V3d> = uniform?LForwards
             member uniform.LUps               : Arr<N<Config.Light.NUM_LIGHTS>,                           V3d> = uniform?LUps
             member uniform.LAreas             : Arr<N<Config.Light.NUM_LIGHTS>,                        double> = uniform?LAreas
@@ -329,6 +358,7 @@ module Light =
                 |> Sg.uniform "Lights"            lc.Lights
                 |> Sg.uniform "LBaseComponents"   lc.BaseComponents
                 |> Sg.uniform "LVertices"         lc.Vertices
+                |> Sg.uniform "LVerticesInverse"  lc.VerticesInverse
                 |> Sg.uniform "LNumVertices"      lc.NumVertices
                 |> Sg.uniform "LRenderIndices"    lc.RenderIndices
                 |> Sg.uniform "LNumRenderIndices" lc.NumRenderIndices
@@ -336,6 +366,7 @@ module Light =
                 |> Sg.uniform "LNumPatchIndices"  lc.NumPatchIndices
                 |> Sg.uniform "LSamplePoints"     lc.SamplePoints
                 |> Sg.uniform "LUVSamplePoints"   lc.UVSamplePoints
+                |> Sg.uniform "LCenters"          lc.Centers
                 |> Sg.uniform "LForwards"         lc.Forwards
                 |> Sg.uniform "LUps"              lc.Ups
                 |> Sg.uniform "LAreas"            lc.Areas

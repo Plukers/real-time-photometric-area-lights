@@ -150,7 +150,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                             //let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
                             //let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
-                            let (clippedVa, clippedVc) = clipPatchTSwN(clipNormal, uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
+                            let (clippedVa, clippedVc) = clipPatchTSwN uniform.LVertices uniform.LBaseComponents.[addr] clipNormal P w2t
                             
 
                             if clippedVc <> 0 then
@@ -315,15 +315,7 @@ module EffectApDelaunayIrradianceIntegration =
 
             return V4d(illumination.XYZ, v.c.W)
         }
-
-    [<ReflectedDefinition>][<Inline>]
-    let private sampleIrrDebug (t2w : M33d) (addr : int) (p : V3d) = 
-        let i = p |> Vec.normalize  
-        let iw = t2w * -i
-        let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
-
-        i.Z * getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
-
+        
     let delaunyIrrDebug applyFlipping (v : Vertex) = 
         fragment {
 
@@ -389,7 +381,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                             //let (clippedVa, clippedVc) = clipPatch(V3d.Zero, V3d.OOI, vt, uniform.LBaseComponents.[addr])
                             //let (clippedVa, clippedVc) = clipPatchTS(uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
-                            let (clippedVa, clippedVc) = clipPatchTSwN(clipNormal, uniform.LVertices, uniform.LBaseComponents.[addr], P, w2t)
+                            let (clippedVa, clippedVc) = clipPatchTSwN uniform.LVertices uniform.LBaseComponents.[addr] clipNormal P w2t
                             
 
                             if clippedVc <> 0 then
@@ -410,45 +402,10 @@ module EffectApDelaunayIrradianceIntegration =
                                 
                                 if not insideLightPlane then
 
-                                    let behindLight = Vec.dot (uniform.LForwards.[addr]) (t2w *(clippedVa.[0] |> Vec.normalize)) > 0.0
-                                    
-                                    let (closestPointClamped, CLAMP_POLYGON_RESULT, clampP0Id, clampP1ID) = clampPointToPolygonP1 clippedVa 0 clippedVc behindLight closestPoint
-
-                                    ////////////////////////////////////////
-                                    // create triangulation
-
-                                    let mutable caseOffset = CASE_INSIDE_OFFSET
-                                    let mutable v1Idx = 0
-
-                                    if CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_POINT then
-                                        caseOffset <- CASE_CORNER_OFFSET
-                                        v1Idx <- clampP0Id
-                                    elif CLAMP_POLYGON_RESULT = CLAMP_POLYGON_RESULT_LINE then
-                                        caseOffset <- CASE_EDGE_OFFSET
-                                        v1Idx <- clampP1ID
-                                    else
-                                        ()
-
                                      
-                                    // XYZ -> Spherical coords; W -> FunValue
-                                    let vertices = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V4d>() 
+                                    // vertices: XYZ -> Spherical coords; W -> FunValue
+                                    let (vertices, caseOffset, offset) = fillVertexArray clippedVa clippedVc t2w uniform.LForwards.[addr] uniform.LUps.[addr] uniform.LAreas.[addr] closestPoint
                                      
-
-
-                                    let mutable vc = clippedVc
-                                    let mutable offset = 0
-                                    if caseOffset <> CASE_CORNER_OFFSET then 
-                                        vc <- vc + 1 
-                                        offset <- 1
-                                        vertices.[0] <- V4d(closestPointClamped |> Vec.normalize, sampleIrrDebug t2w addr closestPointClamped)
-
-                                    if not behindLight then
-                                        for i in 0 .. clippedVc - 1 do 
-                                            vertices.[i + offset] <- V4d(clippedVa.[(v1Idx + i) % clippedVc] |> Vec.normalize, sampleIrrDebug t2w  addr clippedVa.[(v1Idx + i) % clippedVc])
-                                    else
-                                        for i in 0 .. clippedVc - 1 do 
-                                            vertices.[i + offset] <- V4d(clippedVa.[(v1Idx - i) % clippedVc] |> Vec.normalize, sampleIrrDebug t2w  addr clippedVa.[(v1Idx - i) % clippedVc])
-
 
                                     ////////////////////////////////////////
                                     // load inital data

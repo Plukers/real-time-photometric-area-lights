@@ -18,6 +18,10 @@ nuget Aardvark.Rendering.Text          ~> 4.6.1
                                        
 nuget Aardvark.Data.Photometry		   ~> 4.5.0
  
+nuget Aardvark.Compiler.DomainTypes         ~> 4.2.2
+nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.2.2
+
+ 
 nuget Aardvark.UI            ~> 4.4.8
 nuget Aardvark.UI.Primitives ~> 4.4.8
 nuget Aardvark.Service       ~> 4.4.8

@@ -154,6 +154,24 @@ module EffectUtils =
 
         M33dFromCols c1 c2 n
 
+    let basisFrisvadNoGLSL (n : V3d) = 
+
+        let c1 = V3d(
+                    1.0 - (n.X  * n.X) / (1.0 + n.Z),
+                    (-n.X * n.Y) / (1.0 + n.Z),
+                    -n.X
+                    )
+
+        let c2 = V3d(
+                    (-n.X * n.Y) / (1.0 + n.Z),
+                    1.0 - (n.Y  * n.Y) / (1.0 + n.Z),
+                    -n.Y
+                    )
+
+        M33d(c1.X, c2.X, n.X, c1.Y, c2.Y, n.Y, c1.Z, c2.Z, n.Z)
+
+        //M33dFromCols c1 c2 n
+
 
     (*
         Compute barycentric coordinates (u, v, w) for point p with respect to triangle (a, b, c)
@@ -501,7 +519,7 @@ module EffectUtils =
         CLAMP_POLYGON_RESULT_LINE  => (clamped point, CLAMP_POLYGON_RESULT_LINE, line point 0 id, line point 1 id) 
             line is given counterclockwise
     *)
-    [<ReflectedDefinition>] 
+    [<ReflectedDefinition>][<Inline>] 
     let clampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCountStartIdx : int) (polygonVertexCount : int) (polygonClockwiseOrder : bool) (p : V3d) = 
 
         if polygonVertexCount = 0 then
@@ -650,7 +668,7 @@ module EffectUtils =
             clampPointToPolygon (V3d( 0, 5,  0)) |> should equal (V3d( 0, 5, 0), CLAMP_POLYGON_RESULT_NONE,-1, -1)
         )
 
-    [<ReflectedDefinition>] 
+    [<ReflectedDefinition>][<Inline>] 
     let Lerp (a : V3d) (b : V3d) (s : float) : V3d = (1.0 - s) * a + s * b
 
     [<GLSLIntrinsic("mix({0},{1},{2})")>]
@@ -798,14 +816,14 @@ module EffectUtils =
 
         (va,vc)
 
-    [<ReflectedDefinition>] 
-    let clipPatchTSwN(n : V3d, vertices : Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>, vertexCount : int,  P : V3d, w2t : M33d) =
+    [<ReflectedDefinition>][<Inline>]
+    let clipPatchTSwN (vertices : Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>) (vertexCount : int) (n : V3d) (p : V3d) (w2t : M33d) =
         let eps = 1e-9
 
         let mutable vc = 0
         let va = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>()
 
-        let vb = w2t * (vertices.[0] - P)
+        let vb = w2t * (vertices.[0] - p)
         let hb = V3d.Dot(n, vb) 
         let hbv = hb > eps
         let hbn = hb < -eps
@@ -820,7 +838,7 @@ module EffectUtils =
         let mutable h0n = hbn
         
         for vi in 1..vertexCount-1 do
-            let v1 = w2t * (vertices.[vi] - P)
+            let v1 = w2t * (vertices.[vi] - p)
             let h1 = V3d.Dot(n, v1)
             let h1v = h1 > eps
             let h1n = h1 < -eps
@@ -1117,6 +1135,56 @@ module EffectUtils =
 
             // 4. transform (xu, yv, z0) to world coords
             squad.o + xu*squad.x + yv*squad.y + squad.z0*squad.z
+
+    module Test = 
+    
+        let getTransforms n = 
+            let t2w = M33d(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+            let w2t = t2w |> Mat.transpose
+            (t2w, w2t)
+
+
+        let testClipping p = 
+            let lightVertices =
+                    [
+                        V3d(0.0, -0.5, -0.5)
+                        V3d(0.0,  0.5, -0.5)
+                        V3d(0.0,  0.5,  0.5)
+                        V3d(0.0, -0.5,  0.5)
+                    ]
+                    |> List.map (fun v -> v + V3d.OOI)
+
+            let (t2w, w2t) = getTransforms V3d.OOI
+            
+            let (clippedVa, clippedVc) = clipPatchTSwN (Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>(lightVertices)) 4 V3d.OOI p w2t
+
+            clippedVc |> should equal 4
+
+            clippedVa |> List.ofSeq |> should equal lightVertices
+
+        [<Test>]
+        let ``Test clipping 1`` () = testClipping (V3d( 2, 2, 0)) 
+        
+        [<Test>]
+        let ``Test clipping 2`` () = testClipping (V3d( 2, 0, 0))
+
+        [<Test>]
+        let ``Test clipping 3`` () = testClipping (V3d( 2,-2, 0))
+
+        [<Test>]
+        let ``Test clipping 4`` () = testClipping (V3d( 0,-2, 0))
+
+        [<Test>]
+        let ``Test clipping 5`` () = testClipping (V3d(-2,-2, 0))
+
+        [<Test>]
+        let ``Test clipping 6`` () = testClipping (V3d(-2, 0, 0))
+
+        [<Test>]
+        let ``Test clipping 7`` () = testClipping (V3d(-2, 2, 0))
+
+        [<Test>]
+        let ``Test clipping 8`` () = testClipping (V3d( 0, 2, 0))
 
 
     module Easing = 
