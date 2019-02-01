@@ -7,6 +7,7 @@ module EffectApDelaunayDataMutation =
 
     open EffectApDelaunayDataHandling
     open Config.Delaunay
+    open EffectUtils
 
 
     [<ReflectedDefinition>]
@@ -21,6 +22,26 @@ module EffectApDelaunayDataMutation =
                 (c, a, b)
                 
         (a <<< 20) ||| (b <<< 10) ||| c
+
+    [<ReflectedDefinition>][<Inline>]
+    let private IDHash' a b c = (a + 1) * (b + 1) * (c + 1)
+
+    [<ReflectedDefinition>][<Inline>]
+    let getV4iValueByIdx (v : V4i) i =
+        match i with
+        | 0 -> v.X
+        | 1 -> v.Y
+        | 2 -> v.Z
+        | _ -> v.W
+        
+    [<ReflectedDefinition>][<Inline>]
+    let setV4iValueByIdx (v : V4i) i value =
+        match i with
+        | 0 -> V4i(value, v.Y, v.Z, v.W)
+        | 1 -> V4i(v.X, value, v.Z, v.W)
+        | 2 -> V4i(v.X, v.Y, value, v.W)
+        | _ -> V4i(v.X, v.Y, v.Z, value)
+
     
     [<ReflectedDefinition>][<Inline>]
     let flipEdge (edges : Arr<N<MAX_EDGES_HALF>, V4i>) (meta : int) (faces : Arr<N<MAX_FACES_HALF>, V4i>) (stack : Arr<N<MAX_EDGES>, int>) (sp : int) eId =              
@@ -96,6 +117,67 @@ module EffectApDelaunayDataMutation =
                 eId |> getFaceVerticesOfEdge edges OPPOSITE_1 |> writeFaceVertexIdsCombined faces f
                 writeFaceEdgeIds faces f (2 |> readEdgeId edges eId) (3 |> readEdgeId edges eId) eId
 
+        (meta, sp)
+
+
+    [<ReflectedDefinition>][<Inline>]
+    let cheapFlipEdge (edges : Arr<N<MAX_EDGES_HALF>, V4i>) (meta : int) (stack : Arr<N<MAX_EDGES>, int>) (sp : int) eId =              
+             
+        let mutable sp = sp
+        let mutable meta = meta
+
+        // adapt neighbour edges
+        for ne in 0 .. 3 do
+
+            let neId = ne |> readEdgeId edges eId
+
+            // TODO optimize this with a for loop as soon as it is guaranteed to work
+            match ne with
+            | 0 -> 
+                if 2 |> compareIndices edges neId OPPOSITE_0 eId then
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (3 |> readEdgeId edges eId) 
+                    writeVertexId edges neId OPPOSITE_0 (3 |> readVertexId edges eId)
+                else
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (3 |> readEdgeId edges eId) 
+                    writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
+
+            | 2 ->
+                if 0 |> compareIndices edges neId OPPOSITE_0 eId then
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (eId) (1 |> readEdgeId edges eId) 
+                    writeVertexId edges neId OPPOSITE_0 ( 1 |> readVertexId edges eId)
+                else
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (eId) (1 |> readEdgeId edges eId)    
+                    writeVertexId edges neId OPPOSITE_1 ( 1 |> readVertexId edges eId)
+
+            | 1 ->
+                if 0 |> compareIndices edges neId OPPOSITE_0 eId then
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (2 |> readEdgeId edges eId) (eId) 
+                    writeVertexId edges neId OPPOSITE_0 (3 |> readVertexId edges eId)
+                else
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (2 |> readEdgeId edges eId) (eId)  
+                    writeVertexId edges neId OPPOSITE_1 (3 |> readVertexId edges eId)
+
+            | 3 ->
+                if 2 |> compareIndices edges neId OPPOSITE_0 eId then
+                    writeOppositeEdgeIds edges neId OPPOSITE_0 (0 |> readEdgeId edges eId) (eId)
+                    writeVertexId edges neId OPPOSITE_0 (1 |> readVertexId edges eId)
+                else
+                    writeOppositeEdgeIds edges neId OPPOSITE_1 (0 |> readEdgeId edges eId) (eId)
+                    writeVertexId edges neId OPPOSITE_1 (1 |> readVertexId edges eId)
+                
+            | _ -> ()
+
+            // if inside and not marked -> mark it
+            if edgeIsInside meta neId && not (edgeIsMarked meta neId) then
+                meta <- markEdge meta neId
+
+                sp <- sp + 1
+                stack.[sp] <- neId
+                    
+        // flip edge and unmark edge
+        eId |> leftShiftVerticesAndEdgesByOne edges
+        meta <- eId |> unmarkEdge meta
+        
         (meta, sp)
             
 
@@ -224,9 +306,158 @@ module EffectApDelaunayDataMutation =
         //(meta, nextFreeEdgeAddr + 3, nextFreeFaceAddrDynamic)
         (meta, nextFreeEdgeAddr, nextFreeFaceAddr)
 
+    [<ReflectedDefinition>][<Inline>]
+    let computeIllumination (edges : Arr<N<MAX_EDGES_HALF>, V4i>) (meta : int) (vertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V4d>) caseOffset =
+        let mutable patchIllumination = 0.0
+
+        let mutable faces = V4i(-1)
+        let mutable faceCounter = 0
+
+        let maxFaceCounter = 
+            if caseOffset = CASE_CORNER_OFFSET then
+                1
+            else if caseOffset = CASE_EDGE_OFFSET then
+                2
+            else
+                3
+
+        for i in 0 .. MAX_EDGES - 1 do
+            if faceCounter < maxFaceCounter && edgeIsInside meta i then
+                let v0 = readVertexId edges i 0
+                let v1 = readVertexId edges i 1
+                let v2 = readVertexId edges i 2
+                let v3 = readVertexId edges i 3
+
+                let face0 = (v0 + 1) * (v1 + 1) * (v2 + 1)
+                let face1 = (v2 + 1) * (v3 + 1) * (v0 + 1)
+
+                let mutable hasFace0 = false
+                let mutable hasFace1 = false
+
+                for i in 0 .. 3 do
+                    let f = getV4iValueByIdx faces i
+                    if f = face0 then hasFace0 <- true
+                    if f = face1 then hasFace1 <- true
+
+                if not hasFace0 then
+                    faces <- setV4iValueByIdx faces faceCounter face0
+                    faceCounter <- faceCounter + 1
+
+                    let area = computeSphericalExcess (vertices.[v0].XYZ) (vertices.[v1].XYZ) (vertices.[v2].XYZ)
+                    patchIllumination <- patchIllumination + area * (vertices.[v0].W + vertices.[v1].W + vertices.[v2].W)
+
+                if not hasFace1 then
+                    faces <- setV4iValueByIdx faces faceCounter face1
+                    faceCounter <- faceCounter + 1
+
+                    let area = computeSphericalExcess (vertices.[v2].XYZ) (vertices.[v3].XYZ) (vertices.[v0].XYZ)
+                    patchIllumination <- patchIllumination + area * (vertices.[v2].W + vertices.[v3].W + vertices.[v0].W)
+
+        patchIllumination / 3.0
+
+    [<ReflectedDefinition>][<Inline>]
+    let computeIlluminationCheap (edges : Arr<N<MAX_EDGES_HALF>, V4i>) (vertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V4d>) caseOffset =
+        let mutable patchIllumination = 0.0
+
+        if caseOffset = CASE_CORNER_OFFSET then
+            let v0 = readVertexId edges 1 0
+            let v1 = readVertexId edges 1 1
+            let v2 = readVertexId edges 1 2
+            let v3 = readVertexId edges 1 3
+
+            let area = computeSphericalExcess (vertices.[v0].XYZ) (vertices.[v1].XYZ) (vertices.[v2].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[v0].W + vertices.[v1].W + vertices.[v2].W)
+                    
+            let area = computeSphericalExcess (vertices.[v2].XYZ) (vertices.[v3].XYZ) (vertices.[v0].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[v2].W + vertices.[v3].W + vertices.[v0].W)
+        else if caseOffset = CASE_EDGE_OFFSET then
+                
+            let v10 = readVertexId edges 1 0
+            let v11 = readVertexId edges 1 1
+            let v12 = readVertexId edges 1 2
+            let v13 = readVertexId edges 1 3
+
+            let v20 = readVertexId edges 2 0
+            let v21 = readVertexId edges 2 1
+            let v22 = readVertexId edges 2 2
+            let v23 = readVertexId edges 2 3
+
+            let face0 = IDHash' v10 v11 v12
+            let face1 = IDHash' v12 v13 v10
+
+            let face3 = IDHash' v20 v21 v22
+            let face4 = IDHash' v22 v23 v20
+
+            let area = computeSphericalExcess (vertices.[v10].XYZ) (vertices.[v11].XYZ) (vertices.[v12].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[v10].W + vertices.[v11].W + vertices.[v12].W)
+                    
+            let area = computeSphericalExcess (vertices.[v12].XYZ) (vertices.[v13].XYZ) (vertices.[v10].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[v12].W + vertices.[v13].W + vertices.[v10].W)
+
+            if face0 <> face3 && face1 <> face3 then
+                // face 3
+                let area = computeSphericalExcess (vertices.[v20].XYZ) (vertices.[v21].XYZ) (vertices.[v22].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[v20].W + vertices.[v21].W + vertices.[v22].W)
+            else
+                // face 4
+                let area = computeSphericalExcess (vertices.[v22].XYZ) (vertices.[v23].XYZ) (vertices.[v20].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[v22].W + vertices.[v23].W + vertices.[v20].W)
+
+        else
+            let v00 = readVertexId edges 0 0
+            let v01 = readVertexId edges 0 1
+            let v02 = readVertexId edges 0 2
+            let v03 = readVertexId edges 0 3
+
+            let v10 = readVertexId edges 1 0
+            let v11 = readVertexId edges 1 1
+            let v12 = readVertexId edges 1 2
+            let v13 = readVertexId edges 1 3
+
+            let v20 = readVertexId edges 2 0
+            let v21 = readVertexId edges 2 1
+            let v22 = readVertexId edges 2 2
+            let v23 = readVertexId edges 2 3
+                        
+            let face0 = IDHash' v00 v01 v02
+            let face1 = IDHash' v02 v03 v00
+
+            let face2 = IDHash' v10 v11 v12
+            let face3 = IDHash' v12 v13 v10
+
+            let face4 = IDHash' v20 v21 v22
+            let face5 = IDHash' v22 v23 v20
+
+            let area = computeSphericalExcess (vertices.[v00].XYZ) (vertices.[v01].XYZ) (vertices.[v02].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[v00].W + vertices.[v01].W + vertices.[v02].W)
+                    
+            let area = computeSphericalExcess (vertices.[v02].XYZ) (vertices.[v03].XYZ) (vertices.[v00].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[v02].W + vertices.[v03].W + vertices.[v00].W)
+
+            if face0 <> face2 && face1 <> face2 then
+                // face 2
+                let area = computeSphericalExcess (vertices.[v10].XYZ) (vertices.[v11].XYZ) (vertices.[v12].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[v10].W + vertices.[v11].W + vertices.[v12].W)
+            else
+                // face 3
+                let area = computeSphericalExcess (vertices.[v12].XYZ) (vertices.[v13].XYZ) (vertices.[v10].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[v12].W + vertices.[v13].W + vertices.[v10].W)
+
+            if face2 <> face4 && face3 <> face4 then
+                // face 4
+                let area = computeSphericalExcess (vertices.[v20].XYZ) (vertices.[v21].XYZ) (vertices.[v22].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[v20].W + vertices.[v21].W + vertices.[v22].W)
+            else
+                // face 5
+                let area = computeSphericalExcess (vertices.[v22].XYZ) (vertices.[v23].XYZ) (vertices.[v20].XYZ)
+                patchIllumination <- patchIllumination + area * (vertices.[v22].W + vertices.[v23].W + vertices.[v20].W)
+
+        patchIllumination / 3.0
+
     module Test = 
         open NUnit.Framework
         open FsUnit
+        open NUnit.Framework.Constraints
 
 
         module FlipTestMockup =
@@ -1292,3 +1523,118 @@ module EffectApDelaunayDataMutation =
             //    nextFreeFaceAddr |> should equal (SplitBorderEdgeMockup3.After.nextFreeFaceAddr)
             //)  
             true |> should equal false
+
+        
+        module ComputeIlluminationMockup = 
+            let (EDGES, META, _) = Render.EffectApDelaunayGenInitTriangulation.genInitTriangulation 4
+
+            let internal getInitEdgeData (caseOffset : int) = 
+                let edgeArray = Arr<N<MAX_EDGES_HALF>, V4i>() 
+                for i in 0 .. MAX_EDGES_HALF - 1 do
+                    edgeArray.[i] <- EDGES.[MAX_EDGES_HALF * caseOffset + i]
+                edgeArray
+                
+            
+            let internal getInitMetaData (caseOffset : int) = META.[caseOffset]
+
+            let internal getData caseOffset =
+                (getInitEdgeData caseOffset, getInitMetaData caseOffset, caseOffset)
+
+            let getDataCaseCorner ()  = CASE_CORNER_OFFSET |> getData
+            let getDataCaseEdge ()    = CASE_EDGE_OFFSET |> getData
+            let getDataCaseInside ()  = CASE_INSIDE_OFFSET |> getData
+
+            let genVertices (v : V4d list) = Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V4d>(v)
+
+        type Range = Within of float * float
+        let (+/-) (a:float) b = Within(a, b)
+
+        let equal x = 
+          match box x with 
+          | :? Range as r ->
+              let (Within(x, within)) = r
+              (new EqualConstraint(x)).Within(within)
+          | _ ->
+            new EqualConstraint(x)
+
+        [<Test>]
+        let ``Compute Illumination Case Corner``() =
+        
+            let (edges, meta, offset) = ComputeIlluminationMockup.getDataCaseCorner ()
+
+            let vertices = 
+                [
+                    V4d(V3d(3, -1, 1) |> Vec.normalize, 1.0)
+                    V4d(V3d(3, -1, 3) |> Vec.normalize, 1.0)
+                    V4d(V3d(3,  1, 3) |> Vec.normalize, 1.0)
+                    V4d(V3d(3,  1, 1) |> Vec.normalize, 1.0)
+                ]
+                |> ComputeIlluminationMockup.genVertices
+
+
+            let expected =
+                let area1 = computeSphericalExcess (vertices.[0].XYZ) (vertices.[1].XYZ) (vertices.[2].XYZ)
+                let area2 = computeSphericalExcess (vertices.[2].XYZ) (vertices.[3].XYZ) (vertices.[0].XYZ)
+                
+                area1 + area2
+
+            let L = computeIlluminationCheap edges vertices offset
+
+            L |> should equal (expected +/- 1e-5)
+
+        
+        [<Test>]
+        let ``Compute Illumination Case Edge``() =
+        
+            let (edges, meta, offset) = ComputeIlluminationMockup.getDataCaseEdge ()
+
+            let vertices = 
+                [
+                    V4d(V3d(3,  0, 1) |> Vec.normalize, 1.0)
+                    V4d(V3d(3, -1, 1) |> Vec.normalize, 1.0)
+                    V4d(V3d(3, -1, 3) |> Vec.normalize, 1.0)
+                    V4d(V3d(3,  1, 3) |> Vec.normalize, 1.0)
+                    V4d(V3d(3,  1, 1) |> Vec.normalize, 1.0)
+
+                ]
+                |> ComputeIlluminationMockup.genVertices
+
+
+            let expected =
+                let area1 = computeSphericalExcess (vertices.[0].XYZ) (vertices.[1].XYZ) (vertices.[2].XYZ)
+                let area2 = computeSphericalExcess (vertices.[0].XYZ) (vertices.[2].XYZ) (vertices.[3].XYZ)
+                let area3 = computeSphericalExcess (vertices.[0].XYZ) (vertices.[3].XYZ) (vertices.[4].XYZ)
+                
+                area1 + area2 + area3
+
+            let L = computeIlluminationCheap edges vertices offset
+
+            L |> should equal (expected +/- 1e-5)
+
+        [<Test>]
+        let ``Compute Illumination Case Inside``() =
+        
+            let (edges, meta, offset) = ComputeIlluminationMockup.getDataCaseInside ()
+
+            let vertices = 
+                [
+                    V4d(V3d(3,  0, 2) |> Vec.normalize, 1.0)
+                    V4d(V3d(3, -1, 1) |> Vec.normalize, 1.0)
+                    V4d(V3d(3, -1, 3) |> Vec.normalize, 1.0)
+                    V4d(V3d(3,  1, 3) |> Vec.normalize, 1.0)
+                    V4d(V3d(3,  1, 1) |> Vec.normalize, 1.0)
+                ]
+                |> ComputeIlluminationMockup.genVertices
+
+
+            let expected =
+                let area1 = computeSphericalExcess (vertices.[0].XYZ) (vertices.[1].XYZ) (vertices.[2].XYZ)
+                let area2 = computeSphericalExcess (vertices.[0].XYZ) (vertices.[2].XYZ) (vertices.[3].XYZ)
+                let area3 = computeSphericalExcess (vertices.[0].XYZ) (vertices.[3].XYZ) (vertices.[4].XYZ)
+                let area4 = computeSphericalExcess (vertices.[0].XYZ) (vertices.[4].XYZ) (vertices.[1].XYZ)
+                
+                area1 + area2 + area3 + area4
+
+            let L = computeIlluminationCheap edges vertices offset
+
+            L |> should equal (expected +/- 1e-5)      

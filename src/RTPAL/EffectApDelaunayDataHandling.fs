@@ -16,6 +16,9 @@ module EffectApDelaunayDataHandling =
 
     [<ReflectedDefinition>][<Inline>]
     let private getIdFromInt pos value =
+        let v : uint32 = uint32 value
+        let s : uint32 = uint32 value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)
+        let r : uint32 = (uint32 value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID)
         int (((uint32 value &&& (ID_BIT_MASK <<< pos * BIT_PER_ID)) >>> (pos * BIT_PER_ID)))
 
     [<ReflectedDefinition>][<Inline>]
@@ -28,7 +31,7 @@ module EffectApDelaunayDataHandling =
         
     [<ReflectedDefinition>][<Inline>]
     let private offsetId offset id = 
-        id <<< (BIT_PER_ID * offset)
+        (uint32 id) <<< (BIT_PER_ID * offset)
 
     [<ReflectedDefinition>][<Inline>]
     let genIntFrom3Int v0 v1 v2 =
@@ -40,7 +43,13 @@ module EffectApDelaunayDataHandling =
 
     [<ReflectedDefinition>][<Inline>]
     let genIntFrom4Int v0 v1 v2 v3 =
-        int (((uint32 (offsetId 0 v0))) ||| ((uint32 (offsetId 1 v1))) ||| ((uint32 (offsetId 2 v2))) ||| ((uint32 (offsetId 3 v3))))
+        let v0 = (offsetId 0 v0)
+        let v1 = (offsetId 1 v1)
+        let v2 = (offsetId 2 v2)
+        let v3 = (offsetId 3 v3)
+
+        int (v0 ||| v1 ||| v2 ||| v3)
+        //int ((offsetId 0 v0) ||| (offsetId 1 v1) ||| (offsetId 2 v2) ||| (offsetId 3 v3))
 
     [<ReflectedDefinition>][<Inline>]
     let genIntFromV4i (v : V4i) =
@@ -175,9 +184,9 @@ module EffectApDelaunayDataHandling =
     let writeFaceEdgeIds (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId e0 e1 e2 =
         faces.[fId / 2] <- 
             if fId % 2 = 0 then
-                V4i(faces.[fId / 2].X, (offsetId 0 e0) ||| (offsetId 1 e1) ||| (offsetId 2 e2), faces.[fId / 2].Z, faces.[fId / 2].W)
+                V4i(faces.[fId / 2].X, int ((offsetId 0 e0) ||| (offsetId 1 e1) ||| (offsetId 2 e2)), faces.[fId / 2].Z, faces.[fId / 2].W)
             else
-                V4i(faces.[fId / 2].X, faces.[fId / 2].Y, faces.[fId / 2].Z, (offsetId 0 e0) ||| (offsetId 1 e1) ||| (offsetId 2 e2))
+                V4i(faces.[fId / 2].X, faces.[fId / 2].Y, faces.[fId / 2].Z, int ((offsetId 0 e0) ||| (offsetId 1 e1) ||| (offsetId 2 e2)))
 
     [<ReflectedDefinition>][<Inline>]
     let faceIsEmpty (faces : Arr<N<MAX_FACES_HALF>, V4i>) fId =

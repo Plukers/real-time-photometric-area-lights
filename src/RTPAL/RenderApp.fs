@@ -1,6 +1,7 @@
-﻿module RenderApp
+﻿namespace Render
+
+module RenderApp =
     
-    open Render
     open Aardvark.Base
     open Aardvark.Base.Incremental
     open Aardvark.Base.Incremental.Operators
@@ -1214,7 +1215,7 @@
         // initial state
         {            
             lights = lc
-            renderMode = RenderMode.GroundTruth
+            renderMode = RenderMode.DelaunayIrradianceSampling
             updateGroundTruth = true
             usePhotometry = true
             diffuseExitance = {
