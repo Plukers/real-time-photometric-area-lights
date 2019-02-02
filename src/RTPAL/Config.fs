@@ -1,11 +1,11 @@
-namespace Render
+
 (* 
     This file is generated automatically with ConfigGenerator.fsx 
     If you want to update the configuration, please modify ConfigGenerator.fsx and execute 
         fsi --exec ConfigGenerator.fsx
 *)
 
-module Config = 
+module Config
 
     module Light = 
 

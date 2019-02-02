@@ -1,79 +1,79 @@
-﻿namespace Render
-
+﻿
 (*
-    Compares renderings of different effects with a transfer function
+Compares renderings of different effects with a transfer function
 *)
-module EffectOutline =
+module EffectOutline
 
-    open Aardvark.Base
-    open Aardvark.Base.Rendering
-    open Aardvark.Base.Rendering.Effects
-    open Aardvark.Base.Vec
-    open FShade
+open Aardvark.Base
+open Aardvark.Base.Rendering
+open Aardvark.Base.Rendering.Effects
+open Aardvark.Base.Vec
+open FShade
 
-    open EffectUtils
+open EffectUtils
+open RenderState
 
-    type UniformScope with
-        member uniform.PixelSize : V2d = uniform?PixelSize
+type UniformScope with
+    member uniform.PixelSize : V2d = uniform?PixelSize
 
-    let private texDepth = 
-        sampler2d {
-            texture uniform?TexDepth
-            filter Filter.MinMagLinear
-            addressU WrapMode.Border
-            addressV WrapMode.Border
-        }
+let private texDepth = 
+    sampler2d {
+        texture uniform?TexDepth
+        filter Filter.MinMagLinear
+        addressU WrapMode.Border
+        addressV WrapMode.Border
+    }
 
-    let private texError =
-        sampler2d {
-            texture uniform?TexError
-            filter Filter.MinMagMipLinear
-            addressU WrapMode.Wrap
-            addressV WrapMode.Wrap
-        }
+let private texError =
+    sampler2d {
+        texture uniform?TexError
+        filter Filter.MinMagMipLinear
+        addressU WrapMode.Wrap
+        addressV WrapMode.Wrap
+    }
 
-    type OutlineVertex = {
-        [<TexCoord>] tc : V2d
-        [<Semantic("EdgeSample")>] es : Arr<N<4>, V2d>
-    } 
+type OutlineVertex = {
+    [<TexCoord>] tc : V2d
+    [<Semantic("EdgeSample")>] es : Arr<N<4>, V2d>
+} 
 
-    let outlineV (v : OutlineVertex) =
-        vertex {
+let outlineV (v : OutlineVertex) =
+    vertex {
 
-            let sampleDistance = 1.0
+        let sampleDistance = 1.0
 
-            let edgeSamples = Arr<N<4>, V2d>([|
-                                                v.tc + V2d( 1.0,  1.0) * sampleDistance * uniform.PixelSize
-                                                v.tc + V2d( 1.0, -1.0) * sampleDistance * uniform.PixelSize
-                                                v.tc + V2d(-1.0,  1.0) * sampleDistance * uniform.PixelSize
-                                                v.tc + V2d(-1.0, -1.0) * sampleDistance * uniform.PixelSize
-                                            |])
+        let edgeSamples = Arr<N<4>, V2d>([|
+                                            v.tc + V2d( 1.0,  1.0) * sampleDistance * uniform.PixelSize
+                                            v.tc + V2d( 1.0, -1.0) * sampleDistance * uniform.PixelSize
+                                            v.tc + V2d(-1.0,  1.0) * sampleDistance * uniform.PixelSize
+                                            v.tc + V2d(-1.0, -1.0) * sampleDistance * uniform.PixelSize
+                                        |])
             
-            return {
-                tc = v.tc
-                es = edgeSamples
-            }
+        return {
+            tc = v.tc
+            es = edgeSamples
         }
+    }
     
-    let outlineF (v : OutlineVertex) = 
-        fragment {
+let outlineF (v : OutlineVertex) = 
+    fragment {
 
-            let s0 = texDepth.Sample(v.es.[0]).X
-            let s1 = texDepth.Sample(v.es.[1]).X
-            let s2 = texDepth.Sample(v.es.[2]).X
-            let s3 = texDepth.Sample(v.es.[3]).X
+        let s0 = texDepth.Sample(v.es.[0]).X
+        let s1 = texDepth.Sample(v.es.[1]).X
+        let s2 = texDepth.Sample(v.es.[2]).X
+        let s3 = texDepth.Sample(v.es.[3]).X
 
-            let threshold = 0.001
+        let threshold = 0.001
 
-            let diffA = abs(s0 - s3) > (threshold * (s0 + s3))
-            let diffB = abs(s1 - s2) > (threshold * (s1 + s2))
+        let diffA = abs(s0 - s3) > (threshold * (s0 + s3))
+        let diffB = abs(s1 - s2) > (threshold * (s1 + s2))
 
-            let oultine = diffA || diffB
+        let oultine = diffA || diffB
             
-            if oultine then
-                return V4d(V3d(0.0), 1.0)
-            else
-                return texError.Sample(v.tc) 
-        }
+        if oultine then
+            return V4d(V3d(0.0), 1.0)
+        else
+            return texError.Sample(v.tc) 
+    }
 
-    ()
+()

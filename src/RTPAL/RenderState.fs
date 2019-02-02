@@ -1,4 +1,4 @@
-﻿namespace Render
+﻿namespace RenderState
 
 open Aardvark.Base
 open Aardvark.Base.Incremental
