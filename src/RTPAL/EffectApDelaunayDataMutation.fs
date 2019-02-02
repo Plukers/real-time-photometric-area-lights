@@ -391,23 +391,18 @@ let computeIlluminationCheap (edges : Arr<N<MAX_EDGES_HALF>, V4i>) (vertices : A
         weight <- weight + area * (vertices.[(readVertexId edges 1 2)].Z + vertices.[(readVertexId edges 1 3)].Z + vertices.[(readVertexId edges 1 0)].Z)
         areaSum <- areaSum + area
 
-        //if (IDHash' (readVertexId edges 1 0) (readVertexId edges 1 1) (readVertexId edges 1 2)) <> face3 && (IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)) <> face3 then
-        //    // face 3
-        //    let area = computeSphericalExcess (vertices.[(readVertexId edges 2 0)].XYZ) (vertices.[(readVertexId edges 2 1)].XYZ) (vertices.[(readVertexId edges 2 2)].XYZ)
-        //    patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 0)].W + vertices.[(readVertexId edges 2 1)].W + vertices.[(readVertexId edges 2 2)].W)
-        //    weight <- weight + area * (vertices.[(readVertexId edges 2 0)].Z + vertices.[(readVertexId edges 2 1)].Z + vertices.[(readVertexId edges 2 2)].Z)
-        //    areaSum <- areaSum + area
-        //else
-        //    // face 4
-        //    let area = computeSphericalExcess (vertices.[(readVertexId edges 2 2)].XYZ) (vertices.[(readVertexId edges 2 3)].XYZ) (vertices.[(readVertexId edges 2 0)].XYZ)
-        //    patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
-        //    weight <- weight + area * (vertices.[(readVertexId edges 2 2)].Z + vertices.[(readVertexId edges 2 3)].Z + vertices.[(readVertexId edges 2 0)].Z)
-        //    areaSum <- areaSum + area
-
-        let area = computeSphericalExcess (vertices.[(readVertexId edges 2 2)].XYZ) (vertices.[(readVertexId edges 2 3)].XYZ) (vertices.[(readVertexId edges 2 0)].XYZ)
-        patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
-        weight <- weight + area * (vertices.[(readVertexId edges 2 2)].Z + vertices.[(readVertexId edges 2 3)].Z + vertices.[(readVertexId edges 2 0)].Z)
-        areaSum <- areaSum + area
+        if (IDHash' (readVertexId edges 1 0) (readVertexId edges 1 1) (readVertexId edges 1 2)) <> face3 && (IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)) <> face3 then
+            // face 3
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 2 0)].XYZ) (vertices.[(readVertexId edges 2 1)].XYZ) (vertices.[(readVertexId edges 2 2)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 0)].W + vertices.[(readVertexId edges 2 1)].W + vertices.[(readVertexId edges 2 2)].W)
+            weight <- weight + area * (vertices.[(readVertexId edges 2 0)].Z + vertices.[(readVertexId edges 2 1)].Z + vertices.[(readVertexId edges 2 2)].Z)
+            areaSum <- areaSum + area
+        else
+            // face 4
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 2 2)].XYZ) (vertices.[(readVertexId edges 2 3)].XYZ) (vertices.[(readVertexId edges 2 0)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
+            weight <- weight + area * (vertices.[(readVertexId edges 2 2)].Z + vertices.[(readVertexId edges 2 3)].Z + vertices.[(readVertexId edges 2 0)].Z)
+            areaSum <- areaSum + area
     else                        
 
         let face2 = IDHash' (readVertexId edges 1 0) (readVertexId edges 1 1) (readVertexId edges 1 2)
@@ -423,33 +418,81 @@ let computeIlluminationCheap (edges : Arr<N<MAX_EDGES_HALF>, V4i>) (vertices : A
         weight <- weight + area * (vertices.[(readVertexId edges 0 2)].Z + vertices.[(readVertexId edges 0 3)].Z + vertices.[(readVertexId edges 0 0)].Z)
         areaSum <- areaSum + area
 
-        //if (IDHash' (readVertexId edges 0 0) (readVertexId edges 0 1) (readVertexId edges 0 2)) <> face2 && (IDHash' (readVertexId edges 0 2) (readVertexId edges 0 3) (readVertexId edges 0 0)) <> face2 then
-        //    // face 2
-        //    let area = computeSphericalExcess (vertices.[(readVertexId edges 1 0)].XYZ) (vertices.[(readVertexId edges 1 1)].XYZ) (vertices.[(readVertexId edges 1 2)].XYZ)
-        //    patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 0)].W + vertices.[(readVertexId edges 1 1)].W + vertices.[(readVertexId edges 1 2)].W)
-        //    weight <- weight + area * (vertices.[(readVertexId edges 1 0)].Z + vertices.[(readVertexId edges 1 1)].Z + vertices.[(readVertexId edges 1 2)].Z)
-        //    areaSum <- areaSum + area
-        //else
-        //    // face 3
-        //    let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
-        //    patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
-        //    weight <- weight + area * (vertices.[(readVertexId edges 1 2)].Z + vertices.[(readVertexId edges 1 3)].Z + vertices.[(readVertexId edges 1 0)].Z)
-        //    areaSum <- areaSum + area
+        if (IDHash' (readVertexId edges 0 0) (readVertexId edges 0 1) (readVertexId edges 0 2)) <> face2 && (IDHash' (readVertexId edges 0 2) (readVertexId edges 0 3) (readVertexId edges 0 0)) <> face2 then
+            // face 2
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 1 0)].XYZ) (vertices.[(readVertexId edges 1 1)].XYZ) (vertices.[(readVertexId edges 1 2)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 0)].W + vertices.[(readVertexId edges 1 1)].W + vertices.[(readVertexId edges 1 2)].W)
+            weight <- weight + area * (vertices.[(readVertexId edges 1 0)].Z + vertices.[(readVertexId edges 1 1)].Z + vertices.[(readVertexId edges 1 2)].Z)
+            areaSum <- areaSum + area
+        else
+            // face 3
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
+            weight <- weight + area * (vertices.[(readVertexId edges 1 2)].Z + vertices.[(readVertexId edges 1 3)].Z + vertices.[(readVertexId edges 1 0)].Z)
+            areaSum <- areaSum + area
 
 
 
-        //if face2 <> face4 && (IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)) <> face4 then
-        //    // face 4
-        //    let area = computeSphericalExcess (vertices.[(readVertexId edges 2 0)].XYZ) (vertices.[(readVertexId edges 2 1)].XYZ) (vertices.[(readVertexId edges 2 2)].XYZ)
-        //    patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 0)].W + vertices.[(readVertexId edges 2 1)].W + vertices.[(readVertexId edges 2 2)].W)
-        //    weight <- weight + area * (vertices.[(readVertexId edges 2 0)].Z + vertices.[(readVertexId edges 2 1)].Z + vertices.[(readVertexId edges 2 2)].Z)
-        //    areaSum <- areaSum + area
-        //else
-        //    // face 5
-        //    let area = computeSphericalExcess (vertices.[(readVertexId edges 2 2)].XYZ) (vertices.[(readVertexId edges 2 3)].XYZ) (vertices.[(readVertexId edges 2 0)].XYZ)
-        //    patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
-        //    weight <- weight + area * (vertices.[(readVertexId edges 2 2)].Z + vertices.[(readVertexId edges 2 3)].Z + vertices.[(readVertexId edges 2 0)].Z)
-        //    areaSum <- areaSum + area
+        if face2 <> face4 && (IDHash' (readVertexId edges 1 2) (readVertexId edges 1 3) (readVertexId edges 1 0)) <> face4 then
+            // face 4
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 2 0)].XYZ) (vertices.[(readVertexId edges 2 1)].XYZ) (vertices.[(readVertexId edges 2 2)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 0)].W + vertices.[(readVertexId edges 2 1)].W + vertices.[(readVertexId edges 2 2)].W)
+            weight <- weight + area * (vertices.[(readVertexId edges 2 0)].Z + vertices.[(readVertexId edges 2 1)].Z + vertices.[(readVertexId edges 2 2)].Z)
+            areaSum <- areaSum + area
+        else
+            // face 5
+            let area = computeSphericalExcess (vertices.[(readVertexId edges 2 2)].XYZ) (vertices.[(readVertexId edges 2 3)].XYZ) (vertices.[(readVertexId edges 2 0)].XYZ)
+            patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
+            weight <- weight + area * (vertices.[(readVertexId edges 2 2)].Z + vertices.[(readVertexId edges 2 3)].Z + vertices.[(readVertexId edges 2 0)].Z)
+            areaSum <- areaSum + area
+
+    (patchIllumination / 3.0, weight / 3.0, areaSum)
+
+[<ReflectedDefinition>][<Inline>]
+let computeIlluminationNoFlip (edges : Arr<N<MAX_EDGES_HALF>, V4i>) (vertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V4d>) caseOffset =
+    let mutable patchIllumination = 0.0
+    let mutable weight = 0.0
+    let mutable areaSum = 0.0
+
+    if caseOffset = CASE_CORNER_OFFSET then
+        
+        let area = computeSphericalExcess (vertices.[(readVertexId edges 1 0)].XYZ) (vertices.[(readVertexId edges 1 1)].XYZ) (vertices.[(readVertexId edges 1 2)].XYZ)
+        patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 0)].W + vertices.[(readVertexId edges 1 1)].W + vertices.[(readVertexId edges 1 2)].W)
+        weight <- weight + area * (vertices.[(readVertexId edges 1 0)].Z + vertices.[(readVertexId edges 1 1)].Z + vertices.[(readVertexId edges 1 2)].Z)
+        areaSum <- areaSum + area
+
+        let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
+        patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
+        weight <- weight + area * (vertices.[(readVertexId edges 1 2)].Z + vertices.[(readVertexId edges 1 3)].Z + vertices.[(readVertexId edges 1 0)].Z)
+        areaSum <- areaSum + area
+
+    else if caseOffset = CASE_EDGE_OFFSET then
+        
+        let area = computeSphericalExcess (vertices.[(readVertexId edges 1 0)].XYZ) (vertices.[(readVertexId edges 1 1)].XYZ) (vertices.[(readVertexId edges 1 2)].XYZ)
+        patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 0)].W + vertices.[(readVertexId edges 1 1)].W + vertices.[(readVertexId edges 1 2)].W)
+        weight <- weight + area * (vertices.[(readVertexId edges 1 0)].Z + vertices.[(readVertexId edges 1 1)].Z + vertices.[(readVertexId edges 1 2)].Z)
+        areaSum <- areaSum + area
+            
+        let area = computeSphericalExcess (vertices.[(readVertexId edges 1 2)].XYZ) (vertices.[(readVertexId edges 1 3)].XYZ) (vertices.[(readVertexId edges 1 0)].XYZ)
+        patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 1 2)].W + vertices.[(readVertexId edges 1 3)].W + vertices.[(readVertexId edges 1 0)].W)
+        weight <- weight + area * (vertices.[(readVertexId edges 1 2)].Z + vertices.[(readVertexId edges 1 3)].Z + vertices.[(readVertexId edges 1 0)].Z)
+        areaSum <- areaSum + area
+
+        let area = computeSphericalExcess (vertices.[(readVertexId edges 2 2)].XYZ) (vertices.[(readVertexId edges 2 3)].XYZ) (vertices.[(readVertexId edges 2 0)].XYZ)
+        patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
+        weight <- weight + area * (vertices.[(readVertexId edges 2 2)].Z + vertices.[(readVertexId edges 2 3)].Z + vertices.[(readVertexId edges 2 0)].Z)
+        areaSum <- areaSum + area
+    else
+
+        let area = computeSphericalExcess (vertices.[(readVertexId edges 0 0)].XYZ) (vertices.[(readVertexId edges 0 1)].XYZ) (vertices.[(readVertexId edges 0 2)].XYZ)
+        patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 0 0)].W + vertices.[(readVertexId edges 0 1)].W + vertices.[(readVertexId edges 0 2)].W)
+        weight <- weight + area * (vertices.[(readVertexId edges 0 0)].Z + vertices.[(readVertexId edges 0 1)].Z + vertices.[(readVertexId edges 0 2)].Z)
+        areaSum <- areaSum + area
+
+        let area = computeSphericalExcess (vertices.[(readVertexId edges 0 2)].XYZ) (vertices.[(readVertexId edges 0 3)].XYZ) (vertices.[(readVertexId edges 0 0)].XYZ)
+        patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 0 2)].W + vertices.[(readVertexId edges 0 3)].W + vertices.[(readVertexId edges 0 0)].W)
+        weight <- weight + area * (vertices.[(readVertexId edges 0 2)].Z + vertices.[(readVertexId edges 0 3)].Z + vertices.[(readVertexId edges 0 0)].Z)
+        areaSum <- areaSum + area
 
         let area = computeSphericalExcess (vertices.[(readVertexId edges 2 0)].XYZ) (vertices.[(readVertexId edges 2 1)].XYZ) (vertices.[(readVertexId edges 2 2)].XYZ)
         patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 0)].W + vertices.[(readVertexId edges 2 1)].W + vertices.[(readVertexId edges 2 2)].W)
@@ -460,6 +503,8 @@ let computeIlluminationCheap (edges : Arr<N<MAX_EDGES_HALF>, V4i>) (vertices : A
         patchIllumination <- patchIllumination + area * (vertices.[(readVertexId edges 2 2)].W + vertices.[(readVertexId edges 2 3)].W + vertices.[(readVertexId edges 2 0)].W)
         weight <- weight + area * (vertices.[(readVertexId edges 2 2)].Z + vertices.[(readVertexId edges 2 3)].Z + vertices.[(readVertexId edges 2 0)].Z)
         areaSum <- areaSum + area
+        
+
 
     (patchIllumination / 3.0, weight / 3.0, areaSum)
 

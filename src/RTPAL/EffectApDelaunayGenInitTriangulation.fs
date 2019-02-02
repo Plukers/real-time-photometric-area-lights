@@ -147,7 +147,7 @@ let genInitTriangulation (numCorners : int) =
         |                   --/          |   
         |                 -/             |   
         |               -/               | e3
-        e2 |             -/  e1             |   
+     e2 |             -/  e1             |   
         |          --/                   |   
         |        -/                      |   
         |      -/                        |   
@@ -170,7 +170,7 @@ let genInitTriangulation (numCorners : int) =
         |     \                   /      |   
         |      \                 /       |   
         |       \ e2           -/        | e4
-        e6 |        \            / e1       |   
+     e6 |        \            / e1       |   
         |         \          /           |   
         |          \        /            |   
         |           \      /             |   
@@ -193,7 +193,7 @@ let genInitTriangulation (numCorners : int) =
         |          \--      --/          |   
         |             \-  -/             |   
         |               \- v0            | e5
-        e7 |             -/  \-             |   
+     e7 |             -/  \-             |   
         |          --/      \--          |   
         |        -/            \-        |   
         |      -/ e0          e1 \-      |   

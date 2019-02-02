@@ -979,23 +979,20 @@ let computeSolidAngle (va : V3d) (vb : V3d) (vc : V3d) =
 [<ReflectedDefinition>]
 let computeSphericalExcess (va : V3d) (vb : V3d) (vc : V3d) =
 
-    if (va - vb) |> Vec.lengthSquared < 1e-8 || (va - vc) |> Vec.lengthSquared < 1e-8 || (vb - vc) |> Vec.lengthSquared < 1e-8 then 
-        0.0
-    else
-        let crossVaVc = Vec.cross va vc |> Vec.normalize
-        let crossVcVa = Vec.cross vc va |> Vec.normalize
+    let crossVaVc = Vec.cross va vc |> Vec.normalize
+    let crossVcVa = Vec.cross vc va |> Vec.normalize
 
-        let crossVaVb = Vec.cross va vb |> Vec.normalize
-        let crossVbVa = Vec.cross vb va |> Vec.normalize
+    let crossVaVb = Vec.cross va vb |> Vec.normalize
+    let crossVbVa = Vec.cross vb va |> Vec.normalize
 
-        let crossVbVc = Vec.cross vb vc |> Vec.normalize
-        let crossVcVb = Vec.cross vc vb |> Vec.normalize
+    let crossVbVc = Vec.cross vb vc |> Vec.normalize
+    let crossVcVb = Vec.cross vc vb |> Vec.normalize
 
-        let alpha = Vec.dot crossVaVc crossVaVb |> clamp -1.0 1.0 |> acos
-        let betha = Vec.dot crossVbVa crossVbVc |> clamp -1.0 1.0 |> acos
-        let gamma = Vec.dot crossVcVb crossVcVa |> clamp -1.0 1.0 |> acos
+    let alpha = Vec.dot crossVaVc crossVaVb |> clamp -1.0 1.0 |> acos
+    let betha = Vec.dot crossVbVa crossVbVc |> clamp -1.0 1.0 |> acos
+    let gamma = Vec.dot crossVcVb crossVcVa |> clamp -1.0 1.0 |> acos
 
-        alpha + betha + gamma - PI
+    alpha + betha + gamma - PI
 
 
 

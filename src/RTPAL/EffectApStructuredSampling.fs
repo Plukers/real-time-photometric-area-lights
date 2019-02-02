@@ -284,15 +284,15 @@ let structuredIrradianceSampling (v : Vertex) =
                                         sampleIdx <- sampleIdx + 1
                                         sampleCount <- sampleIdx
 
-                                if uniform.sampleMRP        (* && not (sampleAlreadyExisting samples sampleIdx mrp)             *)  then
-                                        samples.[sampleIdx] <- V3d(mrp)
-                                        sampleIdx <- sampleIdx + 1
-                                        sampleCount <- sampleIdx
+                                //if uniform.sampleMRP        (* && not (sampleAlreadyExisting samples sampleIdx mrp)             *)  then
+                                //        samples.[sampleIdx] <- V3d(mrp)
+                                //        sampleIdx <- sampleIdx + 1
+                                //        sampleCount <- sampleIdx
 
-                                if uniform.sampleClosest    (* && not (sampleAlreadyExisting samples sampleIdx closestPoint)    *)  then
-                                        samples.[sampleIdx] <- closestPoint
-                                        sampleIdx <- sampleIdx + 1
-                                        sampleCount <- sampleIdx
+                                //if uniform.sampleClosest    (* && not (sampleAlreadyExisting samples sampleIdx closestPoint)    *)  then
+                                //        samples.[sampleIdx] <- closestPoint
+                                //        sampleIdx <- sampleIdx + 1
+                                //        sampleCount <- sampleIdx
 
                                 if uniform.sampleRandom then        
                                     sampleCount <- sampleCount + uniform.numSRSamples
@@ -334,26 +334,27 @@ let structuredIrradianceSampling (v : Vertex) =
                                                 let (irr, weight) = sampleIrr t2w 1.0 addr samplePoint
                                                 patchIllumination <- patchIllumination + irr
                                                 weightSum <- weightSum + weight
-                                                
-                                let L =
-                                    if sampleCount > 0 then
-                                        patchIllumination / weightSum
-                                    else 
-                                        0.0
+                                  
+                                illumination <- illumination + patchIllumination * brdf 
+                                //let L =
+                                //    if sampleCount > 0 then
+                                //        patchIllumination / weightSum
+                                //    else 
+                                //        0.0
 
                                     
-                                for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
-                                        if l < clippedVc then
-                                            // Project polygon light onto sphere
-                                            clippedVa.[l] <- Vec.normalize clippedVa.[l]
+                                //for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                //        if l < clippedVc then
+                                //             Project polygon light onto sphere
+                                //            clippedVa.[l] <- Vec.normalize clippedVa.[l]
 
                                 //for l in 0 .. clippedVc - 1 do
                                 //    // Project polygon light onto sphere
                                 //    clippedVa.[l] <- Vec.normalize clippedVa.[l]
 
-                                let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
+                                //let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                         
-                                illumination <- illumination + L * brdf * I //* scale // * i.Z  
+                                //illumination <- illumination + L * brdf * I //* scale // * i.Z  
                             ()
                                                                 
                         ////////////////////////////////////////////////////////
@@ -441,88 +442,89 @@ let structuredSampling (v : Vertex) =
 
                         if clippedVc <> 0 then
 
-                            let eps = 1e-9
-                            let epb = 1e-3
+                            //let eps = 1e-9
+                            //let epb = 1e-3
                                                     
-                            let lightPlaneN = w2t * uniform.LForwards.[addr] |> Vec.normalize                                
+                            //let lightPlaneN = w2t * uniform.LForwards.[addr] |> Vec.normalize                                
 
-                            // find closest point limited to upper hemisphere
-                            let t = (- clippedVa.[0]) |> Vec.dot lightPlaneN
-                            let mutable closestPoint = t * (-lightPlaneN)
+                            //// find closest point limited to upper hemisphere
+                            //let t = (- clippedVa.[0]) |> Vec.dot lightPlaneN
+                            //let mutable closestPoint = t * (-lightPlaneN)
                                                     
-                            if (Vec.dot closestPoint V3d.OOI) < 0.0 then
-                                let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
-                                closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
+                            //if (Vec.dot closestPoint V3d.OOI) < 0.0 then
+                            //    let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
+                            //    closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
                                     
-                            let insideLightPlane = (Vec.length closestPoint) < eps
-                                
-                            if not insideLightPlane then
+                            //let insideLightPlane = (Vec.length closestPoint) < eps
+                            let dotOut = Vec.dot (uniform.LForwards.[addr]) ((P - uniform.LCenters.[addr])  |> Vec.normalize) |> clamp -1.0 1.0
+                            
+                            if abs dotOut > 1e-3 then
                                     
-                                let closestPointDir = closestPoint |> Vec.normalize
+                                //let closestPointDir = closestPoint |> Vec.normalize
 
-                                // intersect normal with plane
-                                let mutable up = V3d.OOI
+                                //// intersect normal with plane
+                                //let mutable up = V3d.OOI
                                 
-                                if abs(Vec.dot up lightPlaneN) < eps then
-                                    up <- up + (epb * closestPointDir) |> Vec.normalize     
-                                else
-                                    let abovePlane = if (Vec.dot V3d.OOI closestPoint) < 0.0 && (Vec.dot closestPoint lightPlaneN) < 0.0 then false else true
-                                    if abovePlane then
-                                        if (Vec.dot up lightPlaneN) > 0.0 then
-                                            up <- up + (abs(Vec.dot up lightPlaneN) + epb) * (-lightPlaneN) |> Vec.normalize
+                                //if abs(Vec.dot up lightPlaneN) < eps then
+                                //    up <- up + (epb * closestPointDir) |> Vec.normalize     
+                                //else
+                                //    let abovePlane = if (Vec.dot V3d.OOI closestPoint) < 0.0 && (Vec.dot closestPoint lightPlaneN) < 0.0 then false else true
+                                //    if abovePlane then
+                                //        if (Vec.dot up lightPlaneN) > 0.0 then
+                                //            up <- up + (abs(Vec.dot up lightPlaneN) + epb) * (-lightPlaneN) |> Vec.normalize
                                     
                                     
-                                let normPlanePoint = linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN // tangent space
+                                //let normPlanePoint = linePlaneIntersection V3d.Zero up (clippedVa.[0]) lightPlaneN // tangent space
                                     
-                                let (closestPoint, normPlanePoint) = 
+                                //let (closestPoint, normPlanePoint) = 
                                         
-                                    let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
-                                    let (normPlanePoint, _, _, _) =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
+                                //    let (closestPoint, _, _, _) = clampPointToPolygon clippedVa clippedVc closestPoint t2l
+                                //    let (normPlanePoint, _, _, _) =   clampPointToPolygon clippedVa clippedVc normPlanePoint t2l 
      
-                                    (closestPoint, normPlanePoint)
+                                //    (closestPoint, normPlanePoint)
                                     
-                                let mutable barycenter = V3d.Zero
-                                for l in 0 .. clippedVc - 1 do
-                                    barycenter <- barycenter + clippedVa.[l]
+                                //let mutable barycenter = V3d.Zero
+                                //for l in 0 .. clippedVc - 1 do
+                                //    barycenter <- barycenter + clippedVa.[l]
                                     
-                                let barycenter = barycenter / (float clippedVc)
+                                //let barycenter = barycenter / (float clippedVc)
 
-                                let mrpDir = ((closestPoint |> Vec.normalize) + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
-                                let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
+                                //let mrpDir = ((closestPoint |> Vec.normalize) + (normPlanePoint |> Vec.normalize)) |> Vec.normalize
+                                //let mrp = linePlaneIntersection V3d.Zero mrpDir (clippedVa.[0]) lightPlaneN
 
                                     
 
                                 let mutable sampleCount = 0
-                                let mutable sampleIdx = 0
-                                let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
+                                //let mutable sampleIdx = 0
+                                //let samples = Arr<N<MAX_SAMPLE_NUM_WO_RANDOM>, V3d>() // all samples except random samples
                                     
-                                if uniform.sampleCorners then   
-                                    for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
-                                        if l < clippedVc then
-                                            //if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
-                                            samples.[sampleIdx] <- V3d(clippedVa.[l])
-                                            sampleIdx <- sampleIdx + 1
-                                            sampleCount <- sampleIdx
+                                //if uniform.sampleCorners then   
+                                //    for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                //        if l < clippedVc then
+                                //            //if not (sampleAlreadyExisting samples sampleIdx clippedVa.[l]) then
+                                //            samples.[sampleIdx] <- V3d(clippedVa.[l])
+                                //            sampleIdx <- sampleIdx + 1
+                                //            sampleCount <- sampleIdx
                                             
-                                if uniform.sampleBarycenter (* && not (sampleAlreadyExisting samples sampleIdx barycenter)      *) then
-                                    samples.[sampleIdx] <- V3d(barycenter)
-                                    sampleIdx <- sampleIdx + 1
-                                    sampleCount <- sampleIdx
+                                //if uniform.sampleBarycenter (* && not (sampleAlreadyExisting samples sampleIdx barycenter)      *) then
+                                //    samples.[sampleIdx] <- V3d(barycenter)
+                                //    sampleIdx <- sampleIdx + 1
+                                //    sampleCount <- sampleIdx
 
-                                if uniform.sampleNorm       (* && not (sampleAlreadyExisting samples sampleIdx normPlanePoint)  *) then
-                                    samples.[sampleIdx] <- V3d(normPlanePoint)
-                                    sampleIdx <- sampleIdx + 1
-                                    sampleCount <- sampleIdx
+                                //if uniform.sampleNorm       (* && not (sampleAlreadyExisting samples sampleIdx normPlanePoint)  *) then
+                                //    samples.[sampleIdx] <- V3d(normPlanePoint)
+                                //    sampleIdx <- sampleIdx + 1
+                                //    sampleCount <- sampleIdx
 
-                                if uniform.sampleMRP        (* && not (sampleAlreadyExisting samples sampleIdx mrp)             *) then
-                                    samples.[sampleIdx] <- V3d(mrp)
-                                    sampleIdx <- sampleIdx + 1
-                                    sampleCount <- sampleIdx
+                                //if uniform.sampleMRP        (* && not (sampleAlreadyExisting samples sampleIdx mrp)             *) then
+                                //    samples.[sampleIdx] <- V3d(mrp)
+                                //    sampleIdx <- sampleIdx + 1
+                                //    sampleCount <- sampleIdx
 
-                                if uniform.sampleClosest    (* && not (sampleAlreadyExisting samples sampleIdx closestPoint)    *) then
-                                    samples.[sampleIdx] <- closestPoint
-                                    sampleIdx <- sampleIdx + 1
-                                    sampleCount <- sampleIdx
+                                //if uniform.sampleClosest    (* && not (sampleAlreadyExisting samples sampleIdx closestPoint)    *) then
+                                //    samples.[sampleIdx] <- closestPoint
+                                //    sampleIdx <- sampleIdx + 1
+                                //    sampleCount <- sampleIdx
 
                                 if uniform.sampleRandom then        
                                     sampleCount <- sampleCount + uniform.numSRSamples
@@ -530,17 +532,17 @@ let structuredSampling (v : Vertex) =
                                                      
                                 let mutable patchIllumination = 0.0
 
-                                if sampleIdx > 0 then
+                                //if sampleIdx > 0 then
                                                                                                             
-                                    for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
-                                        if l < sampleIdx then 
+                                //    for l in 0 .. MAX_SAMPLE_NUM_WO_RANDOM - 1 do
+                                //        if l < sampleIdx then 
 
-                                            // let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samples.[l]
+                                //            // let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samples.[l]
                                                 
-                                            //let irr = sample t2w samplesWeightScale.[l] addr samples.[l]
+                                //            //let irr = sample t2w samplesWeightScale.[l] addr samples.[l]
 
-                                            let irr = sample t2w squad.S addr samples.[l]
-                                            patchIllumination <- patchIllumination + irr
+                                //            let irr = sample t2w squad.S addr samples.[l]
+                                //            patchIllumination <- patchIllumination + irr
 
                                 if uniform.sampleRandom && uniform.numSRSamples > 0 then
                                     if uniform.sampleLight then
@@ -549,7 +551,7 @@ let structuredSampling (v : Vertex) =
 
                                             let samplePoint = (SphericalQuad.sphQuadSample squad uvSamplePoint.X uvSamplePoint.Y) - P
 
-                                            if samplePoint.Z >= eps then
+                                            if samplePoint.Z >= 1e-9 then
                                                 let irr = sample t2w squad.S addr samplePoint
                                                 patchIllumination <- patchIllumination + irr
 
@@ -557,7 +559,7 @@ let structuredSampling (v : Vertex) =
                                         for l in 0 .. uniform.numSRSamples - 1 do
                                             let samplePoint = w2t * (uniform.LSamplePoints.[l] - P)
 
-                                            if samplePoint.Z >= eps then
+                                            if samplePoint.Z >= 1e-9 then
                                                 // let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samplePoint
                                                 let irr = sample t2w squad.S addr samplePoint
                                                 patchIllumination <- patchIllumination + irr
