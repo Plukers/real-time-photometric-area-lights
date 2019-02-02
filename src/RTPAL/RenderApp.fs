@@ -837,7 +837,7 @@ let view (app : OpenGlApplication) (form : System.Windows.Forms.Form) =
                                         )] [text "Open Window"]
 
                                     button [ clazz "ui button" ; onClick (fun () -> 
-                                            IMPORT_PHOTOMETRY (openFileDialog form)
+                                            IMPORT_SCENE (openFileDialog form)
                                         )] [text "Load Object"] 
 
                                     button [ clazz "ui button" ; onClick (fun () -> 
@@ -1276,13 +1276,13 @@ let initialState =
         photometryData = photometryData
         lightTransformMode = Translate
         mrpWeights    = V3d(1.0/3.0, 1.0/3.0, 1.0/3.0)
-        sampleCorners    = true
-        sampleBarycenter = true
-        sampleClosest    = true
+        sampleCorners    = false
+        sampleBarycenter = false
+        sampleClosest    = false
         sampleNorm       = false
-        sampleMRP        = true
-        sampleRandom     = false
-        sampleLight      = true
+        sampleMRP        = false
+        sampleRandom     = true
+        sampleLight      = false
         blendSamples     = false
         blendEasing      = false
         skewClipPlane = true
@@ -1294,7 +1294,7 @@ let initialState =
                             format  = "{0:F3}"
                             }
         numOfSRSamples   = {
-                            value   = 380.0
+                            value   = 24.0
                             min     = 0.0
                             max     = (float) Config.Light.SS_LIGHT_SAMPLES_ALL_LIGHT
                             step    = 1.0
