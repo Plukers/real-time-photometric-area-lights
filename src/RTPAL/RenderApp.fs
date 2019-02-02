@@ -179,6 +179,7 @@ module RenderApp =
                 view = view
                 projTrafo = projTrafo 
                 viewportSize = viewportSize
+                mouseClickRay = Ray3d() |> Mod.constant
                 lights = m.lights |> Mod.force // mod force necessary ? 
                 lightData = lightData
                 photometricData = photometryData
@@ -523,7 +524,7 @@ module RenderApp =
             |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
         let projTrafo =
             Frustum.perspective 60.0 0.1 100.0 ((float)viewportSize.X / (float)viewportSize.Y)
-            |> Frustum.projTrafo |> Mod.init
+            |> Frustum.projTrafo |> Mod.constant
 
         //let view =
         //    CameraView.lookAt (V3d(0.0, 0.0, 5.0)) (V3d(0.0, 0.0, -1.0)) V3d.IOO
@@ -560,9 +561,31 @@ module RenderApp =
 
         win.UpdateFrame.Add(fun args -> transact (fun _ -> dt.Value <- args.Time) )
             
-        
-        let renderData = initialRenderData app view projTrafo viewportSize m dt sceneSg lightData
+        let mouseClickedAt = V2d(0) |> Mod.init
 
+        let mouseClickRay = 
+            mouseClickedAt 
+            |> Mod.map (fun pos -> 
+                            let nds = (pos * 2.0 - V2d.II) * V2d(1, -1)
+
+                            let projTrafo = projTrafo |> Mod.force
+                            let viewTrafo = (view |> Mod.force).ViewTrafo 
+
+                            let a = V3d(nds.X, nds.Y, 0.0)
+                            let b = V3d(nds.X, nds.Y, 1.0)
+                            let c = V3d(nds, 0.0)
+                            let d = V3d(nds, 1.0)
+
+                            let near = a |> projTrafo.Backward.TransformPosProj |> viewTrafo.Backward.TransformPos
+                            let far = b |> projTrafo.Backward.TransformPosProj |> viewTrafo.Backward.TransformPos
+
+                            let rayDir = (far - near).Normalized
+
+                            Ray3d(near, rayDir)
+                        )
+        
+
+        let renderData = initialRenderData app view projTrafo viewportSize mouseClickRay m dt sceneSg lightData
 
 
         let (renderTask, renderFeedback) = Rendering.Render.CreateAndLinkRenderTask renderData gtData mrpData ssData saData
@@ -580,6 +603,18 @@ module RenderApp =
         
         win.UpdateFrame.Add(rtGroundTruthRenderUpdate)
         win.UpdateFrame.Add(fpsUpdate renderFeedback)
+
+
+        win.MouseUp.AddHandler (System.EventHandler<OpenTK.Input.MouseButtonEventArgs>(
+                                                        fun s e -> 
+                                                            if e.Button = OpenTK.Input.MouseButton.Middle then
+                                                                let s = V2i(1920, 1080)
+                                                                let pp = PixelPosition(e.X, e.Y, s.X, s.Y)
+
+                                                                transact (fun _ ->
+                                                                    pp.NormalizedPosition |> Mod.change mouseClickedAt
+                                                                )
+                                                        ))
 
 
         (win, renderFeedback, offlineRenderTask)

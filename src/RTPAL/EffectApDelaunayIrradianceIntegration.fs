@@ -470,9 +470,23 @@ module EffectApDelaunayIrradianceIntegration =
                                     ////////////////////////////////////////////////////////
                                     // integrate
                                     
-                                    let patchIllumination = computeIlluminationCheap delEdgeData vertices caseOffset
+                                    let (patchIllumination, weight) = computeIlluminationCheap delEdgeData vertices caseOffset
                                                                             
-                                    illumination <- illumination + patchIllumination * brdf 
+                                    illumination <- illumination + patchIllumination * brdf
+
+                                    let L = patchIllumination / weight
+                                                                                    
+                                    //let I = abs (delauanyBaumFormFactor vertices clippedVc offset) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
+                                      
+                                    for l in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do
+                                        if l < clippedVc then
+                                            // Project polygon light onto sphere
+                                            clippedVa.[l] <- Vec.normalize clippedVa.[l]
+                                                
+                                    let I = abs (baumFormFactor(clippedVa, clippedVc)) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
+                                        
+                                      
+                                    illumination <- illumination + L * brdf * I //* scale // * i.Z  
                                     
 
                             ////////////////////////////////////////////////////////
@@ -571,15 +585,20 @@ module EffectApDelaunayIrradianceIntegration =
             let c3 = n
             
             M33dFromCols c1 c2 c3
+       
+        let delaunyScene (mouseClickRay : IMod<Ray3d>) (lc : Light.LightCollection) = 
 
-        let v = {
-            wp = V4d.Zero
-            n = V3d.OOI
-            c = V4d.One 
-        }
-           
-            
-        let delaunyScene (lc : Light.LightCollection) = 
+            let v = 
+                mouseClickRay
+                |> Mod.map(fun r ->
+                            let plane = Plane3d(V3d.OOI, V3d.OOO)
+
+                            {
+                                wp = V4d(r.Intersect plane, 0.0)
+                                n = V3d.OOI
+                                c = V4d.One 
+                            }
+                        )
 
             let lc = 
                 adaptive {
@@ -592,12 +611,12 @@ module EffectApDelaunayIrradianceIntegration =
                     let! centers = lc.Centers
                     let! forwards = lc.Forwards
                     let! ups = lc.Ups
-
+                    
                     return (lights, patchIndices,  Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>(vertices),  Arr<N<Config.Light.MAX_PATCH_SIZE>, V3d>(verticesInverse), baseComponents, centers, forwards, ups, areas)
 
                 }
 
-            lc |> Mod.map (fun lc ->
+            lc |> Mod.map2 (fun v lc ->
 
                 let (lights, lPatchIndices, lVertices, lVerticesInverse, lBaseComponents, lCenters, lForwards, lUps, lAreas) = lc
                 
@@ -710,14 +729,14 @@ module EffectApDelaunayIrradianceIntegration =
 
                         let patchIllumination = computeIlluminationCheap delEdgeData vertices caseOffset
 
-                        printfn "PatchIllumination: %f" patchIllumination
+                        printfn "PatchIllumination: %A" patchIllumination
                                 
-                        let getTrafo pos = Trafo3d.Translation pos |> Mod.constant
+                        let getTrafo pos = Trafo3d.Translation (pos + P) |> Mod.constant
                         
                         let mutable sg = Sg.empty
 
                         // center
-                        sg <- Sg.group' [sg; pointSg 0.12 (C4b(255, 255, 255, 100)) (Trafo3d.Identity |> Mod.init)]
+                        sg <- Sg.group' [sg; pointSg 0.003 (C4b(0, 255, 0, 100)) (getTrafo (V3d.Zero))]
 
                         // closet
                         sg <- Sg.group' [sg; pointSg 0.002 C4b.Blue (getTrafo (vertices.[0].XYZ * 0.14))]
@@ -732,8 +751,9 @@ module EffectApDelaunayIrradianceIntegration =
                                 let edgeStart = vertices.[0 |> readVertexId delEdgeData i].XYZ
                                 let edgeEnd   = vertices.[2 |> readVertexId delEdgeData i].XYZ
                                 
+                                let t = Trafo3d.Scale 0.14 * (Trafo3d.Translation P)  |> Mod.init
 
-                                sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red (Trafo3d.Scale 0.14 |> Mod.init)]
+                                sg <- Sg.group' [sg; arcSg edgeStart edgeEnd C4b.Red t]
 
                         sg
 
@@ -744,7 +764,7 @@ module EffectApDelaunayIrradianceIntegration =
 
                     Sg.empty
 
-            )
+            ) v
 
   
     module Rendering =
@@ -763,7 +783,7 @@ module EffectApDelaunayIrradianceIntegration =
             let sceneSg = 
                 [
                     sceneSg
-                    Debug.delaunyScene data.lights |> Sg.dynamic
+                    Debug.delaunyScene data.mouseClickRay data.lights |> Sg.dynamic
                 ]
                 |> Sg.group
             

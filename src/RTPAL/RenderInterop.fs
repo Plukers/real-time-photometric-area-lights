@@ -25,6 +25,7 @@ module RenderInterop =
             view         : IMod<CameraView>
             projTrafo    : IMod<Trafo3d>
             viewportSize : IMod<V2i>
+            mouseClickRay: IMod<Ray3d>
 
             mode            : IMod<RenderMode>
             compare         : IMod<RenderMode>
@@ -49,7 +50,7 @@ module RenderInterop =
             compareTexture : IOutputMod<ITexture>
         }
 
-    let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (projTrafo : IMod<Trafo3d>) (viewportSize : V2i) (m : MRenderState) (dt : IMod<float>) (sceneSg : ISg) (lightData : LightSgData) =
+    let initialRenderData (app : OpenGlApplication) (view : IMod<CameraView>) (projTrafo : IMod<Trafo3d>) (viewportSize : V2i) (mouseClickRay : IMod<Ray3d>)(m : MRenderState) (dt : IMod<float>) (sceneSg : ISg) (lightData : LightSgData) =
         {
             runtime = app.Runtime
             dt = dt
@@ -57,6 +58,7 @@ module RenderInterop =
             view = view
             projTrafo = projTrafo 
             viewportSize = viewportSize |> Mod.init
+            mouseClickRay = mouseClickRay
             lights = m.lights |> Mod.force // mod force necessary ? 
             lightData = lightData
             photometricData = m.photometryData

@@ -949,6 +949,11 @@ module EffectUtils =
 
         sum
 
+    [<ReflectedDefinition>][<Inline>] 
+    let delauanyBaumFormFactor (va : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_THREE>, V4d>) (vc : int) offset =
+        integrateSegment(va.[0 + offset].XYZ, va.[1 + offset].XYZ) + integrateSegment(va.[1 + offset].XYZ, va.[2 + offset].XYZ) + integrateSegment(va.[2 + offset].XYZ, va.[3 + offset].XYZ) + integrateSegment(va.[3 + offset].XYZ, va.[0 + offset].XYZ)
+
+
     (*
         Computes the solid angle for a planar triangle as seen from the origin.
 
