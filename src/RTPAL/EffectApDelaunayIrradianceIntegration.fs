@@ -369,7 +369,7 @@ let delaunyIrrFlip (v : Vertex) =
                         ////////////////////////////////////////////////////////
                         let dotOut = Vec.dot (uniform.LForwards.[addr]) ((P - uniform.LCenters.[addr])  |> Vec.normalize) |> clamp -1.0 1.0
                             
-                        if abs dotOut > 1e-3 then
+                        if abs dotOut > 1e-6 then
                             // no super small dotouts
 
                             // linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d)
@@ -481,7 +481,6 @@ let delaunyIrrFlip (v : Vertex) =
                                 let I = abs (delauanyBaumFormFactor vertices clippedVc offset) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                                                             
                                 illumination <- illumination + L * brdf * I //* scale // * i.Z  
-                                    
 
                         ////////////////////////////////////////////////////////
         let mutable color = V4d(1) + illumination * 1e-8;
@@ -550,7 +549,7 @@ let delaunyIrrNoFlip (v : Vertex) =
                         ////////////////////////////////////////////////////////
                         let dotOut = Vec.dot (uniform.LForwards.[addr]) ((P - uniform.LCenters.[addr])  |> Vec.normalize) |> clamp -1.0 1.0
                             
-                        if abs dotOut > 1e-3 then
+                        if abs dotOut > 1e-6 then
                             // no super small dotouts
 
                             // linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d)
@@ -1091,12 +1090,12 @@ module Rendering =
     let internal setupScene (data : RenderData) (signature : IFramebufferSignature) (sceneSg : ISg) applyFlip = 
    
             
-        let sceneSg = 
-            [
-                sceneSg
-                Debug.delaunyScene data.mouseClickRay data.lights |> Sg.dynamic
-            ]
-            |> Sg.group
+        //let sceneSg = 
+        //    [
+        //        sceneSg
+        //        Debug.delaunyScene data.mouseClickRay data.lights |> Sg.dynamic
+        //    ]
+        //    |> Sg.group
             
            
         sceneSg

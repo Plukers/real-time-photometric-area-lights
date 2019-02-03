@@ -110,7 +110,7 @@ let private sampleIrr (t2w : M33d) (scale : float) (addr : int) (p : V3d) =
 
         let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
 
-        (irr * i.Z, i.Z)
+        (irr, i.Z)
     else
 
         //let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
@@ -372,17 +372,17 @@ let private sample (t2w : M33d) (S : float) (addr : int) (p : V3d) =
     let iw = t2w * -i
 
 
-    if uniform.sampleLight then
+    //if uniform.sampleLight then
             
-        let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
+    let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
 
-        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+    let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
 
-        i.Z * irr * S
-    else
-        let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
+    i.Z * irr * S
+    //else
+    //    let irr = getPhotometricIntensity iw uniform.LForwards.[addr]  uniform.LUps.[addr] 
 
-        irr * i.Z / (Vec.lengthSquared p + 1e-9)
+    //    irr * i.Z / (Vec.lengthSquared p + 1e-9)
 
 let structuredSampling (v : Vertex) = 
     fragment {
@@ -458,7 +458,7 @@ let structuredSampling (v : Vertex) =
                             //let insideLightPlane = (Vec.length closestPoint) < eps
                             let dotOut = Vec.dot (uniform.LForwards.[addr]) ((P - uniform.LCenters.[addr])  |> Vec.normalize) |> clamp -1.0 1.0
                             
-                            if abs dotOut > 1e-3 then
+                            if abs dotOut > 1e-6 then
                                     
                                 //let closestPointDir = closestPoint |> Vec.normalize
 
