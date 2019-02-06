@@ -369,7 +369,7 @@ let delaunyIrrFlip (v : Vertex) =
                         ////////////////////////////////////////////////////////
                         let dotOut = Vec.dot (uniform.LForwards.[addr]) ((P - uniform.LCenters.[addr])  |> Vec.normalize) |> clamp -1.0 1.0
                             
-                        if abs dotOut > 1e-6 then
+                        if abs dotOut > 1e-5 then
                             // no super small dotouts
 
                             // linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d)

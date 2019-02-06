@@ -147,15 +147,8 @@ let offlineRenderTasks : ((TaskAPI -> unit) list) =
                         api.setRenderMode RenderMode.StructuredSampling
 
                         api.ssAPI.setSamples false false false false false true
-
-                        api.ssAPI.sampleLight false
-                        for n in [24; 40] do
-                            api.ssAPI.setRandomSampleCount n                                
-                            api.render ()
-                            api.saveImage () 
-                            api.evalAPI.updateEffectList ()      
-                            
-                        api.ssAPI.sampleLight true 
+  
+                        api.ssAPI.sampleLight false 
                         for n in [24; 40] do
                             api.ssAPI.setRandomSampleCount n                                
                             api.render ()
