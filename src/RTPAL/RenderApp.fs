@@ -1251,7 +1251,7 @@ let initialState =
     // initial state
     {            
         lights = lc
-        renderMode = RenderMode.DelaunayIrradianceSampling
+        renderMode = RenderMode.DelaunayNoFlipIrradianceSampling
         updateGroundTruth = true
         usePhotometry = true
         diffuseExitance = {

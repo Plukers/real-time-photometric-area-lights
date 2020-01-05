@@ -502,6 +502,8 @@ let delaunyIrrFlip (v : Vertex) =
         return V4d(illumination.XYZ, v.c.W)
     }
 
+
+
 let delaunyIrrNoFlip (v : Vertex) = 
     fragment {
 
@@ -582,11 +584,128 @@ let delaunyIrrNoFlip (v : Vertex) =
                                     
                             let (patchIllumination, weight, _) = computeIlluminationNoFlip delEdgeData vertices caseOffset
                                                                             
-                            let L = patchIllumination / weight
+                            //let L = patchIllumination / weight
                                                                                     
-                            let I = abs (delauanyBaumFormFactor vertices clippedVc offset) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
+                            //let I = abs (delauanyBaumFormFactor vertices clippedVc offset) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
                                                                             
-                            illumination <- illumination + L * brdf * I //* scale // * i.Z  
+                            //illumination <- illumination + L * brdf * I //* scale // * i.Z  
+
+                            illumination <- illumination + brdf * patchIllumination
+                                    
+
+                        ////////////////////////////////////////////////////////
+
+        //return color
+        return V4d(illumination.XYZ, v.c.W)
+    }
+
+[<ReflectedDefinition>][<Inline>]
+let private sampleIrrOptimized (t2w : M33d) forward up area (p : V3d) = 
+    let i = p |> Vec.normalize  
+    let iw = t2w * -i
+    let dotOut = max 1e-9 (abs (Vec.dot iw forward))
+    let irr = getPhotometricIntensity iw forward  up / (area * dotOut)
+    let weight = i.Z
+
+    irr * weight
+
+let delaunyIrrNoFlipOptimized (v : Vertex) = 
+    fragment {
+
+        ////////////////////////////////////////////////////////
+
+        let P = v.wp.XYZ
+
+        let t2w = v.n |> Vec.normalize |> basisFrisvad 
+        let w2t = t2w |> Mat.transpose
+
+        let brdf = v.c / PI 
+
+        let mutable illumination = V4d.Zero * (uniform.dT * 1e-256 * 0.0)
+        ////////////////////////////////////////////////////////
+
+        for addr in 0 .. (Config.Light.NUM_LIGHTS - 1) do 
+            match uniform.Lights.[addr] with
+                | -1 -> ()
+                |  _ ->    
+                        
+                    ////////////////////////////////////////////////////////
+
+                    let dotOut = Vec.dot (uniform.LForwards.[addr]) ((P - uniform.LCenters.[addr])  |> Vec.normalize) |> clamp -1.0 1.0
+                            
+                    if abs dotOut > 1e-6 then
+                        // no super small dotouts
+
+                        // linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d)
+                        let mutable clipNormal = V3d.OOI
+                        if uniform.skewClipPlane && abs(Vec.dot (uniform.LForwards.[addr]) clipNormal) < (1.0 - 1e-8) then
+                            let heightCut = 0.1
+                            let translate = V2d(-uniform.LForwards.[addr].Y, uniform.LForwards.[addr].X)
+
+                            let planeP0 = linePlaneIntersection (V3d(translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
+                            let planeP1 = linePlaneIntersection (V3d(-translate, heightCut)) (V3d(uniform.LForwards.[addr].XY, 0.0) |> Vec.normalize) uniform.LVertices.[0] uniform.LForwards.[addr]
+
+                            clipNormal <- Vec.cross planeP0 planeP1 |> Vec.normalize
+
+                            if clipNormal.Z < 0.0 then
+                                clipNormal <- -clipNormal
+
+                        ////////////////////////////////////////////////////////
+
+                        let (clippedVa, clippedVc) = clipPatchTSwN ( if dotOut > 0.0 then uniform.LVertices else uniform.LVerticesInverse) uniform.LBaseComponents.[addr] clipNormal P w2t
+                           
+
+                        if clippedVc <> 0 then
+
+                            let lightPlaneN = w2t * uniform.LForwards.[addr] |> Vec.normalize   
+
+                            // find closest point limited to upper hemisphere
+                            let t = (- clippedVa.[0]) |> Vec.dot lightPlaneN
+                            let mutable closestPoint = t * (-lightPlaneN)
+                                                    
+                            if (Vec.dot closestPoint V3d.OOI) < 0.0 then
+                                let newDir = V3d(closestPoint.X, closestPoint.Y, 0.0) |> Vec.normalize
+                                closestPoint <- linePlaneIntersection V3d.Zero newDir (clippedVa.[0]) lightPlaneN
+                                    
+                            let (closestPointClamped, caseDiff, v1Idx) = clampPointToPolygon' clippedVa 0 clippedVc closestPoint
+                            let closestPointDir = Vec.normalize closestPointClamped
+                                     
+                            let mutable patchIllumination = 0.0
+                            
+                            for i in 0 .. Config.Light.MAX_PATCH_SIZE_PLUS_ONE - 1 do 
+                                if i < clippedVc - caseDiff then
+                                    let patchArea = computeSphericalExcess closestPointDir (Vec.normalize (clippedVa.[(v1Idx + i) % clippedVc])) (Vec.normalize (clippedVa.[(v1Idx + i + 1) % clippedVc]))
+                                    patchIllumination <- 
+                                        patchIllumination + patchArea * (
+                                              (sampleIrrOptimized t2w uniform.LForwards.[addr] uniform.LUps.[addr] uniform.LAreas.[addr] closestPointClamped)
+                                            + (sampleIrrOptimized t2w uniform.LForwards.[addr] uniform.LUps.[addr] uniform.LAreas.[addr] (clippedVa.[(v1Idx + i) % clippedVc]))
+                                            + (sampleIrrOptimized t2w uniform.LForwards.[addr] uniform.LUps.[addr] uniform.LAreas.[addr] (clippedVa.[(v1Idx + i + 1) % clippedVc]))
+                                        )
+
+                            let patchIllumination = patchIllumination / 3.0
+                                                       
+                                                                    
+                            ////////////////////////////////////////////////////////
+                            // integrate
+
+                            //if caseDiff = 0 then
+                            //    illumination <- V4d.IOOI
+                            //elif caseDiff = 1 then
+                            //    illumination <- V4d.OIOI
+                            //elif caseDiff = 2 then
+                            //    illumination <- V4d.OOII
+                            //else
+                            //    illumination <- V4d.IIII
+                                    
+                            illumination <- illumination + patchIllumination * brdf
+
+                            //let (patchIllumination, weight, _) = computeIlluminationNoFlip delEdgeData vertices caseOffset
+                                                                            
+                            //let L = patchIllumination / weight
+                                                                                    
+                            //let I = abs (delauanyBaumFormFactor vertices clippedVc offset) / (2.0) // should be divided by 2 PI, but PI is already in the brdf
+                                                                            
+                            //illumination <- illumination + L * brdf * I //* scale // * i.Z  
                                     
 
                         ////////////////////////////////////////////////////////
@@ -1063,7 +1182,7 @@ module Rendering =
                     if applyFlip then
                         yield delaunyIrrFlip |> toEffect
                     else
-                        yield delaunyIrrNoFlip |> toEffect
+                        yield delaunyIrrNoFlipOptimized |> toEffect
                 ]
             |> Light.Sg.addLightCollectionSg (data.lights) (data.lightData)
             |> Light.Sg.setLightCollectionUniforms data.lights

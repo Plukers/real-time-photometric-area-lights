@@ -639,6 +639,60 @@ let delaunayClampPointToPolygonP1 (polygonVertices : Arr<N<Config.Light.MAX_PATC
             (clampedPoint, clampResult, clampResultParam)
 
 (*
+    Returns not cases but max counts
+*)
+[<ReflectedDefinition>][<Inline>] 
+let clampPointToPolygon' (polygonVertices : Arr<N<Config.Light.MAX_PATCH_SIZE_PLUS_ONE>, V3d>) (polygonVertexCountStartIdx : int) (polygonVertexCount : int) (p : V3d) = 
+
+    if polygonVertexCount = 0 then
+        (p, Config.Delaunay.CASE_INSIDE_OFFSET, 0)
+    else
+
+        let mutable clampedPoint = V3d.Zero
+        let mutable clampResult = -1
+        let mutable clampResultParam = -1
+
+        let mutable smallestDist = 1000000.0
+
+        let mutable inside = true
+
+        for i in polygonVertexCountStartIdx .. polygonVertexCount - 1 do
+                
+            let v0 = polygonVertices.[i]
+            let v1 = polygonVertices.[(i + 1) % polygonVertexCount]
+
+            let planeN = Vec.cross v0 v1 |> Vec.normalize
+            let dotPlane = Vec.dot (p |> Vec.normalize) planeN
+            if dotPlane > -1e-8 then
+                    
+                inside <- false
+
+                let projectedPoint, PROJECT_TO_LINE_RESULT = projetToLineSegment v0 v1 p
+
+                let dist = Vec.length (projectedPoint  - p)
+                if dist < smallestDist then
+                    smallestDist <- dist
+
+                    clampedPoint <- projectedPoint
+
+                    match PROJECT_TO_LINE_RESULT with
+                    | PROJECT_TO_LINE_RESULT_A ->
+                        clampResult <- 2
+                        clampResultParam <- (i + 1) % polygonVertexCount 
+                    | PROJECT_TO_LINE_RESULT_B ->
+                        clampResult <- 2
+                        clampResultParam <- (i + 2) % polygonVertexCount
+                    | _ (* PROJECT_TO_LINE_RESULT_LINE *) ->
+                        clampResult <- 1
+                        clampResultParam <- (i + 1) % polygonVertexCount
+
+
+        if inside then
+            (p, 0, 0)
+        else
+            (clampedPoint, clampResult, clampResultParam)
+
+(*
     Clamps a point to a polyogn in 3D
 
     Returns the clamped point + info regarding the clamping process
