@@ -74,7 +74,7 @@ module Render =
         let effectFbs = 
             Map.empty
             |> Map.add RenderMode.GroundTruth                       (groundTruthFb              data gtData     signature data.sceneSg |> applyTonemappingOnFb data signature)
-            // |> Map.add RenderMode.CenterPointApprox                 (centerPointApproxFb        data            signature data.sceneSg |> applyTonemappingOnFb data signature)
+             |> Map.add RenderMode.CenterPointApprox                 (centerPointApproxFb        data            signature data.sceneSg |> applyTonemappingOnFb data signature)
             // |> Map.add RenderMode.MRPApprox                         (mrpApproxFb                data mrpData    signature data.sceneSg |> applyTonemappingOnFb data signature)
             // |> Map.add RenderMode.BaumFFApprox                      (baumFFApproxFb             data            signature data.sceneSg |> applyTonemappingOnFb data signature)
             // |> Map.add RenderMode.StructuredIrrSampling             (ssIrrApproxFb              data ssData     signature data.sceneSg |> applyTonemappingOnFb data signature)

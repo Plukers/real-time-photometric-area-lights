@@ -213,10 +213,10 @@ let projectPointOnLine (a : V3d) (b : V3d) (p : V3d) =
     a + ((Vec.dot ab ap) / (Vec.dot ab ab)) * ab
         
 
+[<Inline>]
 [<ReflectedDefinition>]
 let linePlaneIntersection (lineO : V3d) (lineDir : V3d) (planeP : V3d) (planeN : V3d) = 
-    let t = (Vec.dot (planeP - lineO) planeN) / (Vec.dot lineDir planeN)
-    lineO + t * lineDir
+    lineO + (Vec.dot (planeP - lineO) planeN) / (Vec.dot lineDir planeN) * lineDir
 
 (*
     Computes the intersaction point of a ray and triangle. 
@@ -976,23 +976,33 @@ let computeSolidAngle (va : V3d) (vb : V3d) (vc : V3d) =
 
     2.0 * if halfSA >= 0.0 then halfSA else halfSA + PI
 
-[<ReflectedDefinition>]
-let computeSphericalExcess (va : V3d) (vb : V3d) (vc : V3d) =
+[<ReflectedDefinition>][<Inline>]
+let computeSphericalExcess (va : V3d) (vb : V3d) (vc : V3d) =    
+    2.0 * Math.Atan((abs (Vec.dot va (Vec.cross vb vc))) / (1.0 + (Vec.dot va vb) + (Vec.dot va vc) + (Vec.dot vb vc)))
 
-    let crossVaVc = Vec.cross va vc |> Vec.normalize
-    let crossVcVa = Vec.cross vc va |> Vec.normalize
+    //if v < 0.0 then 2.0 * Math.Atan(v + PI) else 2.0 * Math.Atan(v)
 
-    let crossVaVb = Vec.cross va vb |> Vec.normalize
-    let crossVbVa = Vec.cross vb va |> Vec.normalize
 
-    let crossVbVc = Vec.cross vb vc |> Vec.normalize
-    let crossVcVb = Vec.cross vc vb |> Vec.normalize
+    //let a = Vec.dot va (Vec.cross vb vc)
+    //let b = 1.0 + (Vec.dot va vb) + (Vec.dot va vc) + (Vec.dot vb vc)
 
-    let alpha = Vec.dot crossVaVc crossVaVb |> clamp -1.0 1.0 |> acos
-    let betha = Vec.dot crossVbVa crossVbVc |> clamp -1.0 1.0 |> acos
-    let gamma = Vec.dot crossVcVb crossVcVa |> clamp -1.0 1.0 |> acos
 
-    alpha + betha + gamma - PI
+    //let crossVaVc = Vec.cross va vc |> Vec.normalize
+    //let crossVcVa = Vec.cross vc va |> Vec.normalize
+
+    //let crossVaVb = Vec.cross va vb |> Vec.normalize
+    //let crossVbVa = Vec.cross vb va |> Vec.normalize
+
+    //let crossVbVc = Vec.cross vb vc |> Vec.normalize
+    //let crossVcVb = Vec.cross vc vb |> Vec.normalize
+
+    //let alpha = Vec.dot crossVaVc crossVaVb |> clamp -1.0 1.0 |> acos
+    //let betha = Vec.dot crossVbVa crossVbVc |> clamp -1.0 1.0 |> acos
+    //let gamma = Vec.dot crossVcVb crossVcVa |> clamp -1.0 1.0 |> acos
+
+    //alpha + betha + gamma - PI
+
+    
 
 
 

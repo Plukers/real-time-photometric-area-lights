@@ -83,16 +83,12 @@ let groundTruthTask =
     
 let offlineRenderTasks : ((TaskAPI -> unit) list) = 
 
-    let taskMap = Map.empty
 
-    let addTask (name : string) (task : TaskAPI -> unit) taskMap =
-        (name, taskMap |> Map.add name task)                         
         
-        
-    let (delaunay, taskMap) =   
-        taskMap 
-        |> addTask  "Delaunay"
+    let delaunay =   
                     (fun (api : TaskAPI) ->
+                        api.setRenderLight true
+
                         api.setRenderMode RenderMode.DelaunayIrradianceSampling
 
                         api.setSkewClipPlane true
@@ -108,9 +104,7 @@ let offlineRenderTasks : ((TaskAPI -> unit) list) =
                         api.evalAPI.updateEffectList ()
                     )
 
-    let (delaunayWithLight, taskMap) =  
-        taskMap 
-        |> addTask  "DelaunayWithLight"
+    let delaunayWithLight =  
                     (fun (api : TaskAPI) ->
                         api.setRenderLight true
 
@@ -127,9 +121,7 @@ let offlineRenderTasks : ((TaskAPI -> unit) list) =
                         api.evalAPI.updateEffectList ()
                     )
 
-    let (structuredSampling, taskMap) = 
-        taskMap 
-        |> addTask  "StructuredSampling"
+    let structuredSampling = 
                     (fun (api : TaskAPI) ->
                         api.setRenderMode RenderMode.StructuredSampling
 
@@ -140,25 +132,45 @@ let offlineRenderTasks : ((TaskAPI -> unit) list) =
                             api.evalAPI.updateEffectList ()
                     )
 
-    let (structuredSamplingRandom, taskMap) =   
-        taskMap 
-        |> addTask  "StructuredSamplingRandom"
+    let centerPointApprox = 
+                    (fun (api : TaskAPI) ->
+                        api.setRenderMode RenderMode.CenterPointApprox
+
+                        api.render ()
+                        api.saveImage () 
+                        api.evalAPI.updateEffectList ()
+                    )
+
+    let structuredSampling = 
+                    (fun (api : TaskAPI) ->
+                        api.setRenderMode RenderMode.StructuredSampling
+                        api.setRenderLight true
+                        
+                        api.ssAPI.setSamples false false false false false true
+                        
+                        api.ssAPI.sampleLight false 
+                        for n in [16; 32; 64; 128] do
+                            api.ssAPI.setRandomSampleCount n                                
+                            api.render ()
+                            api.saveImage () 
+                            api.evalAPI.updateEffectList () 
+                    )
+
+    let structuredSamplingRandom =  
                     (fun (api : TaskAPI) ->
                         api.setRenderMode RenderMode.StructuredSampling
 
                         api.ssAPI.setSamples false false false false false true
   
                         api.ssAPI.sampleLight false 
-                        for n in [24; 40] do
+                        for n in [40] do
                             api.ssAPI.setRandomSampleCount n                                
                             api.render ()
                             api.saveImage () 
                             api.evalAPI.updateEffectList ()   
                     )
 
-    let (compare, taskMap) =    
-        taskMap 
-        |> addTask  "Compare"
+    let compare =    
                     (fun (api : TaskAPI) ->
                             
                         api.setRenderLight true
@@ -187,10 +199,8 @@ let offlineRenderTasks : ((TaskAPI -> unit) list) =
 
                     )
              
-    let tasks = [ delaunay; structuredSamplingRandom ]
+    let tasks = [ centerPointApprox; delaunay; structuredSamplingRandom; ]
+    //let tasks = [ structuredSamplingRandom ]
 
-    taskMap
-    |> Map.filter (fun key _ -> tasks |> List.contains key) 
-    |> Map.toList
-    |> List.map snd
+    tasks
 

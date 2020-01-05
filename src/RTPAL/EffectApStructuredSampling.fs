@@ -293,17 +293,17 @@ let private samplePointRandom (t2w : M33d) (S : float) (addr : int) (p : V3d) =
     let iw = t2w * -i
 
 
-    //if uniform.sampleLight then
+    if uniform.sampleLight then
             
-    let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
+        let dotOut = max 1e-9 (abs (Vec.dot iw uniform.LForwards.[addr]))
 
-    let irr = getPhotometricIntensity iw uniform.LForwards.[addr] uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
+        let irr = getPhotometricIntensity iw uniform.LForwards.[addr] uniform.LUps.[addr] / (uniform.LAreas.[addr] * dotOut)
 
-    i.Z * irr * S
-    //else
-    //    let irr = getPhotometricIntensity iw uniform.LForwards.[addr] uniform.LUps.[addr] 
+        i.Z * irr * S
+    else
+        let irr = getPhotometricIntensity iw uniform.LForwards.[addr] uniform.LUps.[addr] 
 
-    //    irr * i.Z / (Vec.lengthSquared p + 1e-9)
+        irr * i.Z / (Vec.lengthSquared p + 1e-9)
 
 
 let structuredSamplingRandom (v : Vertex) = 
@@ -363,9 +363,7 @@ let structuredSamplingRandom (v : Vertex) =
                             let ey = vt.[3] - vt.[0]
                             let squad = SphericalQuad.sphQuadInit vt.[0] ex ey P
                             squad
-
-                        let S = computeSphericalExcess (vtN.[0]) (vtN.[1]) (vtN.[2]) + computeSphericalExcess (vtN.[0]) (vtN.[2]) (vtN.[3])
-
+                            
                         let (clippedVa, clippedVc) = clipPatchTS( ( if dotOut > 0.0 then uniform.LVertices else uniform.LVerticesInverse) , uniform.LBaseComponents.[addr], P, w2t)
 
                         if clippedVc <> 0 then
@@ -400,7 +398,7 @@ let structuredSamplingRandom (v : Vertex) =
                                             let samplePoint = (SphericalQuad.sphQuadSample squad uvSamplePoint.X uvSamplePoint.Y) - P
 
                                             if samplePoint.Z >= eps then
-                                                let irr = samplePointRandom t2w S addr samplePoint
+                                                let irr = samplePointRandom t2w squad.S addr samplePoint
                                                 patchIllumination <- patchIllumination + irr
 
                                     else
@@ -413,7 +411,7 @@ let structuredSamplingRandom (v : Vertex) =
 
                                             if samplePoint.Z >= eps then
                                                 // let scale = uniform.weightScaleSRSamples * computeApproximateSolidAnglePerSample t2w sampleCount uniform.tangentApproxDist addr samplePoint
-                                                let irr = samplePointRandom t2w S addr samplePoint
+                                                let irr = samplePointRandom t2w squad.S addr samplePoint
                                                 patchIllumination <- patchIllumination + irr
 
                                             
